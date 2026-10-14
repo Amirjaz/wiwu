@@ -1,0 +1,15 @@
+{% extends 'shop/base.html' %}
+{% load vite %}
+{% block title %}پیگیری سفارش | {{ store.store_name }}{% endblock %}
+{% block vite %}{% vite 'src/site.ts' 'src/islands/lookup.tsx' %}{% endblock %}
+
+{% block main %}
+<div class="mx-auto max-w-lg px-4 sm:px-6 py-10 md:py-16">
+  <h1 class="text-3xl font-extrabold">پیگیری سفارش</h1>
+  <p class="mt-3 text-ink-soft leading-relaxed">شماره موبایلی را که با آن سفارش داده‌اید وارد کنید. با کد پیامکی، سفارش‌هایتان را می‌بینید.</p>
+  {{ island|json_script:"island-data" }}
+  <div id="lookup-root" class="mt-8">
+    <noscript><p class="rounded-[var(--radius-field)] bg-warn-soft text-warn p-4">برای پیگیری سفارش، جاوااسکریپت مرورگر را روشن کنید.</p></noscript>
+  </div>
+</div>
+{% endblock %}

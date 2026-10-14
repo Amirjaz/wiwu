@@ -1,0 +1,10 @@
+{% extends 'shop/base.html' %}
+{% block title %}{{ page.title }} | {{ store.store_name }}{% endblock %}
+{% block description %}{{ page.title }}، {{ store.store_name }}{% endblock %}
+
+{% block main %}
+<article class="mx-auto max-w-3xl px-4 sm:px-6 py-10 md:py-16">
+  <h1 class="text-3xl sm:text-4xl font-extrabold mb-8">{{ page.title }}</h1>
+  <div class="prose-fa text-[1.05rem]">{{ body }}</div>
+</article>
+{% endblock %}

@@ -1,0 +1,218 @@
+@import "tailwindcss";
+/* Self-hosted: Google Fonts is unreliable from inside Iran. */
+@import "@fontsource-variable/vazirmatn";
+/* Django renders the pages: scan its templates for classes too. */
+@source "../../backend/shop/templates";
+
+/*
+  Stone and off-black, like the bag on a light table, with one accent: the green the fingerprint
+  sensor shows when it opens. The accent marks "open / done / go": focus, success, the lock.
+  Primary buttons are ink. Light only (the look the client chose, 2026-10-14).
+  Corners: buttons are pills, surfaces 18px, inputs 12px.
+*/
+@theme {
+  --color-page: #ededea;
+  --color-surface: #f6f6f4;
+  --color-raised: #fbfbfa;
+  --color-ink: #17181b;
+  --color-ink-soft: #3a3c41;
+  --color-muted: #5f6268;
+  --color-line: #d7d7d2;
+  --color-line-strong: #bcbcb6;
+  --color-accent: #0e7a57;
+  --color-accent-ink: #0a5c42;
+  --color-accent-soft: #dcefe5;
+  --color-danger: #b42318;
+  --color-danger-soft: #fbe7e5;
+  --color-warn: #8a5800;
+  --color-warn-soft: #f8eed8;
+
+  --font-sans: "Vazirmatn Variable", Vazirmatn, system-ui, sans-serif;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --radius-surface: 18px;
+  --radius-field: 12px;
+}
+
+/* In the base layer, so utilities (which live in a layer too) can still override them. */
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background: var(--color-page);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Persian joins its letters: never letter-space it. */
+  * {
+    letter-spacing: 0;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
+}
+
+@layer components {
+  .icon {
+    display: inline-block;
+    width: 1.25em;
+    height: 1.25em;
+    flex: none;
+  }
+  .icon svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 3rem;
+    padding: 0 1.5rem;
+    border-radius: 999px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: transform 0.15s var(--ease-out), background-color 0.2s, color 0.2s, border-color 0.2s;
+    user-select: none;
+  }
+  .btn:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+  .btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  .btn-primary {
+    background: var(--color-ink);
+    color: var(--color-raised);
+  }
+  @media (hover: hover) {
+    .btn-primary:hover:not(:disabled) {
+      background: var(--color-ink-soft);
+    }
+    .btn-ghost:hover:not(:disabled) {
+      border-color: var(--color-ink);
+    }
+  }
+  .btn-ghost {
+    border: 1px solid var(--color-line-strong);
+    color: var(--color-ink);
+  }
+  .btn-sm {
+    min-height: 2.5rem;
+    padding: 0 1rem;
+    font-size: 0.9rem;
+  }
+
+  .label {
+    display: block;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-ink-soft);
+  }
+  .input {
+    width: 100%;
+    min-height: 3rem;
+    padding: 0.65rem 0.9rem;
+    border: 1px solid var(--color-line-strong);
+    border-radius: var(--radius-field);
+    background: var(--color-raised);
+    color: var(--color-ink);
+    font-size: 1rem; /* 16px: iOS doesn't zoom into the field */
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .input:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 22%, transparent);
+  }
+  .input[aria-invalid="true"] {
+    border-color: var(--color-danger);
+  }
+  .input::placeholder {
+    color: var(--color-muted);
+  }
+  .help {
+    font-size: 0.85rem;
+    color: var(--color-muted);
+  }
+  .error-text {
+    font-size: 0.85rem;
+    color: var(--color-danger);
+  }
+  .ltr {
+    direction: ltr;
+    unicode-bidi: isolate;
+  }
+
+  /* Policy pages and FAQ answers (shop/text.py). */
+  .prose-fa {
+    line-height: 2;
+    color: var(--color-ink-soft);
+    max-width: 68ch;
+  }
+  .prose-fa h2 {
+    margin: 2.25rem 0 0.75rem;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--color-ink);
+  }
+  .prose-fa p {
+    margin: 0 0 1rem;
+  }
+  .prose-fa ul {
+    margin: 0 0 1rem;
+    padding-inline-start: 1.25rem;
+    list-style: disc;
+  }
+  .prose-fa li {
+    margin-bottom: 0.35rem;
+  }
+  .prose-fa strong {
+    color: var(--color-ink);
+  }
+}
+
+/* Motion: a short rise on load for the hero, and sections settling in as they scroll into view
+   (CSS scroll-driven, no JavaScript; browsers without it just show the content). */
+@media (prefers-reduced-motion: no-preference) {
+  .rise {
+    animation: rise 0.9s var(--ease-out) both;
+    animation-delay: calc(var(--i, 0) * 90ms + 80ms);
+  }
+  @supports (animation-timeline: view()) {
+    .reveal {
+      animation: settle linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 35%;
+    }
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+}
+
+@keyframes settle {
+  from {
+    opacity: 0;
+    transform: translateY(28px);
+  }
+}

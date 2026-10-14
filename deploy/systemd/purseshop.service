@@ -1,0 +1,20 @@
+[Unit]
+Description=Purse store (gunicorn)
+After=network.target
+
+[Service]
+User=purseshop
+Group=purseshop
+UMask=0002
+WorkingDirectory=/srv/purseshop/app/backend
+# 8000 is nisatech.org, 8010 nisatak.com, 8020 contech on this server.
+ExecStart=/srv/purseshop/app/backend/.venv/bin/gunicorn \
+    --workers 3 \
+    --bind 127.0.0.1:8030 \
+    --timeout 60 \
+    --access-logfile - \
+    purseshop.wsgi:application
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

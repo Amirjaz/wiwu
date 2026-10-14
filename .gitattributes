@@ -1,0 +1,10 @@
+* text=auto eol=lf
+*.sqlite3 binary
+*.png binary
+*.jpg binary
+*.webp binary
+*.avif binary
+*.glb binary
+*.hdr binary
+*.ico binary
+*.woff2 binary

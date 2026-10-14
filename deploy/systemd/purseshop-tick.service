@@ -1,0 +1,10 @@
+[Unit]
+Description=Purse store: payment reminders, expiry, forwarder check (manage.py tick)
+
+[Service]
+Type=oneshot
+User=purseshop
+Group=purseshop
+UMask=0002
+WorkingDirectory=/srv/purseshop/app/backend
+ExecStart=/srv/purseshop/app/backend/.venv/bin/python manage.py tick

@@ -1,0 +1,30 @@
+{
+  "name": "purseshop-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "icons": "node scripts/copy-icons.mjs"
+  },
+  "dependencies": {
+    "@fontsource-variable/vazirmatn": "5.3.0",
+    "@phosphor-icons/react": "2.1.10",
+    "clsx": "2.1.1",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-router-dom": "6.26.2"
+  },
+  "devDependencies": {
+    "@phosphor-icons/core": "2.1.1",
+    "@tailwindcss/vite": "4.1.11",
+    "@types/react": "18.3.3",
+    "@types/react-dom": "18.3.0",
+    "@vitejs/plugin-react": "4.3.4",
+    "tailwindcss": "4.1.11",
+    "typescript": "5.5.4",
+    "vite": "5.4.19"
+  }
+}

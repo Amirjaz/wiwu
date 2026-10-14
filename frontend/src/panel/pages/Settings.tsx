@@ -1,0 +1,197 @@
+import { useEffect, useState, type FormEvent } from 'react';
+import { Trash } from '@phosphor-icons/react';
+import { isApiError, post } from '../../lib/api';
+import { fa, groupCard, latin, toman } from '../../lib/format';
+import { message } from '../../lib/messages';
+import { Field, Notice } from '../../lib/ui';
+import { useLoad } from '../session';
+import { Skeleton, Title } from '../parts';
+
+interface Store {
+  store_name: string; tagline: string; phone: string; email: string; address: string; postal_code: string; hours: string;
+  instagram: string; owner_mobile: string; shipping_post_rial: number; shipping_tipax_rial: number; post_days: string;
+  tipax_days: string; payment_minutes: number; reminder_minutes: number; return_days: number; enamad_html: string;
+}
+interface Product { name: string; subtitle: string; description: string; price_rial: number; is_available: boolean; specs: [string, string][] }
+interface Card { id: number; bank: string; number: string; holder: string; active: boolean }
+
+/** A toman input stored as rials. */
+function TomanInput({ id, rial, onChange, describedBy }: { id: string; rial: number; onChange: (rial: number) => void; describedBy?: string }) {
+  return (
+    <input id={id} aria-describedby={describedBy} className="input ltr text-right" inputMode="numeric" value={fa(String(Math.floor(rial / 10)))}
+      onChange={(e) => onChange(Number(latin(e.target.value).replace(/\D/g, '') || 0) * 10)} />
+  );
+}
+
+function StoreForm() {
+  const { data, error } = useLoad<{ store: Store; product: Product }>('/api/panel/settings/');
+  const [store, setStore] = useState<Store | null>(null);
+  const [product, setProduct] = useState<Product | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  useEffect(() => {
+    if (data) {
+      setStore(data.store);
+      setProduct(data.product);
+    }
+  }, [data]);
+
+  if (error) return <Notice tone="error">{message(error.error)}</Notice>;
+  if (!store || !product) return <Skeleton rows={6} />;
+
+  const s = <K extends keyof Store>(k: K, v: Store[K]) => { setStore({ ...store, [k]: v }); setStatus('idle'); };
+  const p = <K extends keyof Product>(k: K, v: Product[K]) => { setProduct({ ...product, [k]: v }); setStatus('idle'); };
+  const err = (k: string) => (errors[k] ? message(errors[k]) : undefined);
+
+  async function save(event: FormEvent) {
+    event.preventDefault();
+    if (data && product && product.price_rial !== data.product.price_rial &&
+        !window.confirm(`قیمت از ${toman(data.product.price_rial)} به ${toman(product.price_rial)} تومان تغییر کند؟ سفارش‌های ثبت‌شده با قیمت قبلی می‌مانند.`)) return;
+    setStatus('saving');
+    setErrors({});
+    try {
+      const next = await post<{ store: Store; product: Product }>('/api/panel/settings/', { store, product });
+      setStore(next.store);
+      setProduct(next.product);
+      setStatus('saved');
+    } catch (e) {
+      if (isApiError(e)) setErrors(e.fields ?? {});
+      setStatus('error');
+    }
+  }
+
+  return (
+    <form onSubmit={save} className="grid gap-8">
+      <section className="grid gap-5">
+        <h2 className="text-lg font-bold">کالا</h2>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field label="قیمت (تومان)" error={err('price_rial')} help="برای سفارش‌های تازه. پیشنهاد: قیمت + ارسال زیر ۱۰ میلیون تومان بماند.">
+            {(id, d) => <TomanInput id={id} describedBy={d} rial={product.price_rial} onChange={(v) => p('price_rial', v)} />}
+          </Field>
+          <label className="flex items-center gap-3 self-end min-h-12">
+            <input type="checkbox" className="size-5 accent-[var(--color-ink)]" checked={product.is_available} onChange={(e) => p('is_available', e.target.checked)} />
+            <span className="font-semibold">موجود است (فروش باز)</span>
+          </label>
+          <Field label="نام کالا">{(id) => <input id={id} className="input" value={product.name} onChange={(e) => p('name', e.target.value)} />}</Field>
+          <Field label="توضیح کوتاه">{(id) => <input id={id} className="input" value={product.subtitle} onChange={(e) => p('subtitle', e.target.value)} />}</Field>
+        </div>
+        <fieldset className="grid gap-2">
+          <legend className="label mb-2">مشخصات</legend>
+          {product.specs.map(([label, value], i) => (
+            <div key={i} className="grid grid-cols-[1fr_2fr_auto] gap-2">
+              <input aria-label="عنوان" className="input" value={label} onChange={(e) => p('specs', product.specs.map((row, j) => (j === i ? [e.target.value, row[1]] : row)) as [string, string][])} />
+              <input aria-label="مقدار" className="input" value={value} onChange={(e) => p('specs', product.specs.map((row, j) => (j === i ? [row[0], e.target.value] : row)) as [string, string][])} />
+              <button type="button" className="btn btn-ghost btn-sm !px-3" aria-label="حذف" onClick={() => p('specs', product.specs.filter((_, j) => j !== i))}><Trash size={18} /></button>
+            </div>
+          ))}
+          <button type="button" className="btn btn-ghost btn-sm justify-self-start" onClick={() => p('specs', [...product.specs, ['', '']])}>افزودن ردیف</button>
+        </fieldset>
+      </section>
+
+      <section className="grid gap-5">
+        <h2 className="text-lg font-bold">ارسال و پرداخت</h2>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field label="هزینه پست پیشتاز (تومان)" error={err('shipping_post_rial')}>{(id) => <TomanInput id={id} rial={store.shipping_post_rial} onChange={(v) => s('shipping_post_rial', v)} />}</Field>
+          <Field label="زمان رسیدن با پست">{(id) => <input id={id} className="input" value={store.post_days} onChange={(e) => s('post_days', e.target.value)} />}</Field>
+          <Field label="هزینه تیپاکس (تومان)" error={err('shipping_tipax_rial')}>{(id) => <TomanInput id={id} rial={store.shipping_tipax_rial} onChange={(v) => s('shipping_tipax_rial', v)} />}</Field>
+          <Field label="زمان رسیدن با تیپاکس">{(id) => <input id={id} className="input" value={store.tipax_days} onChange={(e) => s('tipax_days', e.target.value)} />}</Field>
+          <Field label="مهلت پرداخت (دقیقه)" error={err('payment_minutes')}>{(id) => <input id={id} className="input ltr text-right" inputMode="numeric" value={fa(store.payment_minutes)} onChange={(e) => s('payment_minutes', Number(latin(e.target.value).replace(/\D/g, '') || 0))} />}</Field>
+          <Field label="یادآوری پرداخت پس از (دقیقه)" error={err('reminder_minutes')}>{(id) => <input id={id} className="input ltr text-right" inputMode="numeric" value={fa(store.reminder_minutes)} onChange={(e) => s('reminder_minutes', Number(latin(e.target.value).replace(/\D/g, '') || 0))} />}</Field>
+          <Field label="مهلت بازگشت (روز کاری)" error={err('return_days')}>{(id) => <input id={id} className="input ltr text-right" inputMode="numeric" value={fa(store.return_days)} onChange={(e) => s('return_days', Number(latin(e.target.value).replace(/\D/g, '') || 0))} />}</Field>
+          <Field label="موبایل مدیر (پیامک سفارش‌ها)" error={err('owner_mobile')}>{(id) => <input id={id} className="input ltr text-right" inputMode="tel" value={store.owner_mobile} onChange={(e) => s('owner_mobile', e.target.value)} />}</Field>
+        </div>
+      </section>
+
+      <section className="grid gap-5">
+        <h2 className="text-lg font-bold">فروشگاه</h2>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field label="نام فروشگاه">{(id) => <input id={id} className="input" value={store.store_name} onChange={(e) => s('store_name', e.target.value)} />}</Field>
+          <Field label="شعار">{(id) => <input id={id} className="input" value={store.tagline} onChange={(e) => s('tagline', e.target.value)} />}</Field>
+          <Field label="تلفن">{(id) => <input id={id} className="input ltr text-right" value={store.phone} onChange={(e) => s('phone', e.target.value)} />}</Field>
+          <Field label="ایمیل">{(id) => <input id={id} className="input ltr" value={store.email} onChange={(e) => s('email', e.target.value)} />}</Field>
+          <Field label="نشانی" className="sm:col-span-2">{(id) => <input id={id} className="input" value={store.address} onChange={(e) => s('address', e.target.value)} />}</Field>
+          <Field label="کد پستی">{(id) => <input id={id} className="input ltr text-right" value={store.postal_code} onChange={(e) => s('postal_code', e.target.value)} />}</Field>
+          <Field label="ساعات پاسخ‌گویی">{(id) => <input id={id} className="input" value={store.hours} onChange={(e) => s('hours', e.target.value)} />}</Field>
+          <Field label="اینستاگرام (بدون @)">{(id) => <input id={id} className="input ltr" value={store.instagram} onChange={(e) => s('instagram', e.target.value)} />}</Field>
+          <Field label="کد نماد اعتماد" help="کد را همان‌طور که اینماد داده بچسبانید." className="sm:col-span-2">
+            {(id, d) => <textarea id={id} aria-describedby={d} className="input ltr min-h-24 font-mono text-sm" value={store.enamad_html} onChange={(e) => s('enamad_html', e.target.value)} />}
+          </Field>
+        </div>
+      </section>
+
+      <div className="sticky bottom-20 md:bottom-4 flex items-center gap-4 rounded-full bg-raised/95 backdrop-blur border border-line p-2 ps-4 w-fit shadow-[0_10px_30px_rgba(23,24,27,0.08)]">
+        <span className="text-sm text-muted" aria-live="polite">{status === 'saved' ? 'ذخیره شد' : status === 'error' ? message('fields') : ''}</span>
+        <button type="submit" className="btn btn-primary" disabled={status === 'saving'}>{status === 'saving' ? 'در حال ذخیره…' : 'ذخیره'}</button>
+      </div>
+    </form>
+  );
+}
+
+function Cards() {
+  const { data, setData, error } = useLoad<{ cards: Card[] }>('/api/panel/cards/');
+  const [draft, setDraft] = useState({ bank: '', number: '', holder: '' });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [problem, setProblem] = useState('');
+
+  async function save(body: Record<string, unknown>) {
+    setProblem('');
+    setErrors({});
+    try {
+      setData(await post<{ cards: Card[] }>('/api/panel/cards/', body));
+      return true;
+    } catch (e) {
+      if (isApiError(e)) {
+        setErrors(e.fields ?? {});
+        setProblem(message(e.error));
+      }
+      return false;
+    }
+  }
+
+  return (
+    <section className="grid gap-4">
+      <h2 className="text-lg font-bold">کارت‌های مقصد</h2>
+      <p className="text-ink-soft leading-relaxed -mt-2">هر سفارش به کارتی می‌رود که مدت بیشتری از آخرین استفاده‌اش گذشته. همه کارت‌ها باید به نام صاحب فروشگاه باشند و پیامک واریزشان به گوشی تأیید خودکار برسد.</p>
+      {error && <Notice tone="error">{message(error.error)}</Notice>}
+      <ul className="grid gap-2">
+        {data?.cards.map((card) => (
+          <li key={card.id} className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-field)] border border-line bg-raised p-4">
+            <span className="grid gap-0.5">
+              <span className="font-semibold">{card.bank} · {card.holder}</span>
+              <span className="ltr text-ink-soft">{fa(groupCard(card.number))}</span>
+            </span>
+            <span className="flex items-center gap-2">
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" className="size-4 accent-[var(--color-ink)]" checked={card.active} onChange={(e) => save({ ...card, active: e.target.checked })} /> فعال
+              </label>
+              <button type="button" className="btn btn-ghost btn-sm !px-3" aria-label="حذف کارت"
+                onClick={() => window.confirm('کارت حذف شود؟ (اگر سفارشی به آن خورده، فقط غیرفعال می‌شود.)') && save({ id: card.id, delete: true })}>
+                <Trash size={18} />
+              </button>
+            </span>
+          </li>
+        ))}
+      </ul>
+      <form className="grid gap-3 sm:grid-cols-[1fr_1.4fr_1fr_auto] sm:items-end rounded-[var(--radius-field)] border border-dashed border-line-strong p-4"
+        onSubmit={async (e) => { e.preventDefault(); if (await save({ ...draft, active: true })) setDraft({ bank: '', number: '', holder: '' }); }}>
+        <Field label="بانک" error={errors.bank ? message(errors.bank) : undefined}>{(id) => <input id={id} className="input" value={draft.bank} onChange={(e) => setDraft({ ...draft, bank: e.target.value })} />}</Field>
+        <Field label="شماره کارت" error={errors.number ? message(errors.number) : undefined}>{(id) => <input id={id} className="input ltr" inputMode="numeric" value={draft.number} onChange={(e) => setDraft({ ...draft, number: e.target.value })} />}</Field>
+        <Field label="نام صاحب کارت" error={errors.holder ? message(errors.holder) : undefined}>{(id) => <input id={id} className="input" value={draft.holder} onChange={(e) => setDraft({ ...draft, holder: e.target.value })} />}</Field>
+        <button type="submit" className="btn btn-primary">افزودن</button>
+      </form>
+      {problem && !Object.keys(errors).length && <Notice tone="error">{problem}</Notice>}
+    </section>
+  );
+}
+
+export default function Settings() {
+  return (
+    <>
+      <Title>فروشگاه</Title>
+      <div className="grid gap-12">
+        <Cards />
+        <StoreForm />
+      </div>
+    </>
+  );
+}

@@ -1,0 +1,45 @@
+{% load shop_tags %}<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="robots" content="noindex, nofollow">
+  <title>برگه بسته {{ order.code }}</title>
+  <style>
+    @page { size: A5; margin: 12mm; }
+    body { font-family: Vazirmatn, Tahoma, sans-serif; color: #17181b; margin: 0; line-height: 1.9; }
+    .label { border: 2px solid #17181b; border-radius: 10px; padding: 14px 18px; margin-bottom: 18px; }
+    .label h1 { font-size: 22px; margin: 0 0 4px; }
+    .muted { color: #5f6268; }
+    .ltr { direction: ltr; unicode-bidi: isolate; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    td { padding: 6px 0; border-bottom: 1px solid #d7d7d2; }
+    td:last-child { text-align: left; }
+    .cut { border-top: 1px dashed #bcbcb6; margin: 22px 0; }
+    .print { position: fixed; top: 12px; left: 12px; font: inherit; padding: 6px 16px; }
+    @media print { .print { display: none; } }
+  </style>
+</head>
+<body>
+  <button class="print" onclick="window.print()">چاپ</button>
+  <div class="label">
+    <p class="muted">گیرنده</p>
+    <h1>{{ order.name }}</h1>
+    <p>{{ order.province }}، {{ order.city }}، {{ order.address }}</p>
+    <p>کد پستی: <span class="ltr">{{ order.postal_code }}</span> · موبایل: <span class="ltr">{{ order.phone }}</span></p>
+    <p class="muted">{{ order.get_shipping_display }} · سفارش <span class="ltr">{{ order.code }}</span></p>
+  </div>
+  {% if store.address %}<p class="muted">فرستنده: {{ store.store_name }}، {{ store.address }}{% if store.phone %}، <span class="ltr">{{ store.phone }}</span>{% endif %}</p>{% endif %}
+  <div class="cut"></div>
+  <h2 style="font-size:18px;margin:0">برگه داخل بسته · سفارش <span class="ltr">{{ order.code }}</span></h2>
+  <p class="muted">{{ order.created_at|jalali }}</p>
+  <table>
+    <tr><td>{{ order.product_name }}</td><td>{% if order.is_gift %}۱ عدد{% else %}{{ price }} تومان{% endif %}</td></tr>
+    {% if not order.is_gift %}
+    <tr><td>ارسال ({{ order.get_shipping_display }})</td><td>{{ shipping }} تومان</td></tr>
+    <tr><td><strong>پرداخت‌شده</strong></td><td><strong>{{ total }} تومان</strong></td></tr>
+    {% endif %}
+  </table>
+  {% if order.is_gift %}<p class="muted">این سفارش هدیه است؛ قیمت در این برگه نیامده.</p>{% endif %}
+  <p class="muted">بازگشت کالا تا {{ store.return_days|fa }} روز کاری پس از تحویل، از صفحه سفارش.</p>
+</body>
+</html>

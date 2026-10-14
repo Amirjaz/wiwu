@@ -1,0 +1,30 @@
+{% extends 'shop/base.html' %}
+{% load vite shop_tags %}
+{% block title %}خرید {{ product.name }} | {{ store.store_name }}{% endblock %}
+{% block head %}<meta name="robots" content="noindex">{% endblock %}
+{% block vite %}{% vite 'src/site.ts' 'src/islands/checkout.tsx' %}{% endblock %}
+{% block header_cta %}{% endblock %}
+
+{% block main %}
+<div class="mx-auto max-w-6xl px-4 sm:px-6 py-8 md:py-14 grid gap-10 lg:grid-cols-[1fr_380px] items-start">
+  <div>
+    <h1 class="text-3xl sm:text-4xl font-extrabold mb-8">خرید</h1>
+    {{ island|json_script:"island-data" }}
+    <div id="checkout-root">
+      <noscript><p class="rounded-[var(--radius-field)] bg-warn-soft text-warn p-4">برای ثبت سفارش، جاوااسکریپت مرورگر را روشن کنید.</p></noscript>
+    </div>
+  </div>
+  <aside class="lg:sticky lg:top-24 rounded-[var(--radius-surface)] bg-surface border border-line p-6 space-y-4" aria-label="سفارش شما">
+    <img src="{% asset 'images/front.webp' %}" alt="" width="844" height="540" class="w-full max-w-[280px] mx-auto h-auto">
+    <div class="flex items-baseline justify-between gap-4">
+      <p class="font-bold">{{ product.name }}</p>
+      <p class="whitespace-nowrap font-bold">{{ price }} <span class="text-muted font-medium text-sm">تومان</span></p>
+    </div>
+    <ul class="space-y-2 text-sm text-ink-soft">
+      <li class="flex gap-2">{% icon 'credit-card' 'mt-0.5 text-muted' %} پرداخت کارت‌به‌کارت{% if card_holder %}، به کارت {{ card_holder }}{% endif %}</li>
+      <li class="flex gap-2">{% icon 'arrow-u-up-left' 'mt-0.5 text-muted' %} {{ store.return_days|fa }} روز کاری فرصت بازگشت</li>
+      <li class="flex gap-2">{% icon 'shield-check' 'mt-0.5 text-muted' %} شماره موبایل فقط برای پیامک‌های همین سفارش</li>
+    </ul>
+  </aside>
+</div>
+{% endblock %}
