@@ -208,7 +208,8 @@ def build(name, faces, texture):
             'normal': (lambda n: (n / np.linalg.norm(n)).round(4).tolist())(led_normal / scale),
         },
     }
-    (OUT / f'{name}.json').write_text(json.dumps(side))
+    (OUT / f'{name}.json').write_text(json.dumps(side), newline='
+')
     print(f'{final.name}: {final.stat().st_size / 1024:.0f} KB; {side}')
 
 
