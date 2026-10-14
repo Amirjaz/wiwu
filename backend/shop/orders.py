@@ -59,7 +59,7 @@ def _hash(phone, code):
 
 
 def send_otp(phone, ip):
-    """Text a 5-digit code to phone; returns seconds until another may be asked for."""
+    """Text a 5-digit code to phone; returns (seconds until another may be asked for, the code)."""
     now = timezone.now()
     recent = OtpCode.objects.filter(phone=phone, created_at__gte=now - timedelta(hours=1))
     last = recent.order_by('-created_at').first()
@@ -73,7 +73,7 @@ def send_otp(phone, ip):
     OtpCode.objects.create(phone=phone, code_hash=_hash(phone, code), ip=ip)
     if not sms.send('otp', phone, code=code):
         raise OrderError('sms_failed')
-    return int(OTP_GAP.total_seconds())
+    return int(OTP_GAP.total_seconds()), code
 
 
 def check_otp(phone, code):

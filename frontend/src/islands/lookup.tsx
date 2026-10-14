@@ -23,6 +23,7 @@ function Lookup({ devSms }: { devSms: boolean }) {
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState('');
   const [resendIn, setResendIn] = useState(0);
+  const [devCode, setDevCode] = useState('');
 
   useEffect(() => {
     if (resendIn <= 0) return;
@@ -39,8 +40,9 @@ function Lookup({ devSms }: { devSms: boolean }) {
     }
     setBusy(true);
     try {
-      const result = await post<{ wait: number }>('/api/otp/', { phone });
+      const result = await post<{ wait: number; dev_code?: string }>('/api/otp/', { phone });
       setResendIn(result.wait);
+      setDevCode(result.dev_code ?? '');
       setStep('code');
     } catch (err) {
       if (isApiError(err) && err.error === 'otp_wait' && err.wait) {
@@ -95,7 +97,7 @@ function Lookup({ devSms }: { devSms: boolean }) {
   if (step === 'code') {
     return (
       <form onSubmit={check} className="grid gap-5" noValidate>
-        <Field label="کد تأیید" error={problem || undefined} help={devSms ? 'محیط آزمایشی: کد در ترمینال سرور چاپ می‌شود.' : `به ${fa(cleanPhone(phone) ?? '')} پیامک شد.`}>
+        <Field label="کد تأیید" error={problem || undefined} help={devSms ? `محیط آزمایشی، پیامکی فرستاده نمی‌شود. کد: ${devCode || 'در ترمینال سرور'}` : `به ${fa(cleanPhone(phone) ?? '')} پیامک شد.`}>
           {(id, d) => (
             <input id={id} aria-describedby={d} aria-invalid={!!problem} autoFocus className="input ltr text-center text-2xl font-bold tracking-[0.5em] max-w-56"
               inputMode="numeric" autoComplete="one-time-code" maxLength={5} value={code}

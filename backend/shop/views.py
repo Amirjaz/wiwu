@@ -160,10 +160,13 @@ def api_otp(request):
     if not phone:
         return _error('phone')
     try:
-        wait = orders.send_otp(phone, _ip(request))
+        wait, code = orders.send_otp(phone, _ip(request))
     except OrderError as exc:
         return _error(exc.code, 429 if exc.code in ('otp_wait', 'otp_limit') else 400, **exc.extra)
-    return JsonResponse({'ok': True, 'phone': phone, 'wait': wait})
+    data = {'ok': True, 'phone': phone, 'wait': wait}
+    if settings.DEBUG and settings.SMS_BACKEND == 'console':
+        data['dev_code'] = code  # local development only: no SMS is sent, so show the code
+    return JsonResponse(data)
 
 
 def _clean_checkout(data):

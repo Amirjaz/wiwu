@@ -75,6 +75,7 @@ function Checkout({ data }: { data: Data }) {
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState('');
   const [resendIn, setResendIn] = useState(0);
+  const [devCode, setDevCode] = useState('');
   const codeInput = useRef<HTMLInputElement>(null);
 
   const shipping = data.shipping.find((s) => s.id === form.shipping) ?? data.shipping[0];
@@ -107,8 +108,9 @@ function Checkout({ data }: { data: Data }) {
     }
     setBusy(true);
     try {
-      const result = await post<{ wait: number }>('/api/otp/', { phone: form.phone });
+      const result = await post<{ wait: number; dev_code?: string }>('/api/otp/', { phone: form.phone });
       setResendIn(result.wait);
+      setDevCode(result.dev_code ?? '');
       setStep('code');
     } catch (err) {
       if (isApiError(err)) {
@@ -161,7 +163,7 @@ function Checkout({ data }: { data: Data }) {
         <p className="text-lg leading-relaxed">
           کد ۵ رقمی به <span className="ltr font-bold">{fa(cleanPhone(form.phone) ?? form.phone)}</span> پیامک شد.
         </p>
-        <Field label="کد تأیید" error={problem || undefined} help={data.dev_sms ? 'محیط آزمایشی: کد در ترمینال سرور چاپ می‌شود.' : undefined}>
+        <Field label="کد تأیید" error={problem || undefined} help={data.dev_sms ? `محیط آزمایشی، پیامکی فرستاده نمی‌شود. کد: ${devCode || 'در ترمینال سرور'}` : undefined}>
           {(id, describedBy) => (
             <input
               ref={codeInput}
