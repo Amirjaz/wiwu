@@ -18,8 +18,9 @@ function PageEditor({ page, onSaved }: { page: PageItem; onSaved: (t: Texts) => 
   const dirty = title !== page.title || body !== page.body;
   return (
     <details className="rounded-[var(--radius-field)] border border-line bg-raised">
-      <summary className="cursor-pointer p-4 font-semibold">{page.title} <a href={`/p/${page.slug}/`} target="_blank" rel="noopener" className="text-sm font-normal text-muted underline">دیدن</a></summary>
+      <summary className="cursor-pointer p-4 font-semibold">{page.title}</summary>
       <div className="grid gap-4 px-4 pb-4">
+        <a href={`/p/${page.slug}/`} target="_blank" rel="noopener" className="text-sm text-ink-soft underline w-fit">دیدن صفحه در سایت</a>
         <Field label="عنوان">{(id) => <input id={id} className="input" value={title} onChange={(e) => { setTitle(e.target.value); setState('idle'); }} />}</Field>
         <Field label="متن" help={MARKUP_HELP}>{(id, d) => <textarea id={id} aria-describedby={d} className="input min-h-72 leading-relaxed" value={body} onChange={(e) => { setBody(e.target.value); setState('idle'); }} />}</Field>
         <div className="flex items-center gap-3">
