@@ -188,8 +188,7 @@ def main():
         cams[name] = fit_view(mesh, name, mask_small)
         overlay(mesh, name, cams[name])
     (OUT / 'cameras.json').write_text(json.dumps({'width': W, 'height': H, 'shape': SHAPE.name, 'cameras': cams},
-                                                 indent=1), newline='
-')
+                                                 indent=1), newline='\n')
 
 
 if __name__ == '__main__':
