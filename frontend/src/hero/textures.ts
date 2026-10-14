@@ -1,5 +1,5 @@
-// Normal maps drawn in the browser instead of downloaded: the pebble grain of the PU leather and the
-// bumps of the zipper teeth. Both tile seamlessly (the models' UVs repeat every 4 cm).
+// The leather grain's normal map, drawn in the browser instead of downloaded. It tiles seamlessly;
+// the model's .json says how often it repeats across the texture atlas (one tile = 4 cm).
 import { CanvasTexture, LinearFilter, LinearMipmapLinearFilter, NoColorSpace, RepeatWrapping, type Texture } from 'three';
 
 function hash(x: number, y: number, seed: number): number {
@@ -72,18 +72,4 @@ export function pebbleNormalMap(size = 512, cells = 26): Texture {
     }
   }
   return toNormalMap(height, size, 2.2);
-}
-
-/** Zipper teeth: a grid of small rounded bumps (they read as teeth whichever way the zipper runs). */
-export function teethNormalMap(size = 256, rows = 14): Texture {
-  const height = new Float32Array(size * size);
-  const period = size / rows;
-  for (let y = 0; y < size; y++) {
-    for (let x = 0; x < size; x++) {
-      const u = ((x % period) / period) * 2 - 1;
-      const v = ((y % period) / period) * 2 - 1;
-      height[y * size + x] = Math.max(0, 1 - Math.max(Math.abs(u) * 1.15, Math.abs(v) * 1.6)) ** 0.5;
-    }
-  }
-  return toNormalMap(height, size, 3);
 }

@@ -19,14 +19,14 @@ The tour: the bag stays pinned (beside the text on desktop, on top on phones) wh
 past. The first stop is the hero. Each stop has its photo; on capable devices the 3D bag
 (islands/hero.ts) replaces the photos and turns to each stop.
 {% endcomment %}
-<section id="tour" class="mx-auto max-w-6xl px-4 sm:px-6 grid md:grid-cols-[1fr_1.15fr] md:gap-x-12">
-  <div class="order-first md:order-last sticky top-16 z-10 -mx-4 sm:-mx-6 md:mx-0 h-[38dvh] md:h-[calc(100dvh-4rem)] md:self-start bg-page">
+<section id="tour" class="mx-auto max-w-7xl px-4 sm:px-6 grid md:grid-cols-[0.8fr_1.35fr] md:gap-x-12">
+  <div class="order-first md:order-last sticky top-16 z-10 -mx-4 sm:-mx-6 md:mx-0 h-[46dvh] md:h-[calc(100dvh-4rem)] md:self-start bg-page">
     <div data-hero-stage data-model="{% asset 'models/alpha.glb' %}" data-model-small="{% asset 'models/alpha-mobile.glb' %}" class="relative size-full rise" style="--i:1">
-      <img data-poster="0 4" src="{% asset 'images/front.webp' %}" alt="کیف دستی آلفا از روبه‌رو، مشکی با زیپ فلزی و پلاک کوچک برند" width="844" height="540" fetchpriority="high"
-           class="absolute inset-0 m-auto max-h-full max-w-full object-contain p-6 md:p-10 transition-opacity duration-500 drop-shadow-[0_30px_40px_rgba(23,24,27,0.18)]">
+      <img data-poster="0" src="{% asset 'images/front.webp' %}" alt="کیف دستی آلفا از روبه‌رو، مشکی با زیپ فلزی و پلاک کوچک برند" width="844" height="540" fetchpriority="high"
+           class="absolute inset-0 m-auto max-h-full max-w-full object-contain p-3 md:p-4 transition-opacity duration-500 drop-shadow-[0_30px_40px_rgba(23,24,27,0.18)]">
       <img data-poster="1" src="{% asset 'images/side.webp' %}" alt="کنار کیف با ماژول قفل اثر انگشت" width="422" height="757" loading="lazy"
            class="absolute inset-0 m-auto max-h-full max-w-full object-contain p-6 md:p-16 opacity-0 transition-opacity duration-500 drop-shadow-[0_24px_32px_rgba(23,24,27,0.16)]">
-      <img data-poster="2 3" src="{% asset 'images/back.webp' %}" alt="پشت کیف با جیب زیپ‌دار و بند مچی" width="897" height="642" loading="lazy"
+      <img data-poster="2 3 4" src="{% asset 'images/back.webp' %}" alt="پشت کیف با جیب زیپ‌دار و بند مچی" width="897" height="642" loading="lazy"
            class="absolute inset-0 m-auto max-h-full max-w-full object-contain p-6 md:p-10 opacity-0 transition-opacity duration-500 drop-shadow-[0_24px_32px_rgba(23,24,27,0.16)]">
       <div data-hotspots class="hidden absolute inset-0 z-10 pointer-events-none transition-opacity duration-300">
         {% for id, label, note in hotspots %}
@@ -48,8 +48,8 @@ past. The first stop is the hero. Each stop has its photo; on capable devices th
   </div>
 
   <div>
-    <div data-stop="0" class="flex flex-col justify-center gap-6 py-8 min-h-[calc(62dvh-4rem)] md:min-h-[calc(100dvh-4rem)]">
-      <h1 class="rise text-[2rem] leading-[1.3] sm:text-5xl lg:text-6xl font-black sm:leading-[1.25]" style="--i:0">فقط با اثر انگشت شما باز می‌شود.</h1>
+    <div data-stop="0" class="flex flex-col justify-center gap-6 py-6 md:py-8 min-h-[calc(54dvh-4rem)] md:min-h-[calc(100dvh-4rem)]">
+      <h1 class="rise text-[1.85rem] leading-[1.3] sm:text-5xl lg:text-[3.35rem] font-black sm:leading-[1.25]" style="--i:0">فقط با اثر انگشت شما باز می‌شود.</h1>
       <p class="rise text-lg sm:text-xl text-ink-soft leading-relaxed max-w-[34ch]" style="--i:1">کیف دستی آلفا با قفل اثر انگشت؛ جای امنی برای کارت، مدارک و گوشی، هر جا که می‌روید.</p>
       <div class="rise flex flex-wrap items-center gap-x-5 gap-y-4" style="--i:2">
         {% if product.is_available %}

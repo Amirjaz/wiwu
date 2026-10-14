@@ -285,3 +285,6 @@ poor, phase 3 grows toward the top of its range.
   were unusable or out of free quota); materials, grain and the sensor are made in the browser instead
   of Blender. Hero and scroll tour are one pinned section with photo fallbacks. See README.md.
 
+- **3D model from the photos** (2026-10-14): the three photos are projected onto the AI shape (cameras
+  fitted per photo), so front, back, top and the lock end with its sensor look like the real bag; the
+  bottom and the far end have no photo yet. Bigger bag in the hero. See README.md, "The 3D hero".

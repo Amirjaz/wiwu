@@ -90,18 +90,33 @@ The home page opens with a tour: the bag stays pinned (beside the text on deskto
 while five stops scroll past: the hero, the lock, the back pocket, the wrist strap, the leather. Each
 stop has a photo, so it all works without 3D. After the page has loaded, devices with WebGL2 (and
 no data saver, 2 GB+ memory) get the 3D bag instead: plain three.js, loaded as a separate chunk
-(158 KB gzipped) plus the model (`public/models/alpha.glb` 650 KB, `alpha-mobile.glb` 280 KB).
+(158 KB gzipped) plus the model (`public/models/alpha.glb` 755 KB, `alpha-mobile.glb` 320 KB).
 At the hero people can drag it (sideways on phones; vertical swipes still scroll) and open three
 hotspots (text in `views.HOTSPOTS`); further down the camera moves to each stop. The fingerprint
 sensor's light turns green at the lock stop. Reduced motion: no turning by itself, no camera glides.
 
-The model: Hunyuan3D-2mv made the shape from the three photos (`media/3d/ai/`, compared in
-`previews/contact-sheet.jpg`; textured AI results were unusable). `tools/build_model.py` cleans and
-decimates it, fixes its proportions to 25 x 15.5 x 6.5 cm, splits it into leather, zipper tape,
-zipper teeth and gunmetal parts by position, adds UVs and compresses it (meshopt). The leather grain
-and the teeth are drawn by the page (`hero/textures.ts`), the sensor is added on the lock's face.
-Rebuild with the 3D venv: `python tools/build_model.py`. A cleaner model (sharper hardware edges, a
-real logo) is a Blender job for later; the page only needs the four part names to stay.
+The model looks like the client's bag because it is wrapped in their photos:
+
+1. **Shape**: Hunyuan3D-2mv made it from the three photos (`media/3d/ai/`, compared in
+   `previews/contact-sheet.jpg`; the textured AI results were unusable).
+2. **Masks** (`tools/photo_masks.py`, rembg): which pixels of each photo are bag → `media/3d/photos/`.
+3. **Cameras** (`tools/fit_cameras.py`): where the phone was for each photo, from features marked on
+   both photo and shape (snap, pocket pull, logo plate corners, lock module, sensor) and then refined
+   until the shape's outline matches the photo's (outline overlap 0.95–0.98) → `media/3d/cameras.json`,
+   overlays in `media/3d/fit/`.
+4. **Model** (`tools/build_model.py` + `tools/bake.py`): cleans and decimates the shape, unwraps it
+   (xatlas), projects the photos onto it (each texel from the photos that see it head-on and unblocked,
+   colour-matched so they blend), sorts faces into leather / zipper / metal parts, fixes the proportions
+   to 25 x 15.5 x 6.5 cm and compresses it (meshopt, JPEG texture): `alpha.glb` 755 KB,
+   `alpha-mobile.glb` 320 KB. The `.json` beside each says where the sensor's status light is (from
+   the side photo) and how often the page's faint leather grain repeats.
+
+The front, back, top and lock end (with the real sensor) come from the photos. **The bottom and the
+far end are in no photo**, so they get plain black leather; photos of those sides (and a sharper one
+of the front) would make them exact: add them to the masks and cameras and rebuild. Rebuild:
+`python tools/photo_masks.py` (rembg venv), then `python tools/fit_cameras.py` and
+`python tools/build_model.py` (the 3D venv: numpy, scipy, opencv-python-headless, trimesh,
+fast-simplification, xatlas).
 
 ## Pages and SEO
 
@@ -126,7 +141,7 @@ transfer screenshots are in `backend/private/`, never served by nginx, only thro
 
 ## Still to do
 
-- The 3D model's hardware edges are jagged where parts meet (triangle-level split); a Blender pass would
-  sharpen them and add the WiWU plate's logo.
+- The 3D model: photos of the bottom and the far end (no photo shows them yet) and a sharper front
+  photo would make every side exact (README, "The 3D hero").
 - cartbecart: finish `payments.py` with their docs.
 - The client's answers (PLAN.md §11): name, domain, cards, SMS account, Enamad details, specs, warranty.

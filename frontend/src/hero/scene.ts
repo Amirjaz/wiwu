@@ -1,15 +1,21 @@
 // The bag in 3D: a studio scene, drag to turn it, hotspots, and a camera that moves to each stop of
 // the scroll tour. Loaded only when the device can take it (see islands/hero.ts).
 import {
-  ACESFilmicToneMapping, BoxGeometry, Color, DirectionalLight, Group, Mesh, MeshBasicMaterial, MeshPhysicalMaterial,
-  MeshStandardMaterial, PCFSoftShadowMap, PerspectiveCamera, PlaneGeometry, PMREMGenerator, Raycaster, Scene,
-  ShadowMaterial, SRGBColorSpace, Vector2, Vector3, WebGLRenderer, type Material, type Object3D,
+  AdditiveBlending, BoxGeometry, CanvasTexture, Color, DirectionalLight, Group, Mesh, MeshBasicMaterial,
+  MeshPhysicalMaterial, MeshStandardMaterial, NeutralToneMapping, PCFSoftShadowMap, PerspectiveCamera, PlaneGeometry,
+  PMREMGenerator, Scene, ShadowMaterial, SRGBColorSpace, Vector2, Vector3, WebGLRenderer, type Material, type Texture,
 } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
-import { pebbleNormalMap, teethNormalMap } from './textures';
+import { pebbleNormalMap } from './textures';
+
+/** What tools/build_model.py writes next to each model. */
+interface ModelInfo {
+  grainRepeat: number;
+  led: { position: [number, number, number]; normal: [number, number, number] } | null;
+}
 
 /** A camera position around a target: azimuth from the front (+z) toward the far end (+x), in degrees.
  *  `frame` is how much (in metres, across) must fit: on narrow screens the camera backs off to fit it. */
@@ -31,11 +37,12 @@ const DEG = Math.PI / 180;
 
 // The bag is 25 x 15.5 x 6.5 cm, resting on y = 0, front facing +z, the lock end at -x.
 export const STOPS: Stop[] = [
-  { az: -48, el: 14, dist: 0.5, frame: 0.33, target: [0, 0.072, 0] }, // the hero: front and the lock end
+  { az: -50, el: 14, dist: 0.3, frame: 0.27, target: [0, 0.072, 0] }, // the hero: front and the lock end
   { az: -80, el: 8, dist: 0.3, frame: 0.15, target: [-0.1, 0.06, 0] }, // the lock
-  { az: 194, el: 12, dist: 0.5, frame: 0.33, target: [0, 0.08, 0] }, // the back pocket
-  { az: 160, el: 22, dist: 0.42, frame: 0.29, target: [-0.01, 0.05, -0.02] }, // the wrist strap
-  { az: 22, el: 30, dist: 0.32, frame: 0.2, target: [0.02, 0.085, 0.02] }, // the leather, in raking light
+  { az: 194, el: 12, dist: 0.3, frame: 0.28, target: [0, 0.08, 0] }, // the back pocket
+  { az: 160, el: 22, dist: 0.3, frame: 0.26, target: [-0.01, 0.05, -0.02] }, // the wrist strap
+  // The leather close-up is on the back: its photo shows the pebbled grain sharply (the front's is soft).
+  { az: 208, el: 26, dist: 0.24, frame: 0.17, target: [0.03, 0.095, -0.02] }, // the leather, in raking light
 ];
 
 export const HOTSPOTS: Hotspot[] = [
@@ -47,7 +54,7 @@ export const HOTSPOTS: Hotspot[] = [
 export class HeroScene {
   private renderer: WebGLRenderer;
   private key!: DirectionalLight;
-  private led: MeshBasicMaterial | null = null;
+  private led: MeshBasicMaterial[] = [];
   private scene = new Scene();
   private camera = new PerspectiveCamera(28, 1, 0.01, 10);
   private controls: OrbitControls;
@@ -68,15 +75,16 @@ export class HeroScene {
     this.renderer = new WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, options.small ? 1.5 : 2));
     this.renderer.outputColorSpace = SRGBColorSpace;
-    this.renderer.toneMapping = ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.05;
+    // Neutral, not filmic: the bag's colours come from the photos and should stay as photographed.
+    this.renderer.toneMapping = NeutralToneMapping;
+    this.renderer.toneMappingExposure = 1.0;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = PCFSoftShadowMap;
     const canvas = this.renderer.domElement;
     canvas.className = 'absolute inset-0 size-full opacity-0 transition-opacity duration-700';
     canvas.setAttribute('aria-hidden', 'true');
     // Fade the canvas out at its edges: a close-up or a long shadow never ends in a hard line.
-    const fade = 'radial-gradient(ellipse 72% 70% at 50% 50%, #000 62%, transparent 100%)';
+    const fade = 'radial-gradient(ellipse 50% 50% at 50% 50%, #000 80%, transparent 100%)';
     canvas.style.maskImage = fade;
     canvas.style.webkitMaskImage = fade;
     container.appendChild(canvas);
@@ -105,7 +113,7 @@ export class HeroScene {
     this.controls = new OrbitControls(this.camera, canvas);
     Object.assign(this.controls, {
       enableDamping: true, dampingFactor: 0.08, enablePan: false, rotateSpeed: 0.7,
-      minDistance: 0.36, maxDistance: 0.85, minPolarAngle: 20 * DEG, maxPolarAngle: 88 * DEG,
+      minDistance: 0.28, maxDistance: 0.85, minPolarAngle: 20 * DEG, maxPolarAngle: 88 * DEG,
       autoRotate: !options.reducedMotion, autoRotateSpeed: -0.6,
     });
     // Vertical swipes keep scrolling the page; sideways ones turn the bag. No pinch-zoom on phones.
@@ -120,18 +128,32 @@ export class HeroScene {
     this.place(this.current);
   }
 
+  /** url: the .glb; its .json sidecar sits next to it. */
   async load(url: string): Promise<void> {
     const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
-    const gltf = await loader.loadAsync(url);
+    const [gltf, info] = await Promise.all([
+      loader.loadAsync(url),
+      fetch(url.replace(/[.]glb$/, '.json'))
+        .then((r) => (r.ok ? (r.json() as Promise<ModelInfo>) : null))
+        .catch(() => null),
+    ]);
+    // The colour is the photos', baked into one texture all parts share. The parts only differ in how
+    // they take the studio light; a faint grain makes highlights break up like on real pebbled PU.
+    let photo: Texture | null = null;
+    gltf.scene.traverse((node) => {
+      if (!photo && node instanceof Mesh) photo = (node.material as MeshStandardMaterial).map;
+    });
     const grain = pebbleNormalMap(this.options.small ? 256 : 512);
+    const repeat = info?.grainRepeat ?? 10;
+    grain.repeat.set(repeat, repeat);
     const materials: Record<string, Material> = {
       leather: new MeshPhysicalMaterial({
-        color: '#1b1c1f', roughness: 0.58, normalMap: grain, normalScale: new Vector2(0.45, 0.45),
-        clearcoat: 0.22, clearcoatRoughness: 0.55, sheen: 0.35, sheenRoughness: 0.7, sheenColor: new Color('#6c7280'),
+        map: photo, roughness: 0.62, normalMap: grain, normalScale: new Vector2(0.16, 0.16),
+        clearcoat: 0.12, clearcoatRoughness: 0.6,
       }),
-      tape: new MeshStandardMaterial({ color: '#121315', roughness: 0.92 }),
-      teeth: new MeshStandardMaterial({ color: '#3d3e42', metalness: 0.8, roughness: 0.45, normalMap: teethNormalMap(), normalScale: new Vector2(0.45, 0.45) }),
-      metal: new MeshStandardMaterial({ color: '#73757b', metalness: 0.9, roughness: 0.45 }),
+      tape: new MeshStandardMaterial({ map: photo, roughness: 0.85 }),
+      teeth: new MeshStandardMaterial({ map: photo, metalness: 0.2, roughness: 0.45 }),
+      metal: new MeshStandardMaterial({ map: photo, metalness: 0.2, roughness: 0.36 }),
     };
     gltf.scene.traverse((node) => {
       if (node instanceof Mesh) {
@@ -142,31 +164,39 @@ export class HeroScene {
       }
     });
     this.scene.add(gltf.scene);
-    this.addSensor(gltf.scene);
+    if (info?.led) this.addStatusLight(info.led.position, info.led.normal);
     this.renderer.render(this.scene, this.camera);
     this.renderer.domElement.classList.remove('opacity-0');
     this.start();
   }
 
-  /** The fingerprint sensor and its status light: too small and flat for the AI shape to have caught,
-   *  so they're drawn here on the lock module's face (found by casting a ray at it). */
-  private addSensor(model: Object3D) {
-    const centre = new Vector3(-0.2, 0.039, 0);
-    const hit = new Raycaster(centre, new Vector3(1, 0, 0)).intersectObject(model, true)[0];
-    if (!hit) return;
-    const face = hit.point.x - 0.0004;
-    const sensor = new Group();
-    const rim = new Mesh(new BoxGeometry(0.0006, 0.0135, 0.0135),
-      new MeshStandardMaterial({ color: '#b07a5a', metalness: 1, roughness: 0.3 }));
-    const glass = new Mesh(new BoxGeometry(0.0008, 0.011, 0.011),
-      new MeshPhysicalMaterial({ color: '#0b0c0e', roughness: 0.15, clearcoat: 1, clearcoatRoughness: 0.1 }));
-    glass.position.x = -0.0002;
-    this.led = new MeshBasicMaterial({ color: '#2b2d31' });
-    const led = new Mesh(new BoxGeometry(0.0006, 0.0016, 0.008), this.led);
-    led.position.y = 0.0135;
-    sensor.add(rim, glass, led);
-    sensor.position.set(face, centre.y, centre.z);
-    this.scene.add(sensor);
+  /** The fingerprint sensor's status light, where the side photo shows it: dark (the photo's own slit
+   *  shows through) until the tour reaches the lock, then green, like the real lock when it opens. */
+  private addStatusLight(position: [number, number, number], normal: [number, number, number]) {
+    const group = new Group();
+    const at = new Vector3(...position);
+    const n = new Vector3(...normal).normalize();
+    group.position.copy(at).addScaledVector(n, 0.0004);
+    group.lookAt(at.clone().add(n));
+    const bar = new MeshBasicMaterial({ color: '#2fe39a', transparent: true, opacity: 0, depthWrite: false });
+    group.add(new Mesh(new BoxGeometry(0.0052, 0.0009, 0.0002), bar));
+    // A soft halo around it.
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 64;
+    const ctx = canvas.getContext('2d')!;
+    const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+    g.addColorStop(0, 'rgba(60,240,160,0.9)');
+    g.addColorStop(1, 'rgba(60,240,160,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 64, 64);
+    const halo = new MeshBasicMaterial({
+      map: new CanvasTexture(canvas), transparent: true, opacity: 0, blending: AdditiveBlending, depthWrite: false,
+    });
+    const glow = new Mesh(new PlaneGeometry(0.016, 0.008), halo);
+    glow.position.z = 0.0003;
+    group.add(glow);
+    this.led = [bar, halo];
+    this.scene.add(group);
   }
 
   /** Move to a tour stop (0 = the hero, where the user can drag). */
@@ -211,9 +241,8 @@ export class HeroScene {
   }
 
   private update() {
-    if (this.led) {
-      const goal = new Color(this.stop === 1 ? '#19c37d' : '#2b2d31');
-      this.led.color.lerp(goal, 0.08);
+    for (const material of this.led) {
+      material.opacity += ((this.stop === 1 ? 1 : 0) - material.opacity) * 0.08;
     }
     if (this.settled) {
       this.controls.update();
