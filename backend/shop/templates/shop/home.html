@@ -6,6 +6,7 @@
 {% block og_title %}{{ product.name }}{% endblock %}
 {% block og_description %}{{ product.subtitle }}{% endblock %}
 {% block og_type %}product{% endblock %}
+{% block vite %}{% vite 'src/site.ts' 'src/islands/hero.ts' %}{% endblock %}
 {% block head %}
 <link rel="preload" as="image" href="{% asset 'images/front.webp' %}" fetchpriority="high">
 {% for item in jsonld %}<script type="application/ld+json">{{ item|jsonld }}</script>{% endfor %}
@@ -13,84 +14,86 @@
 
 {% block main %}
 
-{# Hero: the bag on the end side, the promise and the buy button on the start side. #}
-<section class="mx-auto max-w-6xl px-4 sm:px-6 pt-4 md:pt-16 pb-16 grid items-center gap-6 md:gap-10 md:grid-cols-[1fr_1.2fr] md:min-h-[calc(88dvh-4rem)]">
-  <div class="order-2 md:order-1 space-y-6">
-    <h1 class="rise text-4xl sm:text-5xl lg:text-6xl font-black leading-[1.25]" style="--i:0">فقط با اثر انگشت شما باز می‌شود.</h1>
-    <p class="rise text-lg sm:text-xl text-ink-soft leading-relaxed max-w-[34ch]" style="--i:1">کیف دستی آلفا با قفل اثر انگشت؛ جای امنی برای کارت، مدارک و گوشی، هر جا که می‌روید.</p>
-    <div class="rise flex flex-wrap items-center gap-x-5 gap-y-4" style="--i:2">
-      {% if product.is_available %}
-      <a href="{% url 'checkout' %}" class="btn btn-primary min-h-14 px-8 text-lg">خرید</a>
-      {% else %}
-      <span class="btn btn-ghost min-h-14 px-8 text-lg" aria-disabled="true">فعلاً موجود نیست</span>
-      {% endif %}
-      <p class="text-xl font-bold">{{ price }} <span class="text-base font-medium text-muted">تومان</span></p>
+{% comment %}
+The tour: the bag stays pinned (beside the text on desktop, on top on phones) while the stops scroll
+past. The first stop is the hero. Each stop has its photo; on capable devices the 3D bag
+(islands/hero.ts) replaces the photos and turns to each stop.
+{% endcomment %}
+<section id="tour" class="mx-auto max-w-6xl px-4 sm:px-6 grid md:grid-cols-[1fr_1.15fr] md:gap-x-12">
+  <div class="order-first md:order-last sticky top-16 z-10 -mx-4 sm:-mx-6 md:mx-0 h-[38dvh] md:h-[calc(100dvh-4rem)] md:self-start bg-page">
+    <div data-hero-stage data-model="{% asset 'models/alpha.glb' %}" data-model-small="{% asset 'models/alpha-mobile.glb' %}" class="relative size-full rise" style="--i:1">
+      <img data-poster="0 4" src="{% asset 'images/front.webp' %}" alt="کیف دستی آلفا از روبه‌رو، مشکی با زیپ فلزی و پلاک کوچک برند" width="844" height="540" fetchpriority="high"
+           class="absolute inset-0 m-auto max-h-full max-w-full object-contain p-6 md:p-10 transition-opacity duration-500 drop-shadow-[0_30px_40px_rgba(23,24,27,0.18)]">
+      <img data-poster="1" src="{% asset 'images/side.webp' %}" alt="کنار کیف با ماژول قفل اثر انگشت" width="422" height="757" loading="lazy"
+           class="absolute inset-0 m-auto max-h-full max-w-full object-contain p-6 md:p-16 opacity-0 transition-opacity duration-500 drop-shadow-[0_24px_32px_rgba(23,24,27,0.16)]">
+      <img data-poster="2 3" src="{% asset 'images/back.webp' %}" alt="پشت کیف با جیب زیپ‌دار و بند مچی" width="897" height="642" loading="lazy"
+           class="absolute inset-0 m-auto max-h-full max-w-full object-contain p-6 md:p-10 opacity-0 transition-opacity duration-500 drop-shadow-[0_24px_32px_rgba(23,24,27,0.16)]">
+      <div data-hotspots class="hidden absolute inset-0 z-10 pointer-events-none transition-opacity duration-300">
+        {% for id, label, note in hotspots %}
+        <button type="button" data-hotspot="{{ id }}" aria-expanded="false" hidden
+                class="group absolute top-0 left-0 pointer-events-auto -translate-x-1/2 -translate-y-1/2">
+          <span class="absolute -inset-3" aria-hidden="true"></span>
+          <span class="relative grid size-7 place-items-center rounded-full bg-raised/90 shadow-[0_2px_10px_rgba(23,24,27,0.25)] ring-1 ring-ink/10">
+            <span class="size-2 rounded-full bg-accent"></span>
+          </span>
+          <span class="sr-only">{{ label }}</span>
+          <span class="pointer-events-none absolute top-9 left-1/2 -translate-x-1/2 w-52 rounded-[var(--radius-field)] bg-ink px-3 py-2 text-start text-sm leading-relaxed text-raised opacity-0 transition-opacity group-aria-expanded:opacity-100">
+            <strong class="block">{{ label }}</strong>{{ note }}
+          </span>
+        </button>
+        {% endfor %}
+      </div>
+      <p data-drag-hint class="hidden absolute bottom-3 md:bottom-[14%] inset-x-0 text-center text-sm text-muted transition-opacity duration-300 pointer-events-none">برای چرخاندن، بکشید</p>
     </div>
   </div>
-  <div class="order-1 md:order-2 relative rise" style="--i:1">
-    <div class="absolute inset-x-6 bottom-6 h-10 rounded-[50%] bg-ink/25 blur-2xl" aria-hidden="true"></div>
-    <img src="{% asset 'images/front.webp' %}" alt="کیف دستی آلفا از روبه‌رو، مشکی با زیپ فلزی و پلاک کوچک برند" width="844" height="540"
-         class="relative mx-auto w-auto max-h-[32dvh] md:max-h-none md:w-full h-auto drop-shadow-[0_30px_40px_rgba(23,24,27,0.18)]" fetchpriority="high">
-  </div>
-</section>
 
-{# The lock: one big image, three facts. #}
-<section id="lock" class="scroll-mt-20 bg-surface border-y border-line">
-  <div class="mx-auto max-w-6xl px-4 sm:px-6 py-20 md:py-28 grid gap-12 md:grid-cols-[0.8fr_1.2fr] items-center">
-    <div class="reveal flex justify-center">
-      <img src="{% asset 'images/side.webp' %}" alt="کنار کیف با ماژول قفل اثر انگشت و حسگر مربعی" width="422" height="757" loading="lazy"
-           class="w-auto max-h-[460px] drop-shadow-[0_24px_32px_rgba(23,24,27,0.16)]">
+  <div>
+    <div data-stop="0" class="flex flex-col justify-center gap-6 py-8 min-h-[calc(62dvh-4rem)] md:min-h-[calc(100dvh-4rem)]">
+      <h1 class="rise text-[2rem] leading-[1.3] sm:text-5xl lg:text-6xl font-black sm:leading-[1.25]" style="--i:0">فقط با اثر انگشت شما باز می‌شود.</h1>
+      <p class="rise text-lg sm:text-xl text-ink-soft leading-relaxed max-w-[34ch]" style="--i:1">کیف دستی آلفا با قفل اثر انگشت؛ جای امنی برای کارت، مدارک و گوشی، هر جا که می‌روید.</p>
+      <div class="rise flex flex-wrap items-center gap-x-5 gap-y-4" style="--i:2">
+        {% if product.is_available %}
+        <a href="{% url 'checkout' %}" class="btn btn-primary min-h-14 px-8 text-lg">خرید</a>
+        {% else %}
+        <span class="btn btn-ghost min-h-14 px-8 text-lg" aria-disabled="true">فعلاً موجود نیست</span>
+        {% endif %}
+        <p class="text-xl font-bold">{{ price }} <span class="text-base font-medium text-muted">تومان</span></p>
+      </div>
     </div>
-    <div class="space-y-10">
+
+    <div data-stop="1" id="lock" class="scroll-mt-[45dvh] md:scroll-mt-24 flex flex-col justify-center gap-8 py-16 min-h-[70dvh] md:min-h-[85dvh]">
       <div class="reveal space-y-4">
         <p class="inline-flex items-center gap-2 text-accent-ink font-semibold">{% icon 'fingerprint' 'size-6' %} قفل اثر انگشت</p>
         <h2 class="text-3xl sm:text-4xl font-extrabold leading-snug">کلید این قفل همیشه همراه شماست.</h2>
-        <p class="text-lg text-ink-soft leading-relaxed max-w-[52ch]">انگشتتان را روی حسگر بگذارید، چراغ سبز می‌شود و زیپ باز است. بدون رمز، بدون کلیدی که گم شود.</p>
+        <p class="text-lg text-ink-soft leading-relaxed max-w-[48ch]">انگشتتان را روی حسگر بگذارید، چراغ سبز می‌شود و زیپ باز است. بدون رمز، بدون کلیدی که گم شود.</p>
       </div>
       <dl class="reveal grid grid-cols-3 gap-4 sm:gap-8">
-        <div class="space-y-1">
-          <dt class="text-muted text-sm sm:text-base">اثر انگشت</dt>
-          <dd class="text-3xl sm:text-5xl font-black">۱۰</dd>
-        </div>
-        <div class="space-y-1">
-          <dt class="text-muted text-sm sm:text-base">تا باز شدن</dt>
-          <dd class="text-3xl sm:text-5xl font-black">نیم <span class="text-xl sm:text-2xl font-bold">ثانیه</span></dd>
-        </div>
-        <div class="space-y-1">
-          <dt class="text-muted text-sm sm:text-base">شارژ قفل</dt>
-          <dd class="text-3xl sm:text-5xl font-black"><span class="ltr">USB-C</span></dd>
-        </div>
+        <div class="space-y-1"><dt class="text-muted text-sm sm:text-base">اثر انگشت</dt><dd class="text-3xl sm:text-5xl font-black">۱۰</dd></div>
+        <div class="space-y-1"><dt class="text-muted text-sm sm:text-base">تا باز شدن</dt><dd class="text-3xl sm:text-5xl font-black">نیم <span class="text-xl sm:text-2xl font-bold">ثانیه</span></dd></div>
+        <div class="space-y-1"><dt class="text-muted text-sm sm:text-base">شارژ قفل</dt><dd class="text-3xl sm:text-5xl font-black whitespace-nowrap"><span class="ltr">USB-C</span></dd></div>
       </dl>
     </div>
-  </div>
-</section>
 
-{# Everyday details: an asymmetric grid, one big image cell, two smaller ones. #}
-<section id="features" class="scroll-mt-20 mx-auto max-w-6xl px-4 sm:px-6 py-20 md:py-28">
-  <h2 class="reveal text-3xl sm:text-4xl font-extrabold mb-10">برای هر روز ساخته شده.</h2>
-  <div class="grid gap-4 md:grid-cols-[1.35fr_1fr] md:grid-rows-2">
-    <article class="reveal md:row-span-2 rounded-[var(--radius-surface)] bg-surface border border-line overflow-hidden flex flex-col">
-      <div class="p-6 sm:p-8 space-y-2">
-        <h3 class="text-xl font-bold">جیب زیپ‌دار پشت</h3>
-        <p class="text-ink-soft leading-relaxed max-w-[44ch]">برای چیزهایی که زود به آن‌ها نیاز دارید: کارت مترو، بلیت، رسید. بی‌آنکه قفل اصلی را باز کنید.</p>
+    <div data-stop="2" id="features" class="scroll-mt-[45dvh] md:scroll-mt-24 flex flex-col justify-center py-16 min-h-[60dvh] md:min-h-[75dvh]">
+      <div class="reveal space-y-4">
+        <h2 class="text-3xl sm:text-4xl font-extrabold leading-snug">جیب زیپ‌دار پشت</h2>
+        <p class="text-lg text-ink-soft leading-relaxed max-w-[44ch]">برای چیزهایی که زود به آن‌ها نیاز دارید: کارت مترو، بلیت، رسید. بی‌آنکه قفل اصلی را باز کنید.</p>
       </div>
-      <img src="{% asset 'images/back.webp' %}" alt="پشت کیف با جیب زیپ‌دار و بند مچی" width="897" height="642" loading="lazy"
-           class="mt-auto w-full h-auto px-4 pb-4">
-    </article>
-    <article class="reveal rounded-[var(--radius-surface)] bg-ink text-raised overflow-hidden grid grid-cols-[1fr_auto] items-end">
-      <div class="p-6 sm:p-8 space-y-2">
-        {% icon 'hand-grabbing' 'size-7 text-accent-soft' %}
-        <h3 class="text-xl font-bold">بند مچی</h3>
-        <p class="text-raised/75 leading-relaxed">بند پشت کیف با دکمه فلزی بسته می‌شود تا کیف از دستتان سُر نخورد.</p>
+    </div>
+
+    <div data-stop="3" class="flex flex-col justify-center py-16 min-h-[60dvh] md:min-h-[75dvh]">
+      <div class="reveal space-y-4">
+        <h2 class="text-3xl sm:text-4xl font-extrabold leading-snug">بند مچی</h2>
+        <p class="text-lg text-ink-soft leading-relaxed max-w-[44ch]">بند پشت کیف با دکمه فلزی بسته می‌شود تا کیف از دستتان سُر نخورد.</p>
       </div>
-    </article>
-    <article class="reveal rounded-[var(--radius-surface)] bg-accent-soft overflow-hidden">
-      <div class="p-6 sm:p-8 space-y-2">
-        {% icon 'drop' 'size-7 text-accent-ink' %}
-        <h3 class="text-xl font-bold">چرم مصنوعی مقاوم</h3>
-        <p class="text-ink-soft leading-relaxed">بدنه PU در برابر آب و خط و خش مقاوم است و با یک دستمال تمیز می‌شود.</p>
+    </div>
+
+    <div data-stop="4" class="flex flex-col justify-center py-16 min-h-[60dvh] md:min-h-[85dvh]">
+      <div class="reveal space-y-4">
+        <h2 class="text-3xl sm:text-4xl font-extrabold leading-snug">چرم مصنوعی مقاوم</h2>
+        <p class="text-lg text-ink-soft leading-relaxed max-w-[44ch]">بدنه PU در برابر آب و خط و خش مقاوم است و با یک دستمال تمیز می‌شود.</p>
       </div>
-    </article>
+    </div>
   </div>
 </section>
 

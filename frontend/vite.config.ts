@@ -14,6 +14,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         site: 'src/site.ts',
+        hero: 'src/islands/hero.ts',
         checkout: 'src/islands/checkout.tsx',
         order: 'src/islands/order.tsx',
         lookup: 'src/islands/lookup.tsx',

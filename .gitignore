@@ -9,3 +9,7 @@ frontend/node_modules/
 frontend/dist/
 .claude/
 backend/dev-credentials.txt
+# AI 3D attempts: only the source the hero is built from (tools/build_model.py) and the comparison sheet.
+media/3d/ai/*.glb
+!media/3d/ai/hunyuan2mv-shape-3view-denoised.glb
+media/3d/ai/previews/*.png

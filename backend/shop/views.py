@@ -26,6 +26,12 @@ PROVINCES = [
     'سیستان و بلوچستان', 'فارس', 'قزوین', 'قم', 'کردستان', 'کرمان', 'کرمانشاه', 'کهگیلویه و بویراحمد',
     'گلستان', 'گیلان', 'لرستان', 'مازندران', 'مرکزی', 'هرمزگان', 'همدان', 'یزد',
 ]
+# The 3D hero's hotspots (positions in frontend/src/hero/scene.ts): id, label, note.
+HOTSPOTS = [
+    ('lock', 'قفل اثر انگشت', 'تا ۱۰ اثر انگشت؛ در حدود نیم ثانیه باز می‌شود و با USB-C شارژ می‌شود.'),
+    ('leather', 'چرم مصنوعی PU', 'مقاوم در برابر آب و خط و خش؛ با یک دستمال تمیز می‌شود.'),
+    ('pocket', 'جیب زیپ‌دار پشت', 'برای کارت مترو، بلیت و رسید، بی‌آنکه قفل اصلی را باز کنید.'),
+]
 CLAIM_TYPES = {'image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'application/pdf'}
 
 
@@ -74,6 +80,7 @@ def home(request):
     return render(request, 'shop/home.html', {
         'product': product, 'faqs': faqs, 'price': persian.toman(product.price_rial),
         'shipping': store.shipping_options(),
+        'hotspots': HOTSPOTS,
         'jsonld': _jsonld(request, store, product, faqs),
     })
 

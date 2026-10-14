@@ -84,6 +84,25 @@ Roles (`manage.py setup_roles`, every deploy): **Staff** ship and handle returns
 and reject payments, cancel, record refunds and edit the store. Create people in `/admin/` → Users and
 add them to a group. Sign-in lasts two weeks, 10 attempts per 15 minutes per address.
 
+## The 3D hero (`frontend/src/hero/`, `frontend/src/islands/hero.ts`, `tools/build_model.py`)
+
+The home page opens with a tour: the bag stays pinned (beside the text on desktop, on top on phones)
+while five stops scroll past: the hero, the lock, the back pocket, the wrist strap, the leather. Each
+stop has a photo, so it all works without 3D. After the page has loaded, devices with WebGL2 (and
+no data saver, 2 GB+ memory) get the 3D bag instead: plain three.js, loaded as a separate chunk
+(158 KB gzipped) plus the model (`public/models/alpha.glb` 650 KB, `alpha-mobile.glb` 280 KB).
+At the hero people can drag it (sideways on phones; vertical swipes still scroll) and open three
+hotspots (text in `views.HOTSPOTS`); further down the camera moves to each stop. The fingerprint
+sensor's light turns green at the lock stop. Reduced motion: no turning by itself, no camera glides.
+
+The model: Hunyuan3D-2mv made the shape from the three photos (`media/3d/ai/`, compared in
+`previews/contact-sheet.jpg`; textured AI results were unusable). `tools/build_model.py` cleans and
+decimates it, fixes its proportions to 25 x 15.5 x 6.5 cm, splits it into leather, zipper tape,
+zipper teeth and gunmetal parts by position, adds UVs and compresses it (meshopt). The leather grain
+and the teeth are drawn by the page (`hero/textures.ts`), the sensor is added on the lock's face.
+Rebuild with the 3D venv: `python tools/build_model.py`. A cleaner model (sharper hardware edges, a
+real logo) is a Blender job for later; the page only needs the four part names to stay.
+
 ## Pages and SEO
 
 Django renders every page, so search engines, Torob and Telegram/WhatsApp previews see the product,
@@ -107,6 +126,7 @@ transfer screenshots are in `backend/private/`, never served by nginx, only thro
 
 ## Still to do
 
-- The 3D hero (PLAN.md §5): AI model → Blender cleanup → hero + scroll tour.
+- The 3D model's hardware edges are jagged where parts meet (triangle-level split); a Blender pass would
+  sharpen them and add the WiWU plate's logo.
 - cartbecart: finish `payments.py` with their docs.
 - The client's answers (PLAN.md §11): name, domain, cards, SMS account, Enamad details, specs, warranty.

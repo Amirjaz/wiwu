@@ -280,3 +280,8 @@ poor, phase 3 grows toward the top of its range.
   - Model: rembg `birefnet-general-lite`.
   - Photo 2 had a sofa pillow fused to the zipper, removed with `tools/fix2.py`.
   - Originals are in `media/source-photos/`.
+- **Store core** built (2026-10-14, commit 2ea06c9): see README.md.
+- **3D hero** built (2026-10-14): Hunyuan3D-2mv gave a good untextured shape (the textured generators
+  were unusable or out of free quota); materials, grain and the sensor are made in the browser instead
+  of Blender. Hero and scroll tour are one pinned section with photo fallbacks. See README.md.
+
