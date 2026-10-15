@@ -12,6 +12,7 @@ Backends (settings.SMS_BACKEND):
 import json
 import logging
 import os
+import sys
 import urllib.parse
 import urllib.request
 
@@ -63,7 +64,9 @@ def send(kind, phone, order=None, **values):
     entry = SmsLog(phone=phone, kind=kind, text=text, order=order)
     try:
         if settings.SMS_BACKEND == 'console':
-            print(f'[SMS → {phone}] {text}', flush=True)
+            # A Windows terminal that isn't UTF-8 can't print Persian: escape it rather than fail the send.
+            encoding = getattr(sys.stdout, 'encoding', None) or 'utf-8'
+            print(f'[SMS → {phone}] {text}'.encode(encoding, 'backslashreplace').decode(encoding), flush=True)
             entry.status = 'console'
         elif settings.SMS_BACKEND == 'kavenegar':
             _kavenegar(phone, kind, values)
