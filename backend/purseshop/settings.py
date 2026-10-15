@@ -41,7 +41,9 @@ CSRF_TRUSTED_ORIGINS = env_list('DJANGO_CSRF_TRUSTED_ORIGINS', [PUBLIC_URL])
 if DEVELOPMENT:
     CSRF_TRUSTED_ORIGINS += [f'http://{host}:{port}' for host in ('localhost', '127.0.0.1') for port in (8030, 5180)]
 if not DEVELOPMENT:
-    SESSION_COOKIE_SECURE = CSRF_COOKIE_SECURE = PUBLIC_URL.startswith('https://')
+    # On an https site, plain-http visitors are sent to https (Arvan serves both, and the secure-only
+    # cookies below would otherwise break checkout over http).
+    SECURE_SSL_REDIRECT = SESSION_COOKIE_SECURE = CSRF_COOKIE_SECURE = PUBLIC_URL.startswith('https://')
 
 SESSION_COOKIE_AGE = 14 * 24 * 3600  # staff stay signed in for two weeks
 SESSION_COOKIE_HTTPONLY = True
