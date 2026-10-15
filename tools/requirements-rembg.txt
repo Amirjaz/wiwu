@@ -1,0 +1,8 @@
+# Background removal: cutout.py, fix2.py, photo_masks.py (web_images.py runs here too). Its own venv:
+# onnxruntime is big. The model (birefnet-general-lite) downloads on first use; photo_masks.py keeps it
+# in %TEMP%\u2net unless U2NET_HOME is set.
+#   py -3.12 -m venv .venv-rembg && .venv-rembg/Scripts/pip install -r tools/requirements-rembg.txt
+rembg[cpu]==2.0.85
+onnxruntime==1.31.0
+pillow==12.3.0
+numpy==2.5.4

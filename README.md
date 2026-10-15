@@ -11,7 +11,7 @@ SMS by cartbecart.com, or by staff in the panel.
 | `frontend/` | Vite + React 18 + Tailwind v4 *islands* on Django's pages (checkout, order page, lookup) and the staff panel at `/panel` |
 | `deploy/` | nginx site, systemd units (gunicorn + a minute timer) and deploy scripts for the Nisatech server |
 | `media/` | the client's photos, the background-removed cutouts, 3D sources (not served) |
-| `tools/` | `cutout.py`/`fix2.py` (background removal), `web_images.py` (the site's product images) |
+| `tools/` | `cutout.py`/`fix2.py` (background removal), `web_images.py` (the site's product images), the 3D model's pipeline (see *The 3D hero*), `ai_shape/` (the AI shape it starts from), `dev/` (screenshots and checks) |
 
 ## Running it locally
 
@@ -97,8 +97,8 @@ sensor's light turns green at the lock stop. Reduced motion: no turning by itsel
 
 The model is built from the client's three photos, checked against them view by view:
 
-1. **Shape**: Hunyuan3D-2mv made it from the three photos (`media/3d/ai/`, compared in
-   `previews/contact-sheet.jpg`; the textured AI results were unusable).
+1. **Shape**: Hunyuan3D-2mv made it from the three photos (`tools/ai_shape/`, results in `media/3d/ai/`,
+   compared in `previews/contact-sheet.jpg`; the textured AI results were unusable).
 2. **Masks** (`tools/photo_masks.py`, rembg): which pixels of each photo are bag → `media/3d/photos/`.
 3. **Cameras**: where the phone was for each photo → `media/3d/cameras.json`, overlays in `media/3d/fit/`.
    `tools/fit_cameras.py` starts from features marked on both photo and shape (snap, pocket pull, logo
@@ -123,13 +123,16 @@ The model is built from the client's three photos, checked against them view by 
    `alpha.glb` 720 KB, `alpha-mobile.glb` 300 KB. The `.json` beside each holds the details' measurements,
    the hotspots and the leather grain's repeat.
 7. **Check** (`node tools/compare.mjs`, dev servers running): renders the site's 3D bag from each photo's
-   camera, the same size as the photo, to lay over it.
+   camera, the same size as the photo, to lay over it; `python tools/dev/compose.py` puts them in a
+   photo | render | blend sheet. `tools/dev/orbits.mjs` renders close-ups (lock, zipper from above, far
+   end), `tools/dev/shots.mjs` screenshots the tour's stops, `tools/dev/overflow.mjs` checks phone width.
+   All write to `media/3d/compare/` (not in git).
 
 The front, back, top and lock end come from the photos; the lock, zipper and far-end hardware are
 modelled to their measurements. **The bottom and the far end's leather are in no photo**, so they are
 plain black leather; photos of those sides would make them exact (add them to the masks and cameras,
-rebuild). Venvs: rembg for `photo_masks.py`; numpy, scipy, opencv-python-headless, trimesh,
-fast-simplification, xatlas for the rest.
+rebuild). Venvs: `tools/requirements-rembg.txt` for the masks and cutouts, `tools/requirements.txt` for
+the rest (Python 3.12).
 
 ## Pages and SEO
 

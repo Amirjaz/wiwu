@@ -1,0 +1,13 @@
+# The 3D model's tools: fit_cameras, fit_proportions, refine_cameras, details, bake, build_model,
+# dev/compose.py and ai_shape/. Python 3.12; the versions that built the current model.
+#   py -3.12 -m venv .venv-3d && .venv-3d/Scripts/pip install -r tools/requirements.txt
+numpy==2.5.4
+scipy==1.18.1
+opencv-python-headless==5.0.0.93
+pillow==12.3.0
+trimesh==5.1.1
+rtree==1.4.1
+networkx==3.7
+fast_simplification==0.2.0
+xatlas==0.0.11
+gradio_client==2.7.2
