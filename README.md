@@ -86,8 +86,8 @@ add them to a group. Sign-in lasts two weeks, 10 attempts per 15 minutes per add
 
 ## The 3D hero (`frontend/src/hero/`, `frontend/src/islands/hero.ts`, `tools/build_model.py`)
 
-The home page opens with a tour: the bag stays pinned in a grey shop window (half the screen on
-desktop, the top of it on phones) while five stops scroll past: the hero, the lock, the back pocket, the wrist strap, the leather. Each
+The home page opens with a tour: the bag stays pinned (beside the text on desktop, on top on phones),
+with a switcher for its five views under it, while five stops scroll past: the hero, the lock, the back pocket, the wrist strap, the leather. Each
 stop has a photo, so it all works without 3D. After the page has loaded, devices with WebGL2 (and
 no data saver, 2 GB+ memory) get the 3D bag instead: plain three.js, loaded as a separate chunk
 (170 KB gzipped) plus the model (`public/models/alpha.glb` 720 KB, `alpha-mobile.glb` 300 KB).
@@ -134,14 +134,28 @@ plain black leather; photos of those sides would make them exact (add them to th
 rebuild). Venvs: `tools/requirements-rembg.txt` for the masks and cutouts, `tools/requirements.txt` for
 the rest (Python 3.12).
 
-## Look (`frontend/src/site.css`)
+## Look (`frontend/src/site.css`, `frontend/src/islands/home.ts`)
 
-A shop window, picked on 2026-10-15 from two directions built around the 3D bag. Near-white pages, the
-bag on a soft grey (`stage`), off-black text. One brand colour, lapis (`lapis`): the buy bar, primary
-buttons, links, focus and the key figures, plus the one coloured section (buying, on the home page).
-Green (`accent`) only means done: paid, a completed step, an OK notice. Headings in Markazi Text
-(`font-display`, `.page-title`), the rest in Vazirmatn, both self-hosted through Fontsource. Corners
-are square, round only for dots, step markers and status badges. The panel shares these tokens.
+"Instrument", picked on 2026-10-15 from two directions built around the 3D bag: the bag as a precise
+object on an aluminium-grey bench, like a hardware catalogue. Cool greys and off-black; primary buttons
+are ink. One signal colour, the sensor's green: `signal` for lights (`.led`: in stock, the view on
+screen, a step), `accent` for done (paid, a completed step, an OK notice). Readex Pro for text, Vazir
+Code (a Persian monospace) for labels, readouts and figures (`font-mono`, `.readout-label`), both
+self-hosted. Corners 4px. The panel and the other pages share these tokens.
+
+The home page, after the tour:
+- **Lock demo** (`#try`, the one dark block): a drawing of the real module. Holding it for half a second
+  (the lock's own speed) fills the print and lights the status light; letting go early asks again. It
+  reads nothing, it only times the press. Works by keyboard (hold Space or Enter).
+- **Parts** (`#parts`, `views.PARTS`): the three photos as tabs, with numbered markers at measured
+  positions (percent of each photo) and the list beside; pointing at either lights both. On the side
+  photo the numbers sit beside the bag with lines to the parts, so they don't hide the lock.
+- **Specs**: the size drawn on the front and side photos over a centimetre mat (`.cm-grid`, `--cm` per
+  breakpoint), then the specs as cells.
+- **Buying**: the steps on a rail beside a sample bill that explains the odd amount (`.receipt`, printed
+  in as it scrolls into view).
+
+Motion is CSS: scroll-driven where the browser has it, nothing otherwise, nothing with reduced motion.
 
 ## Pages and SEO
 

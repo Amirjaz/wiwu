@@ -37,6 +37,7 @@ function setup(stage: HTMLElement) {
   const setActive = (index: number) => {
     if (index === active) return;
     active = index;
+    stage.dispatchEvent(new CustomEvent('hero:stop', { detail: index })); // for the view switcher (home.ts)
     showPoster(index);
     scene?.goTo(index);
     hotspotLayer?.classList.toggle('opacity-0', index !== 0);

@@ -15,6 +15,7 @@ export default defineConfig({
       input: {
         site: 'src/site.ts',
         hero: 'src/islands/hero.ts',
+        home: 'src/islands/home.ts',
         checkout: 'src/islands/checkout.tsx',
         order: 'src/islands/order.tsx',
         lookup: 'src/islands/lookup.tsx',

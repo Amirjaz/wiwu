@@ -78,37 +78,52 @@ def home(request):
     faqs = list(Faq.objects.filter(published=True))
     for faq in faqs:
         faq.html = text.render(faq.answer)
-    dims, spec_groups = _specs(product)
+    shipping = store.shipping_options()
+    dims, spec_cells = _specs(product)
+    # The sample bill's total: price, the first shipping option and 437 toman of the per-order offset.
+    example = product.price_rial + (shipping[0]['price_rial'] if shipping else 0) + 4370
     return render(request, 'shop/home.html', {
         'product': product, 'faqs': faqs, 'price': persian.toman(product.price_rial),
-        'shipping': store.shipping_options(),
-        'hotspots': HOTSPOTS,
-        'dims': dims, 'spec_groups': spec_groups,
+        'shipping': shipping, 'example_total': persian.toman(example),
+        'hotspots': HOTSPOTS, 'parts': PARTS,
+        'dims': dims, 'spec_cells': spec_cells,
         'jsonld': _jsonld(request, store, product, faqs),
     })
 
 
-# The specs section's groups, by label; labels not listed here go in the last group.
-SPEC_GROUPS = [
-    ('قفل', ('قفل', 'باز شدن', 'شارژ قفل')),
-    ('بدنه', ('جنس بدنه', 'آستر', 'رنگ')),
-    ('اندازه و جزئیات', ()),
+# The parts diagram: per photo (tab id, name, file, width, height), the parts marked on it: x and y as
+# percentages of the photo (strings, so the template doesn't localise them), a name, a note, and where
+# the number goes when it would hide what it points at (x in %, beside the bag, joined by a line).
+PARTS = [
+    ('back', 'پشت', 'images/back.webp', 897, 642, [
+        ('84', '34', 'جیب زیپ‌دار پشت', 'جدا از قفل اصلی؛ برای کارت مترو، بلیت و رسید.', ''),
+        ('45', '12', 'زیپ اصلی', 'دور بالای کیف؛ سرِ آن در ماژول قفل جا می‌خورد و قفل می‌شود.', ''),
+        ('30', '76', 'بند مچی', 'پشت کیف، تا کیف از دستتان سُر نخورد.', ''),
+        ('80', '70.5', 'دکمه فلزی', 'بند مچی با این دکمه بسته می‌شود.', ''),
+        ('42', '54', 'چرم مصنوعی دانه‌دار', 'PU، مقاوم در برابر آب و خط و خش؛ با یک دستمال تمیز می‌شود.', ''),
+    ]),
+    ('side', 'کنار', 'images/side.webp', 422, 757, [
+        ('38.4', '81.5', 'حسگر اثر انگشت', 'تا ۱۰ اثر انگشت؛ حدود نیم ثانیه تا باز شدن.', '-8'),
+        ('46', '73.6', 'چراغ وضعیت', 'وقتی قفل باز می‌شود سبز می‌شود.', '-8'),
+        ('39', '65.5', 'جای سرِ زیپ', 'سرِ زیپ اصلی اینجا قفل می‌شود.', '-8'),
+        ('35.5', '33', 'زیپ اصلی', 'از بالای کیف تا ماژول قفل.', '-8'),
+    ]),
+    ('front', 'روبه‌رو', 'images/front.webp', 844, 540, [
+        ('81', '73', 'پلاک برند', 'پلاک کوچک برند روی رویه‌ی جلو.', ''),
+        ('40', '50', 'رویه‌ی جلو', 'صاف و مات؛ صاف‌تر از پشت کیف.', ''),
+        ('47', '9', 'زیپ اصلی', 'زیپ فلزی بالای کیف.', ''),
+    ]),
 ]
 
 
 def _specs(product):
-    """The three numbers of the size (shown large, when the size spec has them) and the other specs in groups."""
+    """The size's three numbers (drawn on the photos, when the size spec has them) and the other specs."""
     specs = [tuple(pair) for pair in product.specs]
     size = next((value for label, value in specs if label == 'ابعاد'), '')
     dims = re.findall(r'[۰-۹]+(?:٫[۰-۹]+)?', size)
-    groups = [(title, [s for s in specs if s[0] in labels]) for title, labels in SPEC_GROUPS[:-1]]
-    placed = {s for _, items in groups for s in items}
-    if len(dims) == 3:
-        placed.add(('ابعاد', size))
-    else:
-        dims = []
-    groups.append((SPEC_GROUPS[-1][0], [s for s in specs if s not in placed]))
-    return dims, [g for g in groups if g[1]]
+    if len(dims) != 3:
+        return [], specs
+    return dims, [s for s in specs if s[0] != 'ابعاد']
 
 
 def _jsonld(request, store, product, faqs):
