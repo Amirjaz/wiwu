@@ -1,8 +1,9 @@
 # PurseShop: handoff
 
-State on 2026-10-15 (23 Mehr 1405), when the work moved to another session. [PLAN.md](PLAN.md) has the
-decisions, the risks and the message for the client; [README.md](README.md) explains how everything works.
-This page is the short version, plus what isn't written down anywhere else.
+State on 2026-10-15 (23 Mehr 1405), when the work moved to another session; updated the same day after
+the new look. [PLAN.md](PLAN.md) has the decisions, the risks and the message for the client;
+[README.md](README.md) explains how everything works. This page is the short version, plus what isn't
+written down anywhere else.
 
 ## Where it stands
 
@@ -16,11 +17,15 @@ This page is the short version, plus what isn't written down anywhere else.
   model is the AI shape wrapped in the client's three photos, through cameras fitted to each photo. The
   lock module, zipper and far-end hardware are modelled from measurements in the photos. The last round
   (d743e56) answered the feedback on the lock close-up, the zipper from above and the far end.
+- **Look:** a light "shop window" (README, *Look*), picked from two designs built around the 3D bag.
+  Home page, header and footer are new; checkout, order, lookup, policy pages and the panel follow
+  through the shared tokens in `frontend/src/site.css`.
 - **Client:** no answers yet. PLAN.md §11 is the message to send, in Persian, ready to paste.
 - **Plane** (Nisatech project), all Done:
   - NISA-65: interview, cutouts and plan (1h).
   - NISA-66: store core (1h).
   - NISA-67: 3D hero and scroll tour (3h: 30m, then follow-ups of 1h, 1h, and 30m for this handoff).
+  - NISA-68: site design around the 3D bag, two options, shop window chosen (1h).
 
 ## Next, in order
 

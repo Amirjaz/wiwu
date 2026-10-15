@@ -9,7 +9,7 @@
 <div class="mx-auto max-w-2xl px-4 sm:px-6 py-8 md:py-14">
   {{ island|json_script:"island-data" }}
   <div id="order-root">
-    <h1 class="text-3xl font-extrabold">سفارش <span class="ltr">{{ order.code }}</span></h1>
+    <h1 class="page-title">سفارش <span class="ltr">{{ order.code }}</span></h1>
     <p class="mt-3 text-ink-soft">{{ order.get_status_display }}</p>
     <noscript><p class="mt-6 rounded-[var(--radius-field)] bg-warn-soft text-warn p-4">برای دیدن جزئیات پرداخت، جاوااسکریپت مرورگر را روشن کنید.</p></noscript>
   </div>

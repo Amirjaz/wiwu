@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>{% block title %}{{ store.store_name }}{% endblock %}</title>
   <meta name="description" content="{% block description %}{{ store.tagline }}{% endblock %}">
-  <meta name="theme-color" content="#ededea">
+  <meta name="theme-color" content="#fafaf9">
   {% if noindex %}<meta name="robots" content="noindex, nofollow">{% endif %}
   <meta property="og:site_name" content="{{ store.store_name }}">
   <meta property="og:locale" content="fa_IR">
@@ -18,32 +18,33 @@
   {% block vite %}{% vite 'src/site.ts' %}{% endblock %}
 </head>
 <body class="min-h-[100dvh] flex flex-col antialiased">
-  <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:start-3 focus:z-50 focus:bg-raised focus:px-4 focus:py-2 focus:rounded-full">پرش به محتوا</a>
+  <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:start-3 focus:z-50 focus:bg-raised focus:px-4 focus:py-2">پرش به محتوا</a>
 
+  {# The name in the middle, the page's sections on one side, ordering on the other. #}
   {% block header %}
-  <header class="sticky top-0 z-40 bg-page/85 backdrop-blur-md border-b border-line/70">
-    <div class="mx-auto max-w-6xl px-4 sm:px-6 h-16 flex items-center gap-6">
-      <a href="{% url 'home' %}" class="text-lg font-extrabold">{{ store.store_name }}</a>
-      <nav class="hidden md:flex items-center gap-6 text-[0.95rem] text-ink-soft" aria-label="اصلی">
+  <header class="sticky top-0 z-40 bg-page/92 backdrop-blur-md border-b border-line">
+    <div class="px-4 sm:px-8 h-16 grid grid-cols-[1fr_auto_1fr] items-center gap-6">
+      <nav class="hidden md:flex items-center gap-7 text-[0.95rem] text-ink-soft" aria-label="اصلی">
         <a href="{% url 'home' %}#lock" class="hover:text-ink">قفل</a>
         <a href="{% url 'home' %}#features" class="hover:text-ink">ویژگی‌ها</a>
         <a href="{% url 'home' %}#specs" class="hover:text-ink">مشخصات</a>
         <a href="{% url 'home' %}#faq" class="hover:text-ink">پرسش‌ها</a>
-        <a href="{% url 'lookup' %}" class="hover:text-ink">پیگیری سفارش</a>
       </nav>
-      <div class="ms-auto flex items-center gap-2">
-        {% block header_cta %}<a href="{% url 'checkout' %}" class="btn btn-primary btn-sm">خرید</a>{% endblock %}
-        <button type="button" class="md:hidden btn btn-ghost btn-sm !px-3" data-menu-toggle aria-expanded="false" aria-controls="mobile-menu">
-          {% icon 'list' 'size-5' %}<span class="sr-only">منو</span>
-        </button>
+      <button type="button" class="md:hidden justify-self-start -ms-2 p-2" data-menu-toggle aria-expanded="false" aria-controls="mobile-menu">
+        {% icon 'list' 'size-6' %}<span class="sr-only">منو</span>
+      </button>
+      <a href="{% url 'home' %}" class="font-display text-[1.9rem] font-semibold leading-none pt-1">{{ store.store_name }}</a>
+      <div class="flex items-center justify-end gap-7 text-[0.95rem]">
+        <a href="{% url 'lookup' %}" class="hidden md:inline text-ink-soft hover:text-ink">پیگیری سفارش</a>
+        {% block header_cta %}<a href="{% url 'checkout' %}" class="font-semibold text-lapis hover:text-lapis-deep">خرید</a>{% endblock %}
       </div>
     </div>
-    <nav id="mobile-menu" hidden class="md:hidden border-t border-line/70 px-4 pb-4 pt-2" aria-label="منوی موبایل">
-      <a href="{% url 'home' %}#lock" class="block py-3 text-lg">قفل</a>
-      <a href="{% url 'home' %}#features" class="block py-3 text-lg">ویژگی‌ها</a>
-      <a href="{% url 'home' %}#specs" class="block py-3 text-lg">مشخصات</a>
-      <a href="{% url 'home' %}#faq" class="block py-3 text-lg">پرسش‌ها</a>
-      <a href="{% url 'lookup' %}" class="block py-3 text-lg">پیگیری سفارش</a>
+    <nav id="mobile-menu" hidden class="md:hidden border-t border-line px-5 pb-5 pt-2" aria-label="منوی موبایل">
+      <a href="{% url 'home' %}#lock" class="block py-3 font-display text-2xl">قفل</a>
+      <a href="{% url 'home' %}#features" class="block py-3 font-display text-2xl">ویژگی‌ها</a>
+      <a href="{% url 'home' %}#specs" class="block py-3 font-display text-2xl">مشخصات</a>
+      <a href="{% url 'home' %}#faq" class="block py-3 font-display text-2xl">پرسش‌ها</a>
+      <a href="{% url 'lookup' %}" class="block py-3 font-display text-2xl">پیگیری سفارش</a>
     </nav>
   </header>
   {% endblock %}
@@ -51,25 +52,26 @@
   <main id="main" class="flex-1">{% block main %}{% endblock %}</main>
 
   {% block footer %}
-  <footer class="mt-24 border-t border-line bg-surface">
-    <div class="mx-auto max-w-6xl px-4 sm:px-6 py-12 grid gap-10 md:grid-cols-[1.4fr_1fr_auto]">
-      <div class="space-y-3">
-        <p class="text-lg font-extrabold">{{ store.store_name }}</p>
+  <footer class="border-t border-line">
+    <div class="px-4 sm:px-8 py-14 grid gap-10 md:grid-cols-[1.5fr_1fr_1fr_auto]">
+      <div class="space-y-4">
+        <p class="font-display text-[2.2rem] font-semibold leading-none">{{ store.store_name }}</p>
         {% if store.tagline %}<p class="text-muted">{{ store.tagline }}</p>{% endif %}
         <ul class="space-y-2 text-ink-soft text-[0.95rem]">
-          {% if store.address %}<li class="flex gap-2">{% icon 'map-pin' 'mt-1 text-muted' %}<span>{{ store.address }}{% if store.postal_code %}، کد پستی <span class="ltr">{{ store.postal_code|fa }}</span>{% endif %}</span></li>{% endif %}
-          {% if store.phone %}<li class="flex gap-2">{% icon 'phone' 'mt-1 text-muted' %}<a href="tel:{{ store.phone }}" class="ltr hover:text-ink">{{ store.phone|fa }}</a></li>{% endif %}
-          {% if store.email %}<li class="flex gap-2">{% icon 'envelope-simple' 'mt-1 text-muted' %}<a href="mailto:{{ store.email }}" class="ltr hover:text-ink">{{ store.email }}</a></li>{% endif %}
-          {% if store.hours %}<li class="flex gap-2">{% icon 'clock' 'mt-1 text-muted' %}<span>{{ store.hours }}</span></li>{% endif %}
-          {% if store.instagram %}<li class="flex gap-2">{% icon 'instagram-logo' 'mt-1 text-muted' %}<a href="https://instagram.com/{{ store.instagram }}" class="ltr hover:text-ink" rel="noopener">@{{ store.instagram }}</a></li>{% endif %}
+          {% if store.address %}<li>{{ store.address }}{% if store.postal_code %}، کد پستی <span class="ltr">{{ store.postal_code|fa }}</span>{% endif %}</li>{% endif %}
+          {% if store.phone %}<li><a href="tel:{{ store.phone }}" class="ltr hover:text-ink">{{ store.phone|fa }}</a></li>{% endif %}
+          {% if store.email %}<li><a href="mailto:{{ store.email }}" class="ltr hover:text-ink">{{ store.email }}</a></li>{% endif %}
+          {% if store.hours %}<li>{{ store.hours }}</li>{% endif %}
+          {% if store.instagram %}<li><a href="https://instagram.com/{{ store.instagram }}" class="ltr hover:text-ink" rel="noopener">@{{ store.instagram }}</a></li>{% endif %}
         </ul>
       </div>
-      <nav aria-label="صفحه‌ها">
-        <ul class="grid grid-cols-2 md:grid-cols-1 gap-x-6 gap-y-2 text-ink-soft text-[0.95rem]">
-          {% for item in footer_pages %}<li><a href="{% url 'page' item.slug %}" class="hover:text-ink">{{ item.title }}</a></li>{% endfor %}
-          <li><a href="{% url 'lookup' %}" class="hover:text-ink">پیگیری سفارش</a></li>
-        </ul>
-      </nav>
+      <ul class="space-y-2.5 text-ink-soft text-[0.95rem]">
+        {% for item in footer_pages|slice:':3' %}<li><a href="{% url 'page' item.slug %}" class="hover:text-ink">{{ item.title }}</a></li>{% endfor %}
+      </ul>
+      <ul class="space-y-2.5 text-ink-soft text-[0.95rem]">
+        {% for item in footer_pages|slice:'3:' %}<li><a href="{% url 'page' item.slug %}" class="hover:text-ink">{{ item.title }}</a></li>{% endfor %}
+        <li><a href="{% url 'lookup' %}" class="hover:text-ink">پیگیری سفارش</a></li>
+      </ul>
       {% if store.enamad_html %}<div class="self-start">{{ store.enamad_html|safe }}</div>{% endif %}
     </div>
   </footer>

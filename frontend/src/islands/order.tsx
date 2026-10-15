@@ -180,7 +180,7 @@ function Awaiting({ order, token, onUpdate }: { order: Order; token: string; onU
   return (
     <div className="grid gap-8">
       <div className="grid gap-2">
-        <h1 className="text-3xl sm:text-4xl font-extrabold">مبلغ را کارت‌به‌کارت کنید.</h1>
+        <h1 className="page-title">مبلغ را کارت‌به‌کارت کنید.</h1>
         <p className="text-ink-soft flex flex-wrap items-center gap-x-2">
           <Clock size={18} aria-hidden className="text-muted" />
           {left > 0 ? <>مهلت پرداخت: <span className="font-bold text-ink tabular-nums" aria-live="off">{clock(left)}</span></> : 'مهلت پرداخت تمام شد؛ اگر واریز کرده‌اید، اعلام پرداخت کنید.'}
@@ -212,7 +212,7 @@ function Awaiting({ order, token, onUpdate }: { order: Order; token: string; onU
 function Expired({ order, token, onUpdate }: { order: Order; token: string; onUpdate: (o: Order) => void }) {
   return (
     <div className="grid gap-6">
-      <h1 className="text-3xl font-extrabold">مهلت پرداخت تمام شد.</h1>
+      <h1 className="page-title">مهلت پرداخت تمام شد.</h1>
       <p className="text-ink-soft leading-relaxed">اگر هنوز واریز نکرده‌اید، واریز نکنید و سفارش تازه‌ای ثبت کنید. اگر واریز کرده‌اید، نگران نباشید: اعلام پرداخت کنید تا سفارش‌تان تأیید شود.</p>
       <a href="/checkout/" className="btn btn-primary justify-self-start">ثبت سفارش تازه</a>
       {order.card && <p className="text-sm text-muted">کارت این سفارش: <span className="ltr">{fa(groupCard(order.card.number))}</span>، مبلغ {toman(order.amount_rial)} تومان.</p>}
@@ -344,7 +344,7 @@ function OrderView({ token }: { token: string }) {
       <>
         {header}
         <div className="grid gap-5">
-          <h1 className="text-3xl font-extrabold">پرداخت شما در حال بررسی است.</h1>
+          <h1 className="page-title">پرداخت شما در حال بررسی است.</h1>
           <p className="text-ink-soft leading-relaxed">همکاران ما واریز را با حساب بانکی تطبیق می‌دهند. نتیجه را پیامک می‌کنیم و همین صفحه هم به‌روز می‌شود.</p>
           {order.card && <p className="text-sm text-muted">مبلغ {toman(order.amount_rial)} تومان به کارت <span className="ltr">{fa(groupCard(order.card.number))}</span></p>}
         </div>
@@ -356,7 +356,7 @@ function OrderView({ token }: { token: string }) {
       <>
         {header}
         <div className="grid gap-5">
-          <h1 className="text-3xl font-extrabold">این سفارش لغو شد.</h1>
+          <h1 className="page-title">این سفارش لغو شد.</h1>
           <p className="text-ink-soft leading-relaxed">اگر مبلغی واریز کرده‌اید که برنگشته، با شماره فروشگاه که پایین صفحه آمده تماس بگیرید و کد سفارش را بگویید.</p>
           <a href="/checkout/" className="btn btn-primary justify-self-start">ثبت سفارش تازه</a>
         </div>
@@ -369,7 +369,7 @@ function OrderView({ token }: { token: string }) {
       {header}
       <div className="grid gap-8">
         <div className="grid gap-2">
-          <h1 className="text-3xl sm:text-4xl font-extrabold">{order.status === 'delivered' ? 'سفارش تحویل شد.' : 'سفارش شما ثبت و پرداخت شد.'}</h1>
+          <h1 className="page-title">{order.status === 'delivered' ? 'سفارش تحویل شد.' : 'سفارش شما ثبت و پرداخت شد.'}</h1>
           <p className="text-ink-soft">{order.product} برای {order.name}، {order.city}{order.is_gift ? ' (هدیه)' : ''}</p>
         </div>
         <Progress order={order} />

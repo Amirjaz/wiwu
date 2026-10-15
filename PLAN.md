@@ -33,7 +33,7 @@ still sets the order of work (see *Phases*).
 | Staff alerts | **SMS to the owner** (new paid order, payment needs review) | Works during internet shutdowns. |
 | Operator | **Unknown**, so roles are built anyway (owner / staff) and `/panel` is **phone-first** | Every payment approval and refund is logged with who did it. |
 | Stack | **House stack: Django 5.2 + SQLite, React/Vite/Tailwind v4 islands**, nginx + systemd, frontend built locally | Django renders the real HTML (SEO, Torob, link previews). React handles the 3D, checkout, pay page and `/panel`. |
-| Look | **Light, warm editorial**: cream/stone background, black bag | Unisex. Soft light also hides AI-texture flaws. |
+| Look | **Light "shop window"** (chosen 2026-10-15 from two designs): near-white, the bag on a grey sweep, lapis as the one brand colour, Markazi Text headings, square corners | Unisex. Light keeps the black bag readable. See README, *Look*. |
 | 3D source | **AI image-to-3D from the 3 photos we have**, cleaned up in Blender | "Same bag, the color differences are lighting." Fallback: Blender blockout (see §5). |
 | Hero | **Both**: drag-to-rotate + hotspots at the top, then a scroll-driven tour | One shared WebGL canvas. No AR. |
 | Lock video | **None from the client** | Maker media may fill the gap (next row). |
@@ -82,7 +82,7 @@ PurseShop/
   same as Contech and Nisatak.
 - **Money:** stored as **integer rial** everywhere and shown in toman with Persian digits. Bank SMS
   amounts are in rial, so a toman/rial mix-up is the most likely bug here. Test it explicitly.
-- **Iran-proofing:** self-host **everything**: Vazirmatn font; the three.js **Draco/meshopt decoders and
+- **Iran-proofing:** self-host **everything**: the Vazirmatn and Markazi Text fonts; the three.js **Draco/meshopt decoders and
   KTX2 transcoder** (three's default decoder URLs point at gstatic.com); the HDRI. No Google Fonts,
   Analytics or reCAPTCHA.
 - **Persian input:** normalize Persian/Arabic digits and letters in every input. Phone `09xxxxxxxxx`
@@ -291,3 +291,6 @@ poor, phase 3 grows toward the top of its range.
 - **3D details from the photos** (2026-10-15): the lock module, zipper and far-end hardware are now
   modelled to measurements taken through the fitted photo cameras; the bag's proportions come from the
   photos (a little deeper than the listings say). See README.md, "The 3D hero".
+- **Look** (2026-10-15): two directions built around the 3D bag ("instrument" and "shop window");
+  Amir picked the shop window. Home page, header and footer rebuilt; checkout, order, lookup, policy
+  pages and the panel follow through the shared tokens. See README, *Look*.

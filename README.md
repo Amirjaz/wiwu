@@ -86,8 +86,8 @@ add them to a group. Sign-in lasts two weeks, 10 attempts per 15 minutes per add
 
 ## The 3D hero (`frontend/src/hero/`, `frontend/src/islands/hero.ts`, `tools/build_model.py`)
 
-The home page opens with a tour: the bag stays pinned (beside the text on desktop, on top on phones)
-while five stops scroll past: the hero, the lock, the back pocket, the wrist strap, the leather. Each
+The home page opens with a tour: the bag stays pinned in a grey shop window (half the screen on
+desktop, the top of it on phones) while five stops scroll past: the hero, the lock, the back pocket, the wrist strap, the leather. Each
 stop has a photo, so it all works without 3D. After the page has loaded, devices with WebGL2 (and
 no data saver, 2 GB+ memory) get the 3D bag instead: plain three.js, loaded as a separate chunk
 (170 KB gzipped) plus the model (`public/models/alpha.glb` 720 KB, `alpha-mobile.glb` 300 KB).
@@ -133,6 +133,15 @@ modelled to their measurements. **The bottom and the far end's leather are in no
 plain black leather; photos of those sides would make them exact (add them to the masks and cameras,
 rebuild). Venvs: `tools/requirements-rembg.txt` for the masks and cutouts, `tools/requirements.txt` for
 the rest (Python 3.12).
+
+## Look (`frontend/src/site.css`)
+
+A shop window, picked on 2026-10-15 from two directions built around the 3D bag. Near-white pages, the
+bag on a soft grey (`stage`), off-black text. One brand colour, lapis (`lapis`): the buy bar, primary
+buttons, links, focus and the key figures, plus the one coloured section (buying, on the home page).
+Green (`accent`) only means done: paid, a completed step, an OK notice. Headings in Markazi Text
+(`font-display`, `.page-title`), the rest in Vazirmatn, both self-hosted through Fontsource. Corners
+are square, round only for dots, step markers and status badges. The panel shares these tokens.
 
 ## Pages and SEO
 

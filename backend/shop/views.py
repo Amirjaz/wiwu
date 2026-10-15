@@ -4,6 +4,7 @@ JSON API under /api/. The React islands on the pages talk to the API.
 """
 import json
 import logging
+import re
 
 from django.conf import settings
 from django.http import Http404, HttpResponse, JsonResponse
@@ -77,12 +78,37 @@ def home(request):
     faqs = list(Faq.objects.filter(published=True))
     for faq in faqs:
         faq.html = text.render(faq.answer)
+    dims, spec_groups = _specs(product)
     return render(request, 'shop/home.html', {
         'product': product, 'faqs': faqs, 'price': persian.toman(product.price_rial),
         'shipping': store.shipping_options(),
         'hotspots': HOTSPOTS,
+        'dims': dims, 'spec_groups': spec_groups,
         'jsonld': _jsonld(request, store, product, faqs),
     })
+
+
+# The specs section's groups, by label; labels not listed here go in the last group.
+SPEC_GROUPS = [
+    ('قفل', ('قفل', 'باز شدن', 'شارژ قفل')),
+    ('بدنه', ('جنس بدنه', 'آستر', 'رنگ')),
+    ('اندازه و جزئیات', ()),
+]
+
+
+def _specs(product):
+    """The three numbers of the size (shown large, when the size spec has them) and the other specs in groups."""
+    specs = [tuple(pair) for pair in product.specs]
+    size = next((value for label, value in specs if label == 'ابعاد'), '')
+    dims = re.findall(r'[۰-۹]+(?:٫[۰-۹]+)?', size)
+    groups = [(title, [s for s in specs if s[0] in labels]) for title, labels in SPEC_GROUPS[:-1]]
+    placed = {s for _, items in groups for s in items}
+    if len(dims) == 3:
+        placed.add(('ابعاد', size))
+    else:
+        dims = []
+    groups.append((SPEC_GROUPS[-1][0], [s for s in specs if s not in placed]))
+    return dims, [g for g in groups if g[1]]
 
 
 def _jsonld(request, store, product, faqs):

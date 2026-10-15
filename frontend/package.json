@@ -10,6 +10,7 @@
     "icons": "node scripts/copy-icons.mjs"
   },
   "dependencies": {
+    "@fontsource-variable/markazi-text": "5.3.0",
     "@fontsource-variable/vazirmatn": "5.3.0",
     "@phosphor-icons/react": "2.1.10",
     "clsx": "2.1.1",

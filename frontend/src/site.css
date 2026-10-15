@@ -1,24 +1,31 @@
 @import "tailwindcss";
 /* Self-hosted: Google Fonts is unreliable from inside Iran. */
 @import "@fontsource-variable/vazirmatn";
+@import "@fontsource-variable/markazi-text";
 /* Django renders the pages: scan its templates for classes too. */
 @source "../../backend/shop/templates";
 
 /*
-  Stone and off-black, like the bag on a light table, with one accent: the green the fingerprint
-  sensor shows when it opens. The accent marks "open / done / go": focus, success, the lock.
-  Primary buttons are ink. Light only (the look the client chose, 2026-10-14).
-  Corners: buttons are pills, surfaces 18px, inputs 12px.
+  A shop window: near-white pages, the bag on a soft grey sweep, off-black text, and one brand colour,
+  lapis (the blue of Persian tilework), for buying, links, focus and the key figures. Green, the
+  sensor's light, only means done: paid, delivered, a step completed. Headings in Markazi Text (a
+  Persian text face by Borna Izadpanah), everything else in Vazirmatn. Light only (the client's
+  choice, 2026-10-14; this look picked on 2026-10-15). Corners are square everywhere; round only
+  for dots, step markers and status badges.
 */
 @theme {
-  --color-page: #ededea;
-  --color-surface: #f6f6f4;
-  --color-raised: #fbfbfa;
-  --color-ink: #17181b;
+  --color-page: #fafaf9;
+  --color-surface: #f2f2f0;
+  --color-raised: #fdfdfc;
+  --color-stage: #ececea;
+  --color-ink: #121316;
   --color-ink-soft: #3a3c41;
-  --color-muted: #5f6268;
-  --color-line: #d7d7d2;
-  --color-line-strong: #bcbcb6;
+  --color-muted: #63666c;
+  --color-line: #dcdcd8;
+  --color-line-strong: #b9b9b4;
+  --color-lapis: #24389c;
+  --color-lapis-deep: #1a2a78;
+  --color-lapis-soft: #e7eaf6;
   --color-accent: #0e7a57;
   --color-accent-ink: #0a5c42;
   --color-accent-soft: #dcefe5;
@@ -28,9 +35,10 @@
   --color-warn-soft: #f8eed8;
 
   --font-sans: "Vazirmatn Variable", Vazirmatn, system-ui, sans-serif;
+  --font-display: "Markazi Text Variable", "Markazi Text", serif;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --radius-surface: 18px;
-  --radius-field: 12px;
+  --radius-surface: 0px;
+  --radius-field: 0px;
 }
 
 /* In the base layer, so utilities (which live in a layer too) can still override them. */
@@ -58,9 +66,8 @@
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-accent);
+    outline: 2px solid var(--color-lapis);
     outline-offset: 3px;
-    border-radius: 6px;
   }
 }
 
@@ -83,7 +90,6 @@
     gap: 0.5rem;
     min-height: 3rem;
     padding: 0 1.5rem;
-    border-radius: 999px;
     font-weight: 600;
     white-space: nowrap;
     transition: transform 0.15s var(--ease-out), background-color 0.2s, color 0.2s, border-color 0.2s;
@@ -97,12 +103,12 @@
     cursor: not-allowed;
   }
   .btn-primary {
-    background: var(--color-ink);
-    color: var(--color-raised);
+    background: var(--color-lapis);
+    color: #fff;
   }
   @media (hover: hover) {
     .btn-primary:hover:not(:disabled) {
-      background: var(--color-ink-soft);
+      background: var(--color-lapis-deep);
     }
     .btn-ghost:hover:not(:disabled) {
       border-color: var(--color-ink);
@@ -116,6 +122,49 @@
     min-height: 2.5rem;
     padding: 0 1rem;
     font-size: 0.9rem;
+  }
+
+  /* The buy button on the product page: a full-width lapis bar, the verb at one end and the price at
+     the other. */
+  .buy-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    min-height: 4rem;
+    padding: 0 1.5rem;
+    background: var(--color-lapis);
+    color: #fff;
+    font-size: 1.1rem;
+    transition: background-color 0.2s, transform 0.15s var(--ease-out);
+    user-select: none;
+  }
+  .buy-bar:active {
+    transform: scale(0.99);
+  }
+  .buy-bar-arrow {
+    transition: transform 0.25s var(--ease-out);
+  }
+  @media (hover: hover) {
+    .buy-bar:hover {
+      background: var(--color-lapis-deep);
+    }
+    .buy-bar:hover .buy-bar-arrow {
+      transform: translateX(-4px);
+    }
+  }
+
+  /* Headings set in Markazi, which runs small for its size: hence the larger sizes. */
+  .page-title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 2.4rem;
+    line-height: 1.2;
+  }
+  @media (width >= 40rem) {
+    .page-title {
+      font-size: 3rem;
+    }
   }
 
   .label {
@@ -137,8 +186,8 @@
   }
   .input:focus {
     outline: none;
-    border-color: var(--color-accent);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-accent) 22%, transparent);
+    border-color: var(--color-lapis);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-lapis) 18%, transparent);
   }
   .input[aria-invalid="true"] {
     border-color: var(--color-danger);
@@ -166,9 +215,11 @@
     max-width: 68ch;
   }
   .prose-fa h2 {
-    margin: 2.25rem 0 0.75rem;
-    font-size: 1.2rem;
-    font-weight: 700;
+    margin: 2.5rem 0 0.75rem;
+    font-family: var(--font-display);
+    font-size: 1.75rem;
+    font-weight: 600;
+    line-height: 1.3;
     color: var(--color-ink);
   }
   .prose-fa p {
@@ -187,18 +238,18 @@
   }
 }
 
-/* Motion: a short rise on load for the hero, and sections settling in as they scroll into view
-   (CSS scroll-driven, no JavaScript; browsers without it just show the content). */
+/* Motion, slow and soft like turning a page: a rise on load for the hero, and sections settling in as
+   they scroll into view (CSS scroll-driven, no JavaScript; browsers without it just show the content). */
 @media (prefers-reduced-motion: no-preference) {
   .rise {
-    animation: rise 0.9s var(--ease-out) both;
-    animation-delay: calc(var(--i, 0) * 90ms + 80ms);
+    animation: rise 1.1s var(--ease-out) both;
+    animation-delay: calc(var(--i, 0) * 120ms + 100ms);
   }
   @supports (animation-timeline: view()) {
     .reveal {
       animation: settle linear both;
       animation-timeline: view();
-      animation-range: entry 0% entry 35%;
+      animation-range: entry 0% entry 40%;
     }
   }
 }
@@ -206,13 +257,13 @@
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(18px);
+    transform: translateY(24px);
   }
 }
 
 @keyframes settle {
   from {
     opacity: 0;
-    transform: translateY(28px);
+    transform: translateY(32px);
   }
 }
