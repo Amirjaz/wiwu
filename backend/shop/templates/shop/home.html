@@ -20,7 +20,7 @@ past. The first stop is the hero. Each stop has its photo; on capable devices th
 (islands/hero.ts) replaces the photos and turns to each stop.
 {% endcomment %}
 <section id="tour" class="mx-auto max-w-7xl px-4 sm:px-6 grid md:grid-cols-[0.8fr_1.35fr] md:gap-x-12">
-  <div class="order-first md:order-last sticky top-16 z-10 -mx-4 sm:-mx-6 md:mx-0 h-[46dvh] md:h-[calc(100dvh-4rem)] md:self-start bg-page">
+  <div class="order-first md:order-last sticky top-16 z-10 -mx-4 sm:-mx-6 md:mx-0 h-[46dvh] md:h-[calc(100dvh-4rem)] md:self-start bg-page overflow-x-clip">
     <div data-hero-stage data-model="{% asset 'models/alpha.glb' %}" data-model-small="{% asset 'models/alpha-mobile.glb' %}" class="relative size-full rise" style="--i:1">
       <img data-poster="0" src="{% asset 'images/front.webp' %}" alt="کیف دستی آلفا از روبه‌رو، مشکی با زیپ فلزی و پلاک کوچک برند" width="844" height="540" fetchpriority="high"
            class="absolute inset-0 m-auto max-h-full max-w-full object-contain p-3 md:p-4 transition-opacity duration-500 drop-shadow-[0_30px_40px_rgba(23,24,27,0.18)]">
@@ -37,7 +37,7 @@ past. The first stop is the hero. Each stop has its photo; on capable devices th
             <span class="size-2 rounded-full bg-accent"></span>
           </span>
           <span class="sr-only">{{ label }}</span>
-          <span class="pointer-events-none absolute top-9 left-1/2 -translate-x-1/2 w-52 rounded-[var(--radius-field)] bg-ink px-3 py-2 text-start text-sm leading-relaxed text-raised opacity-0 transition-opacity group-aria-expanded:opacity-100">
+          <span class="pointer-events-none absolute top-9 left-1/2 w-52 rounded-[var(--radius-field)] bg-ink px-3 py-2 text-start text-sm leading-relaxed text-raised opacity-0 transition-opacity group-aria-expanded:opacity-100" style="translate: calc(-50% + var(--tip-shift, 0px)) 0">
             <strong class="block">{{ label }}</strong>{{ note }}
           </span>
         </button>

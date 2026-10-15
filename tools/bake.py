@@ -114,7 +114,7 @@ def balanced_photo(name):
     lum = rgb @ [0.299, 0.587, 0.114]
     leather = inside & (lum < np.quantile(lum[inside], 0.7))
     target = 0.115
-    gain = np.clip(target / np.median(lum[leather]), 0.6, 2.2)
+    gain = np.clip(target / np.median(lum[leather]), 0.6, 1.35)
     return np.clip(rgb * gain, 0, 1), alpha
 
 

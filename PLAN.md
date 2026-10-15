@@ -288,3 +288,6 @@ poor, phase 3 grows toward the top of its range.
 - **3D model from the photos** (2026-10-14): the three photos are projected onto the AI shape (cameras
   fitted per photo), so front, back, top and the lock end with its sensor look like the real bag; the
   bottom and the far end have no photo yet. Bigger bag in the hero. See README.md, "The 3D hero".
+- **3D details from the photos** (2026-10-15): the lock module, zipper and far-end hardware are now
+  modelled to measurements taken through the fitted photo cameras; the bag's proportions come from the
+  photos (a little deeper than the listings say). See README.md, "The 3D hero".

@@ -53,14 +53,45 @@ KEYPOINTS = {
 START = {'back': (200, 30), 'front': (8, 12), 'side': (-80, 6)}
 
 
-def load_shape(faces=30_000):
+def shape_transform():
+    """(scale, centre) that turn the AI shape into the bag's true proportions (tools/fit_proportions.py):
+    p' = (p - centre) * scale + centre. Identity until that has run."""
+    path = OUT / 'cameras.json'
+    data = json.loads(path.read_text()) if path.exists() else {}
+    scale = np.array(data.get('shape_scale', [1.0, 1.0, 1.0]))
+    centre = np.array(data['shape_centre']) if 'shape_centre' in data else None
+    return scale, centre
+
+
+def load_shape(faces=30_000, scaled=True):
     scene = trimesh.load(SHAPE)
     mesh = trimesh.util.concatenate(list(scene.dump())) if isinstance(scene, trimesh.Scene) else scene
     mesh.update_faces(mesh.nondegenerate_faces())
     mesh.merge_vertices()
     v, f = fast_simplification.simplify(mesh.vertices.astype(np.float32), mesh.faces.astype(np.int32),
                                         1 - faces / len(mesh.faces))
-    return trimesh.Trimesh(v, f, process=True)
+    mesh = trimesh.Trimesh(v, f, process=True)
+    if scaled:
+        apply_shape_transform(mesh)
+    return mesh
+
+
+def apply_shape_transform(mesh):
+    scale, centre = shape_transform()
+    if centre is not None:
+        mesh.vertices = (mesh.vertices - centre) * scale + centre
+    return mesh
+
+
+def scaled_spec(spec):
+    """A keypoint's shape coordinates were read off the unscaled shape: move them with it."""
+    scale, centre = shape_transform()
+    if centre is None:
+        return spec
+    kind, a, b = spec
+    if kind in ('back', 'front'):
+        return kind, a, (b - centre[1]) * scale[1] + centre[1]
+    return kind, (a - centre[1]) * scale[1] + centre[1], (b - centre[2]) * scale[2] + centre[2]
 
 
 def raycast(mesh, origin, direction):
@@ -83,7 +114,7 @@ def raycast(mesh, origin, direction):
 
 
 def shape_point(mesh, spec):
-    kind, a, b = spec
+    kind, a, b = scaled_spec(spec)
     if kind == 'back':
         return raycast(mesh, np.array([a, b, -5.0]), np.array([0, 0, 1.0]))
     if kind == 'front':
@@ -187,8 +218,10 @@ def main():
         mask_small = np.array(Image.fromarray(mask.astype(np.uint8) * 255).resize((W // 2, H // 2))) > 128
         cams[name] = fit_view(mesh, name, mask_small)
         overlay(mesh, name, cams[name])
-    (OUT / 'cameras.json').write_text(json.dumps({'width': W, 'height': H, 'shape': SHAPE.name, 'cameras': cams},
-                                                 indent=1), newline='\n')
+    path = OUT / 'cameras.json'
+    data = json.loads(path.read_text()) if path.exists() else {}
+    data.update({'width': W, 'height': H, 'shape': SHAPE.name, 'cameras': cams})  # keeps shape_scale/centre
+    path.write_text(json.dumps(data, indent=1), newline='\n')
 
 
 if __name__ == '__main__':

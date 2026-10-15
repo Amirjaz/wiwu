@@ -13,3 +13,4 @@ backend/dev-credentials.txt
 media/3d/ai/*.glb
 !media/3d/ai/hunyuan2mv-shape-3view-denoised.glb
 media/3d/ai/previews/*.png
+media/3d/compare/

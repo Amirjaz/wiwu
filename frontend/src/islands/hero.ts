@@ -72,12 +72,18 @@ function setup(stage: HTMLElement) {
   }
   document.addEventListener('keydown', (e) => e.key === 'Escape' && closeTips());
 
+  // Notes are 13rem wide under their dot; near the stage's edges they slide sideways to stay on screen.
+  const tipHalf = 104;
   const placeHotspots = (positions: Map<string, { x: number; y: number } | null>) => {
+    const width = stage.clientWidth;
     positions.forEach((pos, id) => {
       const button = buttons.get(id);
       if (!button) return;
       button.hidden = !pos;
-      if (pos) button.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
+      if (!pos) return;
+      button.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
+      const shift = Math.max(8 - (pos.x - tipHalf), Math.min(0, width - 8 - (pos.x + tipHalf)));
+      button.style.setProperty('--tip-shift', `${Math.round(shift)}px`);
     });
   };
 
@@ -95,6 +101,7 @@ function setup(stage: HTMLElement) {
       document.addEventListener('visibilitychange', () => instance.setVisible(!document.hidden));
       await instance.load((small ? stage.dataset.modelSmall : stage.dataset.model) ?? '');
       scene = instance;
+      if (import.meta.env.DEV) (window as unknown as { __hero: HeroScene }).__hero = instance;
       instance.goTo(active);
       showPoster(active);
       hotspotLayer?.classList.remove('hidden');

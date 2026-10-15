@@ -1,7 +1,7 @@
 // The bag in 3D: a studio scene, drag to turn it, hotspots, and a camera that moves to each stop of
 // the scroll tour. Loaded only when the device can take it (see islands/hero.ts).
 import {
-  AdditiveBlending, BoxGeometry, CanvasTexture, Color, DirectionalLight, Group, Mesh, MeshBasicMaterial,
+  AdditiveBlending, CanvasTexture, Color, DirectionalLight, Mesh, MeshBasicMaterial,
   MeshPhysicalMaterial, MeshStandardMaterial, NeutralToneMapping, PCFSoftShadowMap, PerspectiveCamera, PlaneGeometry,
   PMREMGenerator, Scene, ShadowMaterial, SRGBColorSpace, Vector2, Vector3, WebGLRenderer, type Material, type Texture,
 } from 'three';
@@ -10,11 +10,13 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { pebbleNormalMap } from './textures';
+import { buildFarEnd, buildLock, buildZipper, type Details } from './details';
 
 /** What tools/build_model.py writes next to each model. */
 interface ModelInfo {
   grainRepeat: number;
-  led: { position: [number, number, number]; normal: [number, number, number] } | null;
+  details?: Details;
+  hotspots?: Record<string, { at: [number, number, number]; normal: [number, number, number] }>;
 }
 
 /** A camera position around a target: azimuth from the front (+z) toward the far end (+x), in degrees.
@@ -54,11 +56,14 @@ export const HOTSPOTS: Hotspot[] = [
 export class HeroScene {
   private renderer: WebGLRenderer;
   private key!: DirectionalLight;
-  private led: MeshBasicMaterial[] = [];
+  private light: MeshStandardMaterial | null = null;
+  private halo: MeshBasicMaterial | null = null;
   private scene = new Scene();
   private camera = new PerspectiveCamera(28, 1, 0.01, 10);
   private controls: OrbitControls;
   private stop = 0;
+  private stops: Stop[] = STOPS.map((s) => ({ ...s, target: [...s.target] }));
+  private hotspots: Hotspot[] = HOTSPOTS;
   private current: Stop = { ...STOPS[0], target: [...STOPS[0].target] };
   private settled = false; // at the hero stop and handed over to the user's drag
   private running = false;
@@ -151,6 +156,7 @@ export class HeroScene {
         map: photo, roughness: 0.62, normalMap: grain, normalScale: new Vector2(0.16, 0.16),
         clearcoat: 0.12, clearcoatRoughness: 0.6,
       }),
+      front: new MeshStandardMaterial({ map: photo, roughness: 0.82 }), // smooth matte panel
       tape: new MeshStandardMaterial({ map: photo, roughness: 0.85 }),
       teeth: new MeshStandardMaterial({ map: photo, metalness: 0.2, roughness: 0.45 }),
       metal: new MeshStandardMaterial({ map: photo, metalness: 0.2, roughness: 0.36 }),
@@ -164,39 +170,49 @@ export class HeroScene {
       }
     });
     this.scene.add(gltf.scene);
-    if (info?.led) this.addStatusLight(info.led.position, info.led.normal);
+    if (info?.details) this.addDetails(info.details);
+    if (info?.hotspots) {
+      this.hotspots = Object.entries(info.hotspots).map(([id, h]) => ({ id, at: h.at, normal: h.normal }));
+    }
     this.renderer.render(this.scene, this.camera);
     this.renderer.domElement.classList.remove('opacity-0');
     this.start();
   }
 
-  /** The fingerprint sensor's status light, where the side photo shows it: dark (the photo's own slit
-   *  shows through) until the tour reaches the lock, then green, like the real lock when it opens. */
-  private addStatusLight(position: [number, number, number], normal: [number, number, number]) {
-    const group = new Group();
-    const at = new Vector3(...position);
-    const n = new Vector3(...normal).normalize();
-    group.position.copy(at).addScaledVector(n, 0.0004);
-    group.lookAt(at.clone().add(n));
-    const bar = new MeshBasicMaterial({ color: '#2fe39a', transparent: true, opacity: 0, depthWrite: false });
-    group.add(new Mesh(new BoxGeometry(0.0052, 0.0009, 0.0002), bar));
-    // A soft halo around it.
+  /** The lock module, the zipper and the far end's hardware, modelled from the photos' measurements. */
+  private addDetails(details: Details) {
+    // The lock stop looks squarely at the module, a little from the front and above.
+    const [nx, ny, nz] = details.module.n;
+    const [ox, oy, oz] = details.module.origin;
+    this.stops[1] = {
+      ...this.stops[1],
+      az: (Math.atan2(nx, nz) * 180) / Math.PI + 12,
+      el: Math.max(4, (Math.asin(ny) * 180) / Math.PI - 4),
+      target: [ox + nx * 0.004, oy, oz + nz * 0.004],
+    };
+    const lock = buildLock(details.module);
+    this.light = lock.light;
+    // A soft glow over the status light's window when it's lit.
+    const [e0, e1, e2, e3] = details.module.led;
     const canvas = document.createElement('canvas');
     canvas.width = canvas.height = 64;
     const ctx = canvas.getContext('2d')!;
     const g = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-    g.addColorStop(0, 'rgba(60,240,160,0.9)');
+    g.addColorStop(0, 'rgba(60,240,160,0.85)');
     g.addColorStop(1, 'rgba(60,240,160,0)');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, 64, 64);
-    const halo = new MeshBasicMaterial({
+    this.halo = new MeshBasicMaterial({
       map: new CanvasTexture(canvas), transparent: true, opacity: 0, blending: AdditiveBlending, depthWrite: false,
     });
-    const glow = new Mesh(new PlaneGeometry(0.016, 0.008), halo);
-    glow.position.z = 0.0003;
-    group.add(glow);
-    this.led = [bar, halo];
-    this.scene.add(group);
+    const glow = new Mesh(new PlaneGeometry((e2 - e0) * 2.6, (e3 - e1) * 5), this.halo);
+    glow.position.set((e0 + e2) / 2, (e1 + e3) / 2, 0.0008);
+    lock.group.add(glow);
+    this.scene.add(lock.group);
+
+    const tape = new MeshStandardMaterial({ color: '#141518', roughness: 0.95 });
+    this.scene.add(buildZipper(details.zipper, tape));
+    this.scene.add(buildFarEnd(details.farEnd));
   }
 
   /** Move to a tour stop (0 = the hero, where the user can drag). */
@@ -206,8 +222,48 @@ export class HeroScene {
     this.stop = index;
     this.settled = false;
     this.controls.enabled = false;
-    if (this.options.reducedMotion) this.current = { ...STOPS[index], target: [...STOPS[index].target] };
+    if (this.options.reducedMotion) this.current = { ...this.stops[index], target: [...this.stops[index].target] };
     this.start();
+  }
+
+  /** Development only (tools/compare.mjs): one frame from a source photo's camera, as a JPEG data URL,
+   *  so the model can be laid next to the photo. Stops the animation. */
+  debugRender(eye: [number, number, number], quaternion: [number, number, number, number], fov: number,
+    width: number, height: number): string {
+    this.running = false;
+    cancelAnimationFrame(this.frame);
+    const camera = this.camera.clone();
+    camera.position.set(...eye);
+    camera.quaternion.set(...quaternion);
+    camera.fov = fov;
+    camera.aspect = width / height;
+    camera.updateProjectionMatrix();
+    this.aimLight((Math.atan2(eye[0], eye[2]) * 180) / Math.PI);
+    this.renderer.setPixelRatio(1);
+    this.renderer.setSize(width, height, false);
+    this.renderer.render(this.scene, camera);
+    return this.renderer.domElement.toDataURL('image/jpeg', 0.92);
+  }
+
+  /** Development only: one frame from an orbit position (degrees, metres), the status light on or off. */
+  debugOrbit(az: number, el: number, dist: number, target: [number, number, number], width: number,
+    height: number, light = false): string {
+    if (this.light && this.halo) {
+      this.halo.opacity = light ? 1 : 0;
+      this.light.emissiveIntensity = light ? 2.4 : 0;
+    }
+    const a = az * DEG;
+    const e = el * DEG;
+    const eye: [number, number, number] = [
+      target[0] + dist * Math.cos(e) * Math.sin(a),
+      target[1] + dist * Math.sin(e),
+      target[2] + dist * Math.cos(e) * Math.cos(a),
+    ];
+    const camera = new PerspectiveCamera(30, width / height, 0.01, 10);
+    camera.position.set(...eye);
+    camera.lookAt(...target);
+    const q = camera.quaternion;
+    return this.debugRender(eye, [q.x, q.y, q.z, q.w], 30, width, height);
   }
 
   setVisible(visible: boolean) {
@@ -241,8 +297,11 @@ export class HeroScene {
   }
 
   private update() {
-    for (const material of this.led) {
-      material.opacity += ((this.stop === 1 ? 1 : 0) - material.opacity) * 0.08;
+    // The status light: green at the lock stop, like the real lock when a finger opens it.
+    if (this.light && this.halo) {
+      const on = this.stop === 1 ? 1 : 0;
+      this.halo.opacity += (on - this.halo.opacity) * 0.08;
+      this.light.emissiveIntensity = this.halo.opacity * 2.4;
     }
     if (this.settled) {
       this.controls.update();
@@ -250,7 +309,7 @@ export class HeroScene {
       this.aimLight(Math.atan2(offset.x, offset.z) / DEG);
       return;
     }
-    const goal = STOPS[this.stop];
+    const goal = this.stops[this.stop];
     const k = 0.075; // fraction of the way per frame: about half a second to arrive
     let az = goal.az - this.current.az;
     az = ((az + 540) % 360) - 180; // the short way round
@@ -313,7 +372,7 @@ export class HeroScene {
     const positions = new Map<string, Vector2 | null>();
     const rect = this.container.getBoundingClientRect();
     const toCamera = new Vector3();
-    for (const spot of HOTSPOTS) {
+    for (const spot of this.hotspots) {
       const at = new Vector3(...spot.at);
       toCamera.copy(this.camera.position).sub(at).normalize();
       const facing = toCamera.dot(new Vector3(...spot.normal)) > 0.25;
@@ -335,7 +394,7 @@ export class HeroScene {
     // Keep the whole bag in frame on narrow screens.
     this.camera.fov = w / h < 0.9 ? 38 : 28;
     this.camera.updateProjectionMatrix();
-    this.controls.maxDistance = Math.max(0.85, this.fitDistance(STOPS[0].frame) * 1.15);
+    this.controls.maxDistance = Math.max(0.85, this.fitDistance(this.stops[0].frame) * 1.15);
     if (!this.settled) this.place(this.current);
   }
 }

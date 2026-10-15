@@ -90,33 +90,46 @@ The home page opens with a tour: the bag stays pinned (beside the text on deskto
 while five stops scroll past: the hero, the lock, the back pocket, the wrist strap, the leather. Each
 stop has a photo, so it all works without 3D. After the page has loaded, devices with WebGL2 (and
 no data saver, 2 GB+ memory) get the 3D bag instead: plain three.js, loaded as a separate chunk
-(158 KB gzipped) plus the model (`public/models/alpha.glb` 755 KB, `alpha-mobile.glb` 320 KB).
+(170 KB gzipped) plus the model (`public/models/alpha.glb` 720 KB, `alpha-mobile.glb` 300 KB).
 At the hero people can drag it (sideways on phones; vertical swipes still scroll) and open three
 hotspots (text in `views.HOTSPOTS`); further down the camera moves to each stop. The fingerprint
 sensor's light turns green at the lock stop. Reduced motion: no turning by itself, no camera glides.
 
-The model looks like the client's bag because it is wrapped in their photos:
+The model is built from the client's three photos, checked against them view by view:
 
 1. **Shape**: Hunyuan3D-2mv made it from the three photos (`media/3d/ai/`, compared in
    `previews/contact-sheet.jpg`; the textured AI results were unusable).
 2. **Masks** (`tools/photo_masks.py`, rembg): which pixels of each photo are bag → `media/3d/photos/`.
-3. **Cameras** (`tools/fit_cameras.py`): where the phone was for each photo, from features marked on
-   both photo and shape (snap, pocket pull, logo plate corners, lock module, sensor) and then refined
-   until the shape's outline matches the photo's (outline overlap 0.95–0.98) → `media/3d/cameras.json`,
-   overlays in `media/3d/fit/`.
-4. **Model** (`tools/build_model.py` + `tools/bake.py`): cleans and decimates the shape, unwraps it
-   (xatlas), projects the photos onto it (each texel from the photos that see it head-on and unblocked,
-   colour-matched so they blend), sorts faces into leather / zipper / metal parts, fixes the proportions
-   to 25 x 15.5 x 6.5 cm and compresses it (meshopt, JPEG texture): `alpha.glb` 755 KB,
-   `alpha-mobile.glb` 320 KB. The `.json` beside each says where the sensor's status light is (from
-   the side photo) and how often the page's faint leather grain repeats.
+3. **Cameras**: where the phone was for each photo → `media/3d/cameras.json`, overlays in `media/3d/fit/`.
+   `tools/fit_cameras.py` starts from features marked on both photo and shape (snap, pocket pull, logo
+   plate corners, lock module) and refines until the shape's outline matches the photo's;
+   `tools/refine_cameras.py` polishes all three (the side one on its outline only: its features sit on
+   the AI's own, misplaced lock module). Outline overlap: back 0.979, front 0.979, side 0.968.
+4. **Proportions** (`tools/fit_proportions.py`): the height and depth the three photos agree on best.
+   The retailers' sizes disagree (24x14x6 to 26x17x7 cm); at 25 cm wide the photos give about
+   14.2 x 7.7 cm.
+5. **Details** (`tools/details.py`): what the AI shape blurs and the photos have too few pixels for, so
+   the page models it (`frontend/src/hero/details.ts`):
+   - the lock module, traced in the side photo (outline, cap with the pull's slot and latch, groove,
+     light window, sensor glass and frame) and projected through the fitted camera onto its face;
+   - the zipper: tape and interlocked teeth (2.4 mm apart) along the seam, up the lock end, over the
+     top, down the far end to the pull tab;
+   - the far end's ring and pull tab, triangulated from the front and back photos.
+6. **Model** (`tools/build_model.py` + `tools/bake.py`): cleans and decimates the shape, gives it the
+   photos' proportions, presses the AI's blurry versions of the details flat (and smooths away the
+   bracket it invented at the far end and the dents in the front), unwraps it (xatlas), projects the
+   photos onto it (each texel from the photos that see it head-on and unblocked, colour-matched),
+   sorts faces into leather / front panel / zipper / metal and compresses it (meshopt, JPEG texture):
+   `alpha.glb` 720 KB, `alpha-mobile.glb` 300 KB. The `.json` beside each holds the details' measurements,
+   the hotspots and the leather grain's repeat.
+7. **Check** (`node tools/compare.mjs`, dev servers running): renders the site's 3D bag from each photo's
+   camera, the same size as the photo, to lay over it.
 
-The front, back, top and lock end (with the real sensor) come from the photos. **The bottom and the
-far end are in no photo**, so they get plain black leather; photos of those sides (and a sharper one
-of the front) would make them exact: add them to the masks and cameras and rebuild. Rebuild:
-`python tools/photo_masks.py` (rembg venv), then `python tools/fit_cameras.py` and
-`python tools/build_model.py` (the 3D venv: numpy, scipy, opencv-python-headless, trimesh,
-fast-simplification, xatlas).
+The front, back, top and lock end come from the photos; the lock, zipper and far-end hardware are
+modelled to their measurements. **The bottom and the far end's leather are in no photo**, so they are
+plain black leather; photos of those sides would make them exact (add them to the masks and cameras,
+rebuild). Venvs: rembg for `photo_masks.py`; numpy, scipy, opencv-python-headless, trimesh,
+fast-simplification, xatlas for the rest.
 
 ## Pages and SEO
 
