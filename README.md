@@ -173,6 +173,12 @@ ssh -t amir@185.231.180.92 'sudo DOMAIN=<host> STAGING=1 bash purseshop-deploy/s
 DOMAIN=<host> bash deploy/deploy.sh
 ```
 
+Staging runs at **https://shop.nisatech.org** (2026-10-15): set up without `STAGING=1` (open, no
+password, Amir's choice), DNS on ArvanCloud (A record `shop` → 185.231.180.92, CDN on, origin over
+HTTP; nisatak.com's own HTTPS answers on this server's port 443). `amir` can't sudo, so the root setup is
+run by the server admin; deploys need no root. With an https `PUBLIC_URL`, Django sends http visitors to
+https (`SECURE_SSL_REDIRECT`).
+
 gunicorn on 127.0.0.1:8030, `/srv/purseshop`, its own system user. The first deploy writes
 `backend/.env` with staging defaults (SMS printed to the journal, manual payments); edit it for the
 real domain, Kavenegar and cartbecart. Each deploy backs up the database (last 30 kept). Buyers'

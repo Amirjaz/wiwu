@@ -7,8 +7,10 @@ written down anywhere else.
 
 ## Where it stands
 
-- **Built and committed, not deployed.** One branch, `main`, and **no remote**: the repo exists only in
-  `E:\Work\Nisatech\PurseShop`. To continue on another machine, copy the folder (with the local files
+- **Online on staging: https://shop.nisatech.org** (2026-10-15). Open to everyone (no password, Amir's
+  choice), noindex, SMS codes only in the server log, manual payments: people can browse but can't finish
+  an order. Plain http redirects to https. One branch, `main`, and **no remote**: the repo exists only in
+  `E:\Work\Nisatech\PurseShop` (and the deploy bare repo on the server). To continue on another machine, copy the folder (with the local files
   listed under *Running it locally*) or push it to a private repo first.
 - **Store:** product page, checkout with an SMS code, card-to-card payment with a unique amount per order,
   "I've paid" review, the minute timer, shipping, returns, staff panel, SMS templates, SEO.
@@ -27,15 +29,19 @@ written down anywhere else.
   - NISA-67: 3D hero and scroll tour (3h: 30m, then follow-ups of 1h, 1h, and 30m for this handoff).
   - NISA-68: site design around the 3D bag, instrument look (1h30m: 1h for the two designs and the shop
     window, then 30m to switch to the instrument and enrich it).
+  - NISA-69: staging online at shop.nisatech.org (30m).
 
 ## Next, in order
 
 1. **Get the client's answers (PLAN.md §11).** The store name blocks the `.ir` domain, and the domain
    blocks Enamad: the domain must belong to whoever applies.
-2. **Staging.** The open question is whether `shop.nisatech.org` is fine for staging; there is no answer
-   yet. **Deploy only after an explicit go-ahead.**
-   - Steps: README → *Deploying*.
-   - Staging means basic auth, noindex, SMS printed to the journal, and manual payments.
+2. **Staging** is live (above). Still to do there:
+   - a staff panel account: `ssh -t amir@185.231.180.92 'cd /srv/purseshop/app/backend && .venv/bin/python manage.py createsuperuser'`
+     (Amir types the password), then add people to Owners or Staff in `/admin/`;
+   - a test order end to end (the SMS code is in `journalctl -u purseshop`), then cancel it in the panel;
+   - replace the sample card and the placeholder shipping prices in the panel once the client sends them.
+   - **Redeploy:** commit to `main`, then `DOMAIN=shop.nisatech.org bash deploy/deploy.sh`. Deploys still
+     need Amir's go-ahead.
 3. **Price (risk R1).** 10,000,000 toman + shipping + the offset lands just above 10M. Some transfer
    channels stop at 10M. Recommend that price + shipping + 999 stay ≤ 10,000,000; the client decides.
 4. **cartbecart.** Once the client's Max account opens their API docs, finish `backend/shop/payments.py`
