@@ -25,13 +25,15 @@ written down anywhere else.
   lookup, policy pages and the panel follow through the shared tokens in `frontend/src/site.css`.
 - **Client:** no answers yet. PLAN.md §11 is the message to send, in Persian, ready to paste.
 - **Plane** (Nisatech project), all Done:
-  - NISA-65: interview, cutouts and plan (1h).
-  - NISA-66: store core (1h).
-  - NISA-67: 3D hero and scroll tour (3h: 30m, then follow-ups of 1h, 1h, and 30m for this handoff).
-  - NISA-68: site design around the 3D bag, instrument look (2h: 1h for the two designs and the shop
-    window, 30m to switch to the instrument and enrich it, 30m for the review round on 2026-10-16).
-  - NISA-69: staging online at shop.nisatech.org (45m: first deploy 30m, then 15m redeploying the
+  - NISA-65: interview, cutouts and plan (3h).
+  - NISA-66: store core (3h).
+  - NISA-67: 3D hero and scroll tour (9h: 1h30m, then follow-ups of 3h, 3h, and 1h30m for this handoff).
+  - NISA-68: site design around the 3D bag, instrument look (6h: 3h for the two designs and the shop
+    window, 1h30m to switch to the instrument and enrich it, 1h30m for the review round on 2026-10-16).
+  - NISA-69: staging online at shop.nisatech.org (2h15m: first deploy 1h30m, then 45m redeploying the
     2026-10-16 review round; the server runs 2f9ceb7).
+  - These are Amir's figures: on 2026-10-16 he had every PurseShop Spent tripled (23h15m in all). Ask
+    him whether new PurseShop items get the same.
 
 ## Next, in order
 
