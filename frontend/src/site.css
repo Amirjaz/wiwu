@@ -1,6 +1,6 @@
 @import "tailwindcss";
 /* Self-hosted: Google Fonts is unreliable from inside Iran. */
-@import "@fontsource-variable/readex-pro";
+@import "@fontsource-variable/vazirmatn";
 /* Django renders the pages: scan its templates for classes too. */
 @source "../../backend/shop/templates";
 
@@ -8,14 +8,19 @@
   The instrument look (picked 2026-10-15): the bag as a precise object on an aluminium-grey bench,
   in the spirit of hardware catalogues. Cool greys and off-black; one signal colour, the green of the
   sensor's light, for state only: done, paid, in stock, the view on screen, focus. Primary buttons are
-  ink. Readex Pro for text, Vazir Code (a Persian monospace) for labels, readouts and figures.
+  ink. Vazirmatn for text and Vazir Code, its monospace sibling, for labels, readouts and figures
+  (Readex Pro looked the part but its self-hosted copy has no Persian ی ک گ پ, so words fell apart).
   Light only (the client's choice, 2026-10-14). Corners: 4px everywhere; round only for lights, step
   markers and status badges.
 */
+/* Vazir Code only for figures, Latin and punctuation: Persian words set in a monospace stretch and
+   read as broken, so their letters fall through to Vazirmatn (the next font in --font-mono). The
+   spaces, the ZWNJ and the Arabic letters are left out on purpose. */
 @font-face {
   font-family: "Vazir Code";
   src: url("../node_modules/vazir-code-font/dist/Vazir-Code.woff2") format("woff2");
   font-display: swap;
+  unicode-range: U+0021-007E, U+00A1-00FF, U+0660-0669, U+066B-066C, U+06F0-06F9, U+2010-2027, U+2030-205E, U+2212;
 }
 
 @theme {
@@ -27,6 +32,10 @@
   --color-muted: #52555b;
   --color-line: #b5b8bd;
   --color-line-strong: #8d9096;
+  /* Section grounds, so each part of the page reads as its own: steel under the specs, graphite under
+     buying (with ink for the lock demo and the footer, and signal green for the closing band). */
+  --color-steel: #c6c8cc;
+  --color-graphite: #1c1e22;
   --color-signal: #17b169;
   --color-accent: #0f7b4f;
   --color-accent-ink: #075c35;
@@ -36,8 +45,8 @@
   --color-warn: #7d5000;
   --color-warn-soft: #eee2c6;
 
-  --font-sans: "Readex Pro Variable", "Readex Pro", system-ui, sans-serif;
-  --font-mono: "Vazir Code", ui-monospace, monospace;
+  --font-sans: "Vazirmatn Variable", Vazirmatn, system-ui, sans-serif;
+  --font-mono: "Vazir Code", "Vazirmatn Variable", Vazirmatn, ui-monospace, monospace;
   --ease-out: cubic-bezier(0.2, 0.9, 0.25, 1);
   --radius-surface: 4px;
   --radius-field: 4px;
@@ -59,7 +68,6 @@
     background: var(--color-page);
     color: var(--color-ink);
     font-family: var(--font-sans);
-    font-weight: 330;
     text-rendering: optimizeLegibility;
   }
 

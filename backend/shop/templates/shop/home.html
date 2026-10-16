@@ -22,8 +22,6 @@ on capable devices the 3D bag (islands/hero.ts) replaces the photos and turns to
 <section id="tour" class="mx-auto max-w-7xl px-4 sm:px-6 grid md:grid-cols-[0.8fr_1.3fr] md:gap-x-12">
   <div class="order-first md:order-last sticky top-16 z-10 -mx-4 sm:-mx-6 md:mx-0 h-[48dvh] md:h-[calc(100dvh-4rem)] md:self-start bg-page flex flex-col border-b border-line md:border-0 overflow-x-clip">
     <div data-hero-stage data-model="{% asset 'models/alpha.glb' %}" data-model-small="{% asset 'models/alpha-mobile.glb' %}" class="relative flex-1 min-h-0 rise" style="--i:1">
-      {# Studio light: a soft pool of light on the bench, under the photos and the 3D. #}
-      <div aria-hidden="true" class="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_48%_40%_at_50%_54%,rgba(255,255,255,0.6),rgba(255,255,255,0)_72%)]"></div>
       <img data-poster="0" src="{% asset 'images/front.webp' %}" alt="کیف دستی آلفا از روبه‌رو، مشکی با زیپ فلزی و پلاک کوچک برند" width="844" height="540" fetchpriority="high"
            class="absolute inset-0 m-auto max-h-full max-w-full object-contain p-3 md:p-6 transition-opacity duration-500 drop-shadow-[0_26px_30px_rgba(36,40,48,0.28)]">
       <img data-poster="1" src="{% asset 'images/side.webp' %}" alt="کنار کیف با ماژول قفل اثر انگشت" width="422" height="757" loading="lazy"
@@ -59,7 +57,7 @@ on capable devices the 3D bag (islands/hero.ts) replaces the photos and turns to
   <div>
     <div data-stop="0" class="flex flex-col justify-center gap-5 sm:gap-6 py-6 md:py-8 min-h-[calc(52dvh-4rem)] md:min-h-[calc(100dvh-4rem)]">
       <p class="rise hidden sm:flex items-center gap-2 font-mono text-sm text-muted" style="--i:0">{% if product.is_available %}<span class="led led-on"></span>{% endif %}{{ product.name }}</p>
-      <h1 class="rise text-[1.8rem] leading-[1.45] sm:text-5xl lg:text-[3.5rem] font-semibold sm:leading-[1.3]" style="--i:0">فقط با اثر انگشت شما باز می‌شود.</h1>
+      <h1 class="rise text-[1.8rem] leading-[1.45] sm:text-5xl lg:text-[3.5rem] font-bold sm:leading-[1.35]" style="--i:0">فقط با اثر انگشت شما باز می‌شود.</h1>
       <p class="rise text-[1.05rem] sm:text-xl text-ink-soft leading-[1.9] max-w-[36ch]" style="--i:1">کیف دستی آلفا با قفل اثر انگشت؛ جای امنی برای کارت، مدارک و گوشی، هر جا که می‌روید.</p>
       <div class="rise flex flex-wrap items-center gap-x-6 gap-y-4 pt-2" style="--i:2">
         {% if product.is_available %}
@@ -76,7 +74,7 @@ on capable devices the 3D bag (islands/hero.ts) replaces the photos and turns to
 
     <div data-stop="1" id="lock" class="scroll-mt-[50dvh] md:scroll-mt-24 flex flex-col justify-center gap-10 py-16 min-h-[70dvh] md:min-h-[85dvh]">
       <div class="reveal space-y-4">
-        <h2 class="text-3xl sm:text-[2.5rem] font-semibold leading-[1.45]">کلید این قفل همیشه همراه شماست.</h2>
+        <h2 class="text-3xl sm:text-[2.5rem] font-bold leading-[1.45]">کلید این قفل همیشه همراه شماست.</h2>
         <p class="text-lg text-ink-soft leading-[1.9] max-w-[46ch]">انگشتتان را روی حسگر بگذارید، چراغ سبز می‌شود و زیپ باز است. بدون رمز، بدون کلیدی که گم شود.</p>
       </div>
       <dl class="reveal grid grid-cols-[1fr_1.3fr_1fr] rounded-[var(--radius-surface)] border border-line-strong bg-surface [&>div+div]:border-s [&>div+div]:border-line">
@@ -89,7 +87,7 @@ on capable devices the 3D bag (islands/hero.ts) replaces the photos and turns to
 
     <div data-stop="2" id="features" class="scroll-mt-[50dvh] md:scroll-mt-24 flex flex-col justify-center py-16 min-h-[60dvh] md:min-h-[75dvh]">
       <div class="reveal space-y-4">
-        <h2 class="text-3xl sm:text-[2.5rem] font-semibold leading-[1.45]">جیب زیپ‌دار پشت</h2>
+        <h2 class="text-3xl sm:text-[2.5rem] font-bold leading-[1.45]">جیب زیپ‌دار پشت</h2>
         <p class="text-lg text-ink-soft leading-[1.9] max-w-[44ch]">برای چیزهایی که زود به آن‌ها نیاز دارید: کارت مترو، بلیت، رسید. بی‌آنکه قفل اصلی را باز کنید.</p>
         <p class="font-mono text-sm"><span class="text-muted">جیب‌ها</span>&ensp;جیب زیپ‌دار پشت، جای کارت و مدارک در داخل</p>
       </div>
@@ -97,7 +95,7 @@ on capable devices the 3D bag (islands/hero.ts) replaces the photos and turns to
 
     <div data-stop="3" class="flex flex-col justify-center py-16 min-h-[60dvh] md:min-h-[75dvh]">
       <div class="reveal space-y-4">
-        <h2 class="text-3xl sm:text-[2.5rem] font-semibold leading-[1.45]">بند مچی</h2>
+        <h2 class="text-3xl sm:text-[2.5rem] font-bold leading-[1.45]">بند مچی</h2>
         <p class="text-lg text-ink-soft leading-[1.9] max-w-[44ch]">بند پشت کیف با دکمه فلزی بسته می‌شود تا کیف از دستتان سُر نخورد.</p>
         <p class="font-mono text-sm"><span class="text-muted">بند</span>&ensp;بند مچی با دکمه فلزی</p>
       </div>
@@ -105,7 +103,7 @@ on capable devices the 3D bag (islands/hero.ts) replaces the photos and turns to
 
     <div data-stop="4" class="flex flex-col justify-center py-16 min-h-[60dvh] md:min-h-[85dvh]">
       <div class="reveal space-y-4">
-        <h2 class="text-3xl sm:text-[2.5rem] font-semibold leading-[1.45]">چرم مصنوعی مقاوم</h2>
+        <h2 class="text-3xl sm:text-[2.5rem] font-bold leading-[1.45]">چرم مصنوعی مقاوم</h2>
         <p class="text-lg text-ink-soft leading-[1.9] max-w-[44ch]">بدنه PU در برابر آب و خط و خش مقاوم است و با یک دستمال تمیز می‌شود.</p>
         <p class="font-mono text-sm"><span class="text-muted">آستر</span>&ensp;میکروفایبر</p>
       </div>
@@ -117,7 +115,7 @@ on capable devices the 3D bag (islands/hero.ts) replaces the photos and turns to
 <section id="try" class="scroll-mt-16 bg-ink text-raised bg-[radial-gradient(ellipse_40%_60%_at_28%_50%,#25272c_0%,rgba(15,16,18,0)_75%)]">
   <div class="mx-auto max-w-7xl px-4 sm:px-6 py-20 md:py-28 grid gap-14 md:grid-cols-[1.1fr_0.9fr] items-center">
     <div class="reveal space-y-6">
-      <h2 class="text-3xl sm:text-[2.6rem] font-semibold leading-[1.45]">امتحانش کنید.</h2>
+      <h2 class="text-3xl sm:text-[2.6rem] font-bold leading-[1.45]">امتحانش کنید.</h2>
       <p class="text-lg text-raised/75 leading-[1.9] max-w-[42ch]">انگشتتان را روی حسگر نگه دارید. قفل واقعی هم همین‌قدر طول می‌کشد: حدود نیم ثانیه.</p>
       <p class="flex items-start gap-2 font-mono text-[0.8rem] text-raised/55 leading-relaxed max-w-[48ch]">{% icon 'shield-check' 'size-4 mt-0.5' %}این فقط یک نمایش است. چیزی خوانده یا ذخیره نمی‌شود؛ فقط مدت نگه داشتن را می‌سنجد.</p>
     </div>
@@ -136,12 +134,15 @@ on capable devices the 3D bag (islands/hero.ts) replaces the photos and turns to
   </div>
 </section>
 
-{# The parts, marked on the three photos (views.PARTS); a tab per photo, the list beside it. #}
-<section id="parts" class="scroll-mt-16 overflow-x-clip">
+{# The parts, marked on the three photos (views.PARTS), on a light table: a tab per photo, the list beside it. #}
+<section id="parts" class="scroll-mt-16 overflow-x-clip bg-raised">
   <div class="mx-auto max-w-7xl px-4 sm:px-6 py-20 md:py-28">
     <div class="reveal flex flex-wrap items-end justify-between gap-6 mb-10 md:mb-14">
-      <h2 class="text-3xl sm:text-[2.5rem] font-semibold leading-[1.45]">جزء به جزء</h2>
-      <div role="tablist" aria-label="نمای کیف" class="inline-flex gap-1 rounded-[var(--radius-surface)] border border-line-strong bg-surface p-1 text-sm">
+      <div class="space-y-3">
+        <h2 class="text-3xl sm:text-[2.6rem] font-bold leading-[1.45]">جزء به جزء</h2>
+        <p class="text-ink-soft leading-relaxed max-w-[46ch]">هر سطر را بزنید تا جایش روی کیف روشن شود.</p>
+      </div>
+      <div role="tablist" aria-label="نمای کیف" class="inline-flex gap-1 rounded-[var(--radius-surface)] border border-line bg-surface p-1 text-sm">
         {% for key, label, image, w, h, items in parts %}
         <button type="button" role="tab" id="parts-tab-{{ key }}" aria-controls="parts-{{ key }}" aria-selected="{% if forloop.first %}true{% else %}false{% endif %}" tabindex="{% if forloop.first %}0{% else %}-1{% endif %}" data-parts-tab
                 class="flex items-center gap-2 h-9 px-4 rounded-[3px] text-muted hover:text-ink aria-selected:bg-ink aria-selected:text-raised"><span class="led"></span>{{ label }}</button>
@@ -152,9 +153,8 @@ on capable devices the 3D bag (islands/hero.ts) replaces the photos and turns to
     <div role="tabpanel" id="parts-{{ key }}" aria-labelledby="parts-tab-{{ key }}" data-parts-panel {% if not forloop.first %}hidden{% endif %}
          class="reveal grid gap-10 lg:grid-cols-[1.4fr_1fr] lg:gap-16 items-center">
       <figure class="relative mx-auto w-fit">
-        <div aria-hidden="true" class="pointer-events-none absolute -inset-8 bg-[radial-gradient(ellipse_50%_45%_at_50%_52%,rgba(255,255,255,0.5),rgba(255,255,255,0)_72%)]"></div>
         <img src="{% asset image %}" alt="کیف از {{ label }}" width="{{ w }}" height="{{ h }}" loading="lazy"
-             class="relative block w-auto h-auto max-w-full {% if key == 'side' %}max-h-[24rem] sm:max-h-[30rem]{% else %}max-h-[30rem]{% endif %} drop-shadow-[0_22px_26px_rgba(36,40,48,0.24)]">
+             class="block w-auto h-auto max-w-full {% if key == 'side' %}max-h-[24rem] sm:max-h-[30rem]{% else %}max-h-[30rem]{% endif %} drop-shadow-[0_22px_26px_rgba(36,40,48,0.24)]">
         {% for x, y, name, note, bx in items %}
         {% if bx %}{# The number beside the bag, a line to a pin on the part. #}
         <span class="absolute h-px bg-ink/55" style="top: {{ y }}%; left: {{ bx }}%; right: calc(100% - {{ x }}%)" aria-hidden="true"></span>
@@ -163,12 +163,12 @@ on capable devices the 3D bag (islands/hero.ts) replaces the photos and turns to
         <span class="marker absolute -translate-x-1/2 -translate-y-1/2 cursor-default" style="left: {% if bx %}{{ bx }}{% else %}{{ x }}{% endif %}%; top: {{ y }}%" data-part="{{ forloop.counter }}" aria-hidden="true">{{ forloop.counter|fa }}</span>
         {% endfor %}
       </figure>
-      <ol class="border-t border-line-strong">
+      <ol class="border-t border-ink">
         {% for x, y, name, note, bx in items %}
         <li data-part="{{ forloop.counter }}" class="flex gap-4 py-4 border-b border-line cursor-default transition-colors data-[active]:bg-surface sm:px-3">
           <span class="marker mt-0.5" aria-hidden="true">{{ forloop.counter|fa }}</span>
           <div>
-            <p class="font-medium">{{ name }}</p>
+            <p class="font-bold">{{ name }}</p>
             <p class="mt-1 text-[0.95rem] text-ink-soft leading-relaxed">{{ note }}</p>
           </div>
         </li>
@@ -179,16 +179,16 @@ on capable devices the 3D bag (islands/hero.ts) replaces the photos and turns to
   </div>
 </section>
 
-{# Specs: the size drawn on two of the photos over a centimetre mat, then every spec in a grid of cells. #}
-<section id="specs" class="scroll-mt-16 border-t border-line">
+{# Specs, on steel: the size drawn on two of the photos over a centimetre mat, then every spec in a grid of cells. #}
+<section id="specs" class="scroll-mt-16 bg-steel">
   <div class="mx-auto max-w-7xl px-4 sm:px-6 py-20 md:py-28 space-y-12">
     <div class="reveal flex flex-wrap items-end justify-between gap-4">
-      <h2 class="text-3xl sm:text-[2.5rem] font-semibold">مشخصات</h2>
-      {% if dims %}<p class="font-mono text-sm text-muted">{{ dims.0 }} × {{ dims.1 }} × {{ dims.2 }} سانتی‌متر، تقریبی</p>{% endif %}
+      <h2 class="text-3xl sm:text-[2.6rem] font-bold">مشخصات</h2>
+      {% if dims %}<p class="font-mono text-sm text-ink-soft">{{ dims.0 }} × {{ dims.1 }} × {{ dims.2 }} سانتی‌متر، تقریبی</p>{% endif %}
     </div>
     {% if dims %}
     {# --cm: a centimetre of the bag at the photos' height (front width = height × 844/540, and 25 cm wide). #}
-    <figure class="reveal cm-grid rounded-[var(--radius-surface)] border border-line px-4 py-10 sm:px-10 sm:py-16 [--cm:9px] sm:[--cm:14px] lg:[--cm:18px]">
+    <figure class="reveal cm-grid rounded-[var(--radius-surface)] border border-line-strong/50 shadow-[0_24px_40px_-30px_rgba(15,16,18,0.55)] px-4 py-10 sm:px-10 sm:py-16 [--cm:9px] sm:[--cm:14px] lg:[--cm:18px]">
       <div class="flex items-end justify-center gap-x-8 sm:gap-x-16">
         <div class="relative w-fit pb-9 ps-10">
           <img src="{% asset 'images/front.webp' %}" alt="کیف از روبه‌رو" width="844" height="540" loading="lazy" class="block h-36 sm:h-56 lg:h-72 w-auto drop-shadow-[0_14px_16px_rgba(36,40,48,0.22)]">
@@ -204,9 +204,9 @@ on capable devices the 3D bag (islands/hero.ts) replaces the photos and turns to
     </figure>
     {% endif %}
     {# The last cell stretches over the row's empty places, so the grid never ends in a gap. #}
-    <dl class="reveal grid gap-px overflow-hidden rounded-[var(--radius-surface)] border border-line bg-line sm:grid-cols-2 lg:grid-cols-3">
+    <dl class="reveal grid gap-px overflow-hidden rounded-[var(--radius-surface)] border border-line-strong/60 bg-line-strong/60 sm:grid-cols-2 lg:grid-cols-3">
       {% for label, value in spec_cells %}
-      <div class="flex flex-col gap-2 bg-page p-5 sm:p-6{% if forloop.last %}{% if not spec_cells|length|divisibleby:2 %} sm:col-span-2{% endif %}{% if spec_cells|length|divisibleby:3 %} lg:col-span-1{% elif spec_cells|length|add:'-1'|divisibleby:3 %} lg:col-span-3{% else %} lg:col-span-2{% endif %}{% endif %}">
+      <div class="flex flex-col gap-2 bg-surface p-5 sm:p-6{% if forloop.last %}{% if not spec_cells|length|divisibleby:2 %} sm:col-span-2{% endif %}{% if spec_cells|length|divisibleby:3 %} lg:col-span-1{% elif spec_cells|length|add:'-1'|divisibleby:3 %} lg:col-span-3{% else %} lg:col-span-2{% endif %}{% endif %}">
         <dt class="readout-label">{{ label }}</dt>
         <dd class="text-[1.05rem] font-medium leading-relaxed">{{ value }}</dd>
       </div>
@@ -215,46 +215,46 @@ on capable devices the 3D bag (islands/hero.ts) replaces the photos and turns to
   </div>
 </section>
 
-{# Buying: the steps on a rail beside a sample bill, which explains why the amount isn't round. #}
-<section id="buy" class="scroll-mt-16 border-t border-line">
+{# Buying, on graphite like a shop counter: the steps on a rail beside the sample bill, which explains why the amount isn't round. #}
+<section id="buy" class="scroll-mt-16 bg-graphite text-raised">
   <div class="mx-auto max-w-7xl px-4 sm:px-6 py-20 md:py-28 grid gap-14 lg:grid-cols-[1.2fr_0.8fr] lg:gap-20 items-start">
     <div class="reveal space-y-10">
       <div class="space-y-4">
-        <h2 class="text-3xl sm:text-[2.5rem] font-semibold leading-[1.45]">خرید با کارت‌به‌کارت، ساده و روشن.</h2>
-        <p class="text-lg text-ink-soft leading-[1.9] max-w-[52ch]">بدون درگاه و ثبت‌نام. شماره موبایلتان را تأیید می‌کنید و مبلغ را از اپ بانک می‌فرستید.</p>
+        <h2 class="text-3xl sm:text-[2.6rem] font-bold leading-[1.45]">خرید با کارت‌به‌کارت، ساده و روشن.</h2>
+        <p class="text-lg text-raised/70 leading-[1.9] max-w-[52ch]">بدون درگاه و ثبت‌نام. شماره موبایلتان را تأیید می‌کنید و مبلغ را از اپ بانک می‌فرستید.</p>
       </div>
-      <ol class="relative space-y-8 ps-7 before:absolute before:top-2 before:bottom-2 before:start-[3px] before:w-px before:bg-line-strong">
+      <ol class="relative space-y-8 ps-7 before:absolute before:top-2 before:bottom-2 before:start-[3px] before:w-px before:bg-raised/20">
         <li class="relative">
           <span class="led led-on absolute -start-7 top-[0.55rem]"></span>
-          <p class="font-mono text-[0.78rem] text-muted">اکنون</p>
-          <p class="mt-1 text-xl font-medium">ثبت سفارش</p>
-          <p class="mt-1 text-ink-soft leading-relaxed">نشانی را وارد کنید و شماره موبایل را با کد پیامکی تأیید کنید.</p>
+          <p class="font-mono text-[0.78rem] text-raised/50">اکنون</p>
+          <p class="mt-1 text-xl font-bold">ثبت سفارش</p>
+          <p class="mt-1 text-raised/70 leading-relaxed">نشانی را وارد کنید و شماره موبایل را با کد پیامکی تأیید کنید.</p>
         </li>
         <li class="relative">
           <span class="led absolute -start-7 top-[0.55rem]"></span>
-          <p class="font-mono text-[0.78rem] text-muted">تا ۳۰ دقیقه</p>
-          <p class="mt-1 text-xl font-medium">کارت‌به‌کارت</p>
-          <p class="mt-1 text-ink-soft leading-relaxed">مبلغ دقیق سفارش را به کارتی که نشان می‌دهیم{% if card_holder %} به نام {{ card_holder }}{% endif %} واریز کنید.</p>
+          <p class="font-mono text-[0.78rem] text-raised/50">تا ۳۰ دقیقه</p>
+          <p class="mt-1 text-xl font-bold">کارت‌به‌کارت</p>
+          <p class="mt-1 text-raised/70 leading-relaxed">مبلغ دقیق سفارش را به کارتی که نشان می‌دهیم{% if card_holder %} به نام {{ card_holder }}{% endif %} واریز کنید.</p>
         </li>
         <li class="relative">
           <span class="led absolute -start-7 top-[0.55rem]"></span>
-          <p class="font-mono text-[0.78rem] text-muted">{% if auto_confirm %}خودکار، کمتر از یک دقیقه{% else %}با بررسی همکاران ما{% endif %}</p>
-          <p class="mt-1 text-xl font-medium">تأیید</p>
-          <p class="mt-1 text-ink-soft leading-relaxed">پیامک تأیید سفارش برایتان فرستاده می‌شود.</p>
+          <p class="font-mono text-[0.78rem] text-raised/50">{% if auto_confirm %}خودکار، کمتر از یک دقیقه{% else %}با بررسی همکاران ما{% endif %}</p>
+          <p class="mt-1 text-xl font-bold">تأیید</p>
+          <p class="mt-1 text-raised/70 leading-relaxed">پیامک تأیید سفارش برایتان فرستاده می‌شود.</p>
         </li>
         <li class="relative">
           <span class="led absolute -start-7 top-[0.55rem]"></span>
-          <p class="font-mono text-[0.78rem] text-muted">{% for option in shipping %}{{ option.name }} {{ option.days }}{% if not forloop.last %}، {% endif %}{% endfor %}</p>
-          <p class="mt-1 text-xl font-medium">ارسال</p>
-          <p class="mt-1 text-ink-soft leading-relaxed">کیف با کد رهگیری فرستاده می‌شود و کد را پیامک می‌کنیم.</p>
+          <p class="font-mono text-[0.78rem] text-raised/50">{% for option in shipping %}{{ option.name }} {{ option.days }}{% if not forloop.last %}، {% endif %}{% endfor %}</p>
+          <p class="mt-1 text-xl font-bold">ارسال</p>
+          <p class="mt-1 text-raised/70 leading-relaxed">کیف با کد رهگیری فرستاده می‌شود و کد را پیامک می‌کنیم.</p>
         </li>
       </ol>
-      <a href="{% url 'page' 'returns' %}" class="inline-flex items-center gap-2 text-ink-soft hover:text-ink">
-        {% icon 'arrow-u-up-left' 'size-5 text-muted' %}<span>{{ store.return_days|fa }} روز کاری فرصت بازگشت کالا</span>{% icon 'arrow-left' 'size-4' %}
+      <a href="{% url 'page' 'returns' %}" class="inline-flex items-center gap-2 text-raised/80 hover:text-raised">
+        {% icon 'arrow-u-up-left' 'size-5 text-raised/50' %}<span>{{ store.return_days|fa }} روز کاری فرصت بازگشت کالا</span>{% icon 'arrow-left' 'size-4' %}
       </a>
     </div>
 
-    <aside class="lg:sticky lg:top-28 pb-3" aria-label="نمونه‌ی مبلغ سفارش">
+    <aside class="lg:sticky lg:top-28 pb-3 text-ink" aria-label="نمونه‌ی مبلغ سفارش">
       <div class="receipt print px-6 pt-7 pb-8 font-mono text-[0.84rem] leading-relaxed">
         <p class="text-center text-muted">نمونه‌ی مبلغ یک سفارش</p>
         <dl class="mt-6 space-y-2.5">
@@ -268,7 +268,7 @@ on capable devices the 3D bag (islands/hero.ts) replaces the photos and turns to
         {% if shipping %}
         <div class="flex items-baseline justify-between gap-4">
           <span>مثلاً با {{ shipping.0.name }}</span>
-          <span class="font-sans text-2xl font-medium whitespace-nowrap">{{ example_total }}</span>
+          <span class="font-sans text-2xl font-bold whitespace-nowrap">{{ example_total }}</span>
         </div>
         <p class="text-end text-xs text-muted">تومان</p>
         <div class="my-5 border-t border-dashed border-line-strong"></div>
@@ -280,13 +280,13 @@ on capable devices the 3D bag (islands/hero.ts) replaces the photos and turns to
 </section>
 
 {% if faqs %}
-<section id="faq" class="scroll-mt-16 border-t border-line">
+<section id="faq" class="scroll-mt-16">
   <div class="mx-auto max-w-7xl px-4 sm:px-6 py-20 md:py-28 grid gap-10 lg:grid-cols-[0.7fr_1.6fr]">
-    <h2 class="reveal text-3xl sm:text-[2.5rem] font-semibold lg:sticky lg:top-28 lg:self-start">پرسش‌ها</h2>
+    <h2 class="reveal text-3xl sm:text-[2.6rem] font-bold lg:sticky lg:top-28 lg:self-start">پرسش‌ها</h2>
     <div class="reveal grid gap-px overflow-hidden rounded-[var(--radius-surface)] border border-line bg-line">
       {% for faq in faqs %}
       <details class="group bg-surface open:bg-raised">
-        <summary class="flex cursor-pointer list-none items-center gap-4 px-5 py-4 text-[1.05rem] font-medium [&::-webkit-details-marker]:hidden">
+        <summary class="flex cursor-pointer list-none items-center gap-4 px-5 py-4 text-[1.05rem] font-bold [&::-webkit-details-marker]:hidden">
           <span class="flex-1">{{ faq.question }}</span>
           <span class="font-mono text-lg text-muted transition-transform duration-200 group-open:rotate-45" aria-hidden="true">+</span>
         </summary>
@@ -298,24 +298,24 @@ on capable devices the 3D bag (islands/hero.ts) replaces the photos and turns to
 </section>
 {% endif %}
 
-{# Closing: the bag, its price and the button on one bar, and what comes with buying here. #}
-<section class="mx-auto max-w-7xl px-4 sm:px-6 pb-20">
-  <div class="reveal rounded-[var(--radius-surface)] border border-line-strong bg-surface overflow-hidden">
-    <div class="grid gap-6 sm:grid-cols-[auto_1fr] md:grid-cols-[auto_1fr_auto] items-center p-5 sm:p-7 bg-[radial-gradient(ellipse_30%_90%_at_88%_50%,rgba(255,255,255,0.55),rgba(255,255,255,0)_75%)]">
-      <img src="{% asset 'images/back.webp' %}" alt="" width="897" height="642" loading="lazy" class="hidden sm:block h-24 w-auto drop-shadow-[0_12px_14px_rgba(36,40,48,0.25)]">
-      <div class="space-y-1.5">
-        <p class="text-xl sm:text-2xl font-medium">{{ product.name }}</p>
-        <p class="flex items-center gap-2 font-mono text-sm text-muted">{% if product.is_available %}<span class="led led-on"></span>موجود{% else %}<span class="led"></span>فعلاً موجود نیست{% endif %}</p>
-      </div>
-      <div class="flex items-center gap-5 sm:col-span-2 md:col-span-1">
-        <p class="leading-tight"><span class="block text-2xl font-medium">{{ price }}</span><span class="block font-mono text-xs text-muted">تومان</span></p>
-        {% if product.is_available %}<a href="{% url 'checkout' %}" class="btn btn-primary min-h-14 px-12 text-lg flex-1 md:flex-none">خرید</a>{% endif %}
+{# Closing: a band in the sensor's green, the colour of "open": the bag, its price, the button, and what comes with buying here. #}
+<section class="bg-signal text-ink">
+  <div class="mx-auto max-w-7xl px-4 sm:px-6 py-16 md:py-24 grid gap-12 md:grid-cols-[1.1fr_0.9fr] items-center">
+    <div class="reveal space-y-6">
+      <p class="flex items-center gap-2 font-mono text-sm text-ink/70"><span class="size-2 rounded-full {% if product.is_available %}bg-ink{% else %}border border-ink{% endif %}"></span>{% if product.is_available %}موجود{% else %}فعلاً موجود نیست{% endif %}</p>
+      <h2 class="text-3xl sm:text-[2.8rem] font-bold leading-[1.4] max-w-[17ch]">{{ product.name }}</h2>
+      <div class="flex flex-wrap items-center gap-x-6 gap-y-4">
+        {% if product.is_available %}<a href="{% url 'checkout' %}" class="btn btn-primary min-h-14 px-12 text-lg">خرید</a>{% endif %}
+        <p class="leading-tight"><span class="block text-2xl font-bold">{{ price }}</span><span class="block font-mono text-xs text-ink/70">تومان</span></p>
       </div>
     </div>
-    <ul class="grid sm:grid-cols-3 border-t border-line text-[0.9rem] text-ink-soft [&>li+li]:border-t sm:[&>li+li]:border-t-0 sm:[&>li+li]:border-s [&>li+li]:border-line">
-      <li class="flex items-center gap-3 px-5 py-4">{% icon 'credit-card' 'size-5 text-muted' %} کارت‌به‌کارت، بدون درگاه</li>
-      <li class="flex items-center gap-3 px-5 py-4">{% icon 'truck' 'size-5 text-muted' %} پست پیشتاز یا تیپاکس، با کد رهگیری</li>
-      <li class="flex items-center gap-3 px-5 py-4">{% icon 'arrow-u-up-left' 'size-5 text-muted' %} {{ store.return_days|fa }} روز کاری فرصت بازگشت</li>
+    <img src="{% asset 'images/back.webp' %}" alt="" width="897" height="642" loading="lazy" class="reveal w-full max-w-md justify-self-center h-auto drop-shadow-[0_30px_28px_rgba(4,48,26,0.38)]">
+  </div>
+  <div class="border-t border-ink/15">
+    <ul class="mx-auto max-w-7xl px-4 sm:px-6 grid sm:grid-cols-3 text-[0.92rem] [&>li+li]:border-t sm:[&>li+li]:border-t-0 sm:[&>li+li]:border-s [&>li+li]:border-ink/15">
+      <li class="flex items-center gap-3 py-5 sm:px-5 sm:first:ps-0">{% icon 'credit-card' 'size-5 text-ink/70' %} کارت‌به‌کارت، بدون درگاه</li>
+      <li class="flex items-center gap-3 py-5 sm:px-5">{% icon 'truck' 'size-5 text-ink/70' %} پست پیشتاز یا تیپاکس، با کد رهگیری</li>
+      <li class="flex items-center gap-3 py-5 sm:px-5">{% icon 'arrow-u-up-left' 'size-5 text-ink/70' %} {{ store.return_days|fa }} روز کاری فرصت بازگشت</li>
     </ul>
   </div>
 </section>

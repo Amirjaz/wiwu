@@ -139,9 +139,19 @@ the rest (Python 3.12).
 "Instrument", picked on 2026-10-15 from two directions built around the 3D bag: the bag as a precise
 object on an aluminium-grey bench, like a hardware catalogue. Cool greys and off-black; primary buttons
 are ink. One signal colour, the sensor's green: `signal` for lights (`.led`: in stock, the view on
-screen, a step), `accent` for done (paid, a completed step, an OK notice). Readex Pro for text, Vazir
-Code (a Persian monospace) for labels, readouts and figures (`font-mono`, `.readout-label`), both
-self-hosted. Corners 4px. The panel and the other pages share these tokens.
+screen, a step), `accent` for done (paid, a completed step, an OK notice). Vazirmatn for text; Vazir
+Code, its monospace sibling, for the figures and Latin in labels and readouts (`font-mono`,
+`.readout-label`); its `@font-face` leaves out the Persian letters and spaces, which fall through to
+Vazirmatn, since Persian set in a monospace stretches and reads as broken. Both self-hosted. (Readex
+Pro was tried first: Fontsource's copy has no ی ک گ پ, so words fell apart on phones.) Corners 4px.
+The panel and the other pages share these tokens.
+
+Each home section has its own ground, so moving down the page reads as moving between parts: the tour
+on aluminium grey (`page`), the lock demo on ink, the parts on a light table (`raised`), the specs on
+`steel`, buying on `graphite` with the bill in white, the questions on grey, a closing band in signal
+green, and an ink footer. No white glows behind the bag. On phones the menu is a solid ink panel under
+the header (outside it, since the header's blur would trap a fixed panel), with the buy button at the
+bottom; the page doesn't scroll under it, and Escape closes it.
 
 The home page, after the tour:
 - **Lock demo** (`#try`, the one dark block): a drawing of the real module. Holding it for half a second

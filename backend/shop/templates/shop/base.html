@@ -24,7 +24,7 @@
   {% block header %}
   <header class="sticky top-0 z-40 bg-page/90 backdrop-blur-md border-b border-line">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 h-16 flex items-center gap-10">
-      <a href="{% url 'home' %}" class="flex items-center gap-2 text-lg font-semibold">{% icon 'fingerprint' 'size-6' %}{{ store.store_name }}</a>
+      <a href="{% url 'home' %}" class="flex items-center gap-2 text-lg font-bold">{% icon 'fingerprint' 'size-6' %}{{ store.store_name }}</a>
       <nav class="hidden xl:flex items-center gap-7 text-[0.92rem]" aria-label="اصلی">
         <a href="{% url 'home' %}#lock" class="leading-tight hover:text-ink-soft"><span class="block font-medium">قفل</span><span class="block font-mono text-[0.72rem] text-muted">۱۰ اثر انگشت</span></a>
         <a href="{% url 'home' %}#features" class="leading-tight hover:text-ink-soft"><span class="block font-medium">ویژگی‌ها</span><span class="block font-mono text-[0.72rem] text-muted">جیب، بند، بدنه</span></a>
@@ -35,52 +35,75 @@
       </nav>
       <div class="ms-auto flex items-center gap-2">
         {% block header_cta %}<a href="{% url 'checkout' %}" class="btn btn-primary min-h-10 px-4 text-sm">خرید{% if price %}<span class="hidden sm:inline font-mono text-[0.75rem] opacity-70">{{ price }}</span>{% endif %}</a>{% endblock %}
-        <button type="button" class="xl:hidden btn btn-ghost min-h-10 !px-3" data-menu-toggle aria-expanded="false" aria-controls="mobile-menu">
-          {% icon 'list' 'size-5' %}<span class="sr-only">منو</span>
+        <button type="button" class="group xl:hidden btn btn-ghost min-h-10 !px-3 aria-expanded:bg-ink aria-expanded:border-ink aria-expanded:text-raised" data-menu-toggle aria-expanded="false" aria-controls="mobile-menu">
+          {% icon 'list' 'size-5 group-aria-expanded:hidden' %}{% icon 'x' 'size-5 hidden group-aria-expanded:inline-block' %}<span class="sr-only">منو</span>
         </button>
       </div>
     </div>
-    <nav id="mobile-menu" hidden class="xl:hidden border-t border-line px-4 pb-4 pt-2" aria-label="منوی موبایل">
-      <a href="{% url 'home' %}#lock" class="flex items-baseline justify-between gap-4 py-3 text-lg">قفل <span class="font-mono text-xs text-muted">۱۰ اثر انگشت</span></a>
-      <a href="{% url 'home' %}#features" class="flex items-baseline justify-between gap-4 py-3 text-lg">ویژگی‌ها <span class="font-mono text-xs text-muted">جیب، بند، بدنه</span></a>
-      <a href="{% url 'home' %}#parts" class="flex items-baseline justify-between gap-4 py-3 text-lg">اجزا <span class="font-mono text-xs text-muted">روی عکس‌ها</span></a>
-      <a href="{% url 'home' %}#specs" class="flex items-baseline justify-between gap-4 py-3 text-lg">مشخصات <span class="font-mono text-xs text-muted">اندازه و جنس</span></a>
-      <a href="{% url 'home' %}#faq" class="flex items-baseline justify-between gap-4 py-3 text-lg">پرسش‌ها <span class="font-mono text-xs text-muted">پرداخت، ارسال، بازگشت</span></a>
-      <a href="{% url 'lookup' %}" class="flex items-baseline justify-between gap-4 py-3 text-lg">پیگیری سفارش <span class="font-mono text-xs text-muted">با شماره موبایل</span></a>
-    </nav>
   </header>
+  {# The phone menu: a solid panel from under the header to the bottom of the screen (outside the header, whose blur would trap it). #}
+  <nav id="mobile-menu" hidden class="xl:hidden fixed inset-x-0 top-16 bottom-0 z-30 overflow-y-auto overscroll-contain bg-ink text-raised" aria-label="منوی موبایل">
+    <div class="mx-auto flex min-h-full max-w-7xl flex-col px-5 sm:px-6 py-6">
+      <ul class="divide-y divide-raised/10 border-y border-raised/10">
+        <li><a href="{% url 'home' %}#lock" class="flex items-center justify-between gap-4 py-4 hover:text-signal"><span class="text-2xl font-bold">قفل</span><span class="font-mono text-xs text-raised/55">۱۰ اثر انگشت</span></a></li>
+        <li><a href="{% url 'home' %}#features" class="flex items-center justify-between gap-4 py-4 hover:text-signal"><span class="text-2xl font-bold">ویژگی‌ها</span><span class="font-mono text-xs text-raised/55">جیب، بند، بدنه</span></a></li>
+        <li><a href="{% url 'home' %}#parts" class="flex items-center justify-between gap-4 py-4 hover:text-signal"><span class="text-2xl font-bold">اجزا</span><span class="font-mono text-xs text-raised/55">روی عکس‌ها</span></a></li>
+        <li><a href="{% url 'home' %}#specs" class="flex items-center justify-between gap-4 py-4 hover:text-signal"><span class="text-2xl font-bold">مشخصات</span><span class="font-mono text-xs text-raised/55">اندازه و جنس</span></a></li>
+        <li><a href="{% url 'home' %}#faq" class="flex items-center justify-between gap-4 py-4 hover:text-signal"><span class="text-2xl font-bold">پرسش‌ها</span><span class="font-mono text-xs text-raised/55">پرداخت، ارسال، بازگشت</span></a></li>
+        <li><a href="{% url 'lookup' %}" class="flex items-center justify-between gap-4 py-4 hover:text-signal"><span class="text-2xl font-bold">پیگیری سفارش</span><span class="font-mono text-xs text-raised/55">با شماره موبایل</span></a></li>
+      </ul>
+      {% block menu_cta %}
+      <a href="{% url 'checkout' %}" class="btn mt-auto min-h-14 w-full bg-signal text-lg text-ink">خرید{% if price %}<span class="font-mono text-sm opacity-70">{{ price }} تومان</span>{% endif %}</a>
+      {% endblock %}
+    </div>
+  </nav>
   {% endblock %}
 
   <main id="main" class="flex-1">{% block main %}{% endblock %}</main>
 
+  {# The footer, on ink: the name and a line about the bag, then the pages and how to reach the shop. #}
   {% block footer %}
-  <footer class="border-t border-line-strong text-[0.9rem]">
-    <div class="mx-auto max-w-7xl px-4 sm:px-6 py-12 grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_auto]">
-      <div class="space-y-4">
-        <p class="flex items-center gap-2 text-lg font-semibold">{% icon 'fingerprint' 'size-6' %}{{ store.store_name }}</p>
-        {% if store.tagline %}<p class="text-muted">{{ store.tagline }}</p>{% endif %}
-        <ul class="space-y-2 text-ink-soft">
-          {% if store.address %}<li class="flex gap-2">{% icon 'map-pin' 'mt-0.5 text-muted' %}<span>{{ store.address }}{% if store.postal_code %}، کد پستی <span class="ltr font-mono">{{ store.postal_code|fa }}</span>{% endif %}</span></li>{% endif %}
-          {% if store.phone %}<li class="flex gap-2">{% icon 'phone' 'mt-0.5 text-muted' %}<a href="tel:{{ store.phone }}" class="ltr font-mono hover:text-ink">{{ store.phone|fa }}</a></li>{% endif %}
-          {% if store.email %}<li class="flex gap-2">{% icon 'envelope-simple' 'mt-0.5 text-muted' %}<a href="mailto:{{ store.email }}" class="ltr font-mono hover:text-ink">{{ store.email }}</a></li>{% endif %}
-          {% if store.hours %}<li class="flex gap-2">{% icon 'clock' 'mt-0.5 text-muted' %}<span>{{ store.hours }}</span></li>{% endif %}
-          {% if store.instagram %}<li class="flex gap-2">{% icon 'instagram-logo' 'mt-0.5 text-muted' %}<a href="https://instagram.com/{{ store.instagram }}" class="ltr font-mono hover:text-ink" rel="noopener">@{{ store.instagram }}</a></li>{% endif %}
-        </ul>
+  <footer class="relative overflow-hidden bg-ink text-raised text-[0.92rem]">
+    {% icon 'fingerprint' 'pointer-events-none absolute -bottom-28 -end-24 size-[28rem] text-raised/[0.05]' %}
+    <div class="relative mx-auto max-w-7xl px-4 sm:px-6 pt-16 pb-8">
+      <div class="grid gap-12 lg:grid-cols-[1.2fr_2fr]">
+        <div class="space-y-5">
+          <p class="flex items-center gap-3 text-2xl font-bold">{% icon 'fingerprint' 'size-8 text-signal' %}{{ store.store_name }}</p>
+          <p class="max-w-[38ch] leading-relaxed text-raised/65">{% if store.tagline %}{{ store.tagline }}{% else %}کیف دستی با قفل اثر انگشت؛ فقط با انگشت شما باز می‌شود.{% endif %}</p>
+          {% block footer_cta %}<a href="{% url 'checkout' %}" class="btn min-h-12 px-8 bg-signal text-ink">خرید</a>{% endblock %}
+        </div>
+        <div class="grid grid-cols-2 gap-10 sm:grid-cols-3">
+          <nav aria-label="فروشگاه">
+            <p class="mb-4 font-mono text-xs text-raised/45">فروشگاه</p>
+            <ul class="space-y-2.5 text-raised/80">
+              {% for item in footer_pages|slice:':3' %}<li><a href="{% url 'page' item.slug %}" class="hover:text-signal">{{ item.title }}</a></li>{% endfor %}
+            </ul>
+          </nav>
+          <nav aria-label="خرید">
+            <p class="mb-4 font-mono text-xs text-raised/45">خرید</p>
+            <ul class="space-y-2.5 text-raised/80">
+              {% for item in footer_pages|slice:'3:' %}<li><a href="{% url 'page' item.slug %}" class="hover:text-signal">{{ item.title }}</a></li>{% endfor %}
+              <li><a href="{% url 'lookup' %}" class="hover:text-signal">پیگیری سفارش</a></li>
+            </ul>
+          </nav>
+          <div class="col-span-2 sm:col-span-1">
+            <p class="mb-4 font-mono text-xs text-raised/45">تماس</p>
+            <ul class="space-y-2.5 text-raised/80">
+              {% if store.phone %}<li class="flex gap-2">{% icon 'phone' 'mt-0.5 text-raised/45' %}<a href="tel:{{ store.phone }}" class="ltr font-mono hover:text-signal">{{ store.phone|fa }}</a></li>{% endif %}
+              {% if store.email %}<li class="flex gap-2">{% icon 'envelope-simple' 'mt-0.5 text-raised/45' %}<a href="mailto:{{ store.email }}" class="ltr font-mono hover:text-signal">{{ store.email }}</a></li>{% endif %}
+              {% if store.instagram %}<li class="flex gap-2">{% icon 'instagram-logo' 'mt-0.5 text-raised/45' %}<a href="https://instagram.com/{{ store.instagram }}" class="ltr font-mono hover:text-signal" rel="noopener">@{{ store.instagram }}</a></li>{% endif %}
+              {% if store.hours %}<li class="flex gap-2">{% icon 'clock' 'mt-0.5 text-raised/45' %}<span>{{ store.hours }}</span></li>{% endif %}
+              {% if store.address %}<li class="flex gap-2">{% icon 'map-pin' 'mt-0.5 text-raised/45' %}<span>{{ store.address }}{% if store.postal_code %}، کد پستی <span class="ltr font-mono">{{ store.postal_code|fa }}</span>{% endif %}</span></li>{% endif %}
+              <li><a href="{% url 'home' %}#faq" class="hover:text-signal">پرسش‌های پرتکرار</a></li>
+            </ul>
+          </div>
+        </div>
       </div>
-      <nav aria-label="فروشگاه">
-        <p class="readout-label mb-3">فروشگاه</p>
-        <ul class="space-y-2 text-ink-soft">
-          {% for item in footer_pages|slice:':3' %}<li><a href="{% url 'page' item.slug %}" class="hover:text-ink">{{ item.title }}</a></li>{% endfor %}
-        </ul>
-      </nav>
-      <nav aria-label="خرید">
-        <p class="readout-label mb-3">خرید</p>
-        <ul class="space-y-2 text-ink-soft">
-          {% for item in footer_pages|slice:'3:' %}<li><a href="{% url 'page' item.slug %}" class="hover:text-ink">{{ item.title }}</a></li>{% endfor %}
-          <li><a href="{% url 'lookup' %}" class="hover:text-ink">پیگیری سفارش</a></li>
-        </ul>
-      </nav>
-      {% if store.enamad_html %}<div class="self-start">{{ store.enamad_html|safe }}</div>{% endif %}
+      <div class="mt-14 flex flex-wrap items-center justify-between gap-x-8 gap-y-4 border-t border-raised/10 pt-6 font-mono text-xs text-raised/50">
+        <p>© {{ store.store_name }}</p>
+        <p>پرداخت کارت‌به‌کارت، ارسال با پست پیشتاز و تیپاکس</p>
+        {% if store.enamad_html %}<div class="rounded-[var(--radius-surface)] bg-raised p-2">{{ store.enamad_html|safe }}</div>{% endif %}
+      </div>
     </div>
   </footer>
   {% endblock %}
