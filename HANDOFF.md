@@ -30,7 +30,8 @@ written down anywhere else.
   - NISA-67: 3D hero and scroll tour (3h: 30m, then follow-ups of 1h, 1h, and 30m for this handoff).
   - NISA-68: site design around the 3D bag, instrument look (2h: 1h for the two designs and the shop
     window, 30m to switch to the instrument and enrich it, 30m for the review round on 2026-10-16).
-  - NISA-69: staging online at shop.nisatech.org (30m).
+  - NISA-69: staging online at shop.nisatech.org (45m: first deploy 30m, then 15m redeploying the
+    2026-10-16 review round; the server runs 2f9ceb7).
 
 ## Next, in order
 
