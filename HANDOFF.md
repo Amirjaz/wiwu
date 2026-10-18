@@ -9,7 +9,7 @@ written down anywhere else.
 
 ## Where it stands
 
-- **Staging is online at https://shop.nisatech.org** and runs **0911b3a**, deployed on 2026-10-18 (the
+- **Staging is online at https://shop.nisatech.org** and runs **ebc1158**, deployed on 2026-10-19 (the
   same as `main`; the handoff commits after it change only this file).
   - Open to everyone (no password, Amir's choice), but kept out of search engines (noindex).
   - SMS codes only go to the server log and payments are manual, so people can browse but can't finish
@@ -28,7 +28,7 @@ written down anywhere else.
     in use, one at a time over the whole first screen as a campaign page (text at the bottom, the photos
     as thumbnails); the parts section shows the 3D bag with a tab per side and numbered pins.
     Supersedes the 3D-only hero.
-  - **WiWU, three colours, a better 3D bag** (2026-10-19, not deployed): the bag is named «کیف دستی ویوو
+  - **WiWU, three colours, a better 3D bag** (2026-10-19, deployed): the bag is named «کیف دستی ویوو
     آلفا» (brand WiWU in the specs and search data); brown and silver-white («سفید», Amir's word for the
     silver-grey one) are on sale next to black (migration 0003); the 3D bag turns the picked colour; its
     front is taut and pebbled; WiWU's own studio photos (found on resellers' pages) replace the client's
@@ -61,7 +61,15 @@ written down anywhere else.
 
 ## Next, in order
 
-1. **Deployed on 2026-10-18 (0911b3a), at Amir's word.** The database was backed up first
+1. **Deployed on 2026-10-19 (ebc1158), at Amir's word:** WiWU, the three colours, the better 3D bag and
+   the studio photos. Database backed up first (`/srv/purseshop/backups/db-20261018-205907.sqlite3`,
+   server time); migration 0003 added brown and white, renamed the bag and gave each colour its photo.
+   The page cache was emptied by hand after it (a migration doesn't). Checked: every page answers 200 on
+   the server and through Arvan; both pickers show the three swatches; image and model addresses carry
+   their `?v=` hash, and Arvan serves the new front photo (MISS, then HIT, at the new size); the search
+   data names WiWU; checkout shows each colour's photo; a browser pass on the live site turns the 3D bag
+   black, brown and white, front, lock end and back, on desktop, and brown on a phone. Not yet on Plane.
+2. **Deployed on 2026-10-18 (0911b3a), at Amir's word.** The database was backed up first
    (`/srv/purseshop/backups/db-20261018-164322.sqlite3`) and migration 0002 gave everything the colour
    black. Checked: every page answers 200 on the server and through Arvan; the home page takes about
    0.35 s on its first render and about 9 ms from the page cache; the hero's photos are cached by Arvan
