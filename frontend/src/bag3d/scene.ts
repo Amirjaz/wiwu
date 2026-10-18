@@ -1,9 +1,11 @@
-// The bag in 3D: a studio scene, drag to turn it, hotspots, and a camera that moves to each stop of
-// the scroll tour. Loaded only when the device can take it (see islands/hero.ts).
+// The bag in 3D: a studio scene, a camera that moves to each side the parts section asks for (and to a
+// single part), numbered pins that move with the bag, and dragging to turn it. Loaded only when the
+// device can take it (see islands/bag3d.ts).
 import {
   AdditiveBlending, CanvasTexture, Color, DirectionalLight, Mesh, MeshBasicMaterial,
   MeshPhysicalMaterial, MeshStandardMaterial, NeutralToneMapping, PCFSoftShadowMap, PerspectiveCamera, PlaneGeometry,
-  PMREMGenerator, Scene, ShadowMaterial, SRGBColorSpace, Vector2, Vector3, WebGLRenderer, type Material, type Texture,
+  PMREMGenerator, Raycaster, Scene, ShadowMaterial, SRGBColorSpace, Vector2, Vector3, WebGLRenderer, type Material,
+  type Texture,
 } from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
@@ -16,7 +18,6 @@ import { buildFarEnd, buildLock, buildZipper, type Details } from './details';
 interface ModelInfo {
   grainRepeat: number;
   details?: Details;
-  hotspots?: Record<string, { at: [number, number, number]; normal: [number, number, number] }>;
 }
 
 /** A camera position around a target: azimuth from the front (+z) toward the far end (+x), in degrees.
@@ -29,32 +30,26 @@ export interface Stop {
   target: [number, number, number];
 }
 
-export interface Hotspot {
-  id: string;
+/** A numbered pin on the bag: the point, and the way its surface faces (the pin hides when that turns
+ *  away from the camera). */
+export interface Pin {
   at: [number, number, number];
   normal: [number, number, number];
 }
 
 const DEG = Math.PI / 180;
 
-// The bag is 25 x 15.5 x 6.5 cm, resting on y = 0, front facing +z, the lock end at -x.
-export const STOPS: Stop[] = [
-  { az: -50, el: 14, dist: 0.3, frame: 0.27, target: [0, 0.072, 0] }, // the hero: front and the lock end
-  { az: -80, el: 8, dist: 0.3, frame: 0.15, target: [-0.1, 0.06, 0] }, // the lock
-  { az: 194, el: 12, dist: 0.3, frame: 0.36, target: [0.012, 0.075, 0] }, // the back pocket, with room for its shadow
-  { az: 160, el: 22, dist: 0.3, frame: 0.26, target: [-0.01, 0.05, -0.02] }, // the wrist strap
-  // The leather is shown on the back: its photo has the pebbled grain sharply (the front's is soft). The
-  // whole back stays in frame: closer, the bag ran past the stage's edges (no edge fade since 2026-10-18).
-  { az: 208, el: 24, dist: 0.36, frame: 0.34, target: [-0.008, 0.08, -0.01] }, // the leather, in raking light
-];
+// The bag is 25 x 14 x 7.7 cm, resting on y = 0, front facing +z, the lock end at -x. A view per tab of
+// the parts section; the side's is aimed squarely at the lock module once the model is in (addDetails).
+export const VIEWS: Record<string, Stop> = {
+  front: { az: -30, el: 16, dist: 0.3, frame: 0.28, target: [0, 0.068, 0] }, // the front and the lock end
+  side: { az: -80, el: 8, dist: 0.3, frame: 0.17, target: [-0.1, 0.07, 0] }, // the lock
+  back: { az: 194, el: 14, dist: 0.3, frame: 0.34, target: [0.01, 0.072, 0] }, // with room for its shadow
+};
 
-export const HOTSPOTS: Hotspot[] = [
-  { id: 'lock', at: [-0.129, 0.05, 0], normal: [-1, 0, 0] },
-  { id: 'leather', at: [-0.03, 0.085, 0.034], normal: [0, 0, 1] },
-  { id: 'pocket', at: [0.02, 0.118, -0.034], normal: [0, 0, -1] },
-];
+const copy = (stop: Stop): Stop => ({ ...stop, target: [...stop.target] });
 
-export class HeroScene {
+export class BagScene {
   private renderer: WebGLRenderer;
   private key!: DirectionalLight;
   private light: MeshStandardMaterial | null = null;
@@ -62,22 +57,23 @@ export class HeroScene {
   private scene = new Scene();
   private camera = new PerspectiveCamera(28, 1, 0.01, 10);
   private controls: OrbitControls;
-  private stop = 0;
-  private stops: Stop[] = STOPS.map((s) => ({ ...s, target: [...s.target] }));
-  private hotspots: Hotspot[] = HOTSPOTS;
-  private current: Stop = { ...STOPS[0], target: [...STOPS[0].target] };
-  private settled = false; // at the hero stop and handed over to the user's drag
+  private views: Record<string, Stop> = Object.fromEntries(Object.entries(VIEWS).map(([k, v]) => [k, copy(v)]));
+  private view = 'front';
+  private goal: Stop = copy(VIEWS.front);
+  private current: Stop = copy(VIEWS.front);
+  private pins: Pin[] = [];
+  private settled = false; // arrived, and handed over to the user's drag
   private running = false;
   private visible = true;
   private frame = 0;
-  private onHotspots: (positions: Map<string, Vector2 | null>) => void;
+  private onPins: (positions: (Vector2 | null)[]) => void;
   private resizeObserver: ResizeObserver;
 
   constructor(
     private container: HTMLElement,
-    private options: { reducedMotion: boolean; small: boolean; onHotspots: HeroScene['onHotspots'] },
+    private options: { reducedMotion: boolean; small: boolean; onPins: BagScene['onPins'] },
   ) {
-    this.onHotspots = options.onHotspots;
+    this.onPins = options.onPins;
     this.renderer = new WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, options.small ? 1.5 : 2));
     this.renderer.outputColorSpace = SRGBColorSpace;
@@ -113,19 +109,17 @@ export class HeroScene {
     floor.receiveShadow = true;
     this.scene.add(floor);
 
+    // No zoom and no auto-turn: the pins should stay where people can read them. The distance limits only
+    // keep a drag from changing how close a view is.
     this.controls = new OrbitControls(this.camera, canvas);
     Object.assign(this.controls, {
-      enableDamping: true, dampingFactor: 0.08, enablePan: false, rotateSpeed: 0.7,
-      minDistance: 0.28, maxDistance: 0.85, minPolarAngle: 20 * DEG, maxPolarAngle: 88 * DEG,
-      autoRotate: !options.reducedMotion, autoRotateSpeed: -0.6,
+      enableDamping: true, dampingFactor: 0.08, enablePan: false, enableZoom: false, rotateSpeed: 0.7,
+      minDistance: 0.05, maxDistance: 3, minPolarAngle: 20 * DEG, maxPolarAngle: 88 * DEG,
     });
-    // Vertical swipes keep scrolling the page; sideways ones turn the bag. No zoom anywhere: the mouse
-    // wheel over the bag scrolls the page like everywhere else (zooming in had pushed the bag past the
-    // stage's edges).
+    // Vertical swipes keep scrolling the page; sideways ones turn the bag. The mouse wheel over the bag
+    // scrolls the page like everywhere else.
     canvas.style.touchAction = 'pan-y';
-    this.controls.enableZoom = false;
     this.controls.enabled = false;
-    this.controls.addEventListener('start', () => (this.controls.autoRotate = false));
 
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(container);
@@ -171,9 +165,6 @@ export class HeroScene {
     });
     this.scene.add(gltf.scene);
     if (info?.details) this.addDetails(info.details);
-    if (info?.hotspots) {
-      this.hotspots = Object.entries(info.hotspots).map(([id, h]) => ({ id, at: h.at, normal: h.normal }));
-    }
     this.renderer.render(this.scene, this.camera);
     this.renderer.domElement.classList.remove('opacity-0');
     this.start();
@@ -181,14 +172,15 @@ export class HeroScene {
 
   /** The lock module, the zipper and the far end's hardware, modelled from the photos' measurements. */
   private addDetails(details: Details) {
-    // The lock stop looks squarely at the module, a little from the front and above.
+    // The side view looks squarely at the module, a little from the front, from just above its middle
+    // (so the zipper running up from it stays in the picture).
     const [nx, ny, nz] = details.module.n;
     const [ox, oy, oz] = details.module.origin;
-    this.stops[1] = {
-      ...this.stops[1],
+    this.views.side = {
+      ...this.views.side,
       az: (Math.atan2(nx, nz) * 180) / Math.PI + 12,
-      el: Math.max(4, (Math.asin(ny) * 180) / Math.PI - 4),
-      target: [ox + nx * 0.004, oy, oz + nz * 0.004],
+      el: Math.max(6, (Math.asin(ny) * 180) / Math.PI),
+      target: [ox + nx * 0.004, oy + 0.022, oz + nz * 0.004],
     };
     const lock = buildLock(details.module);
     this.light = lock.light;
@@ -215,15 +207,49 @@ export class HeroScene {
     this.scene.add(buildFarEnd(details.farEnd));
   }
 
-  /** Move to a tour stop (0 = the hero, where the user can drag). */
-  goTo(index: number) {
-    if (index === this.stop) return;
-    if (this.stop === 0 && this.settled) this.readCamera();
-    this.stop = index;
+  /** Turn to a side (a key of VIEWS) and show its pins. `instant`: be there at once (the first view). */
+  show(view: string, pins: Pin[], instant = false) {
+    this.view = view;
+    this.pins = pins;
+    this.moveTo(this.views[view] ?? this.views.front, instant);
+  }
+
+  /** Turn the bag toward a pin's part: to face it, keeping up to 15° of the side's own angle so the bag
+   *  doesn't go flat, and aimed a little toward it. The whole bag stays in the picture (a closer look
+   *  cut it off at the stage's edges). */
+  focus(pin: Pin) {
+    const [nx, ny, nz] = pin.normal;
+    const view = this.views[this.view] ?? this.views.front;
+    const facing = Math.atan2(nx, nz) / DEG;
+    const turn = ((view.az - facing + 540) % 360) - 180;
+    this.moveTo({
+      ...view,
+      // A part facing up (the zipper on top) is looked at from higher, from where the bag is seen now.
+      az: Math.hypot(nx, nz) > 0.5 ? facing + Math.max(-15, Math.min(15, turn)) : this.goal.az,
+      el: ny > 0.7 ? 34 : view.el,
+      target: view.target.map((c, i) => c + (pin.at[i] - c) * 0.2) as Stop['target'],
+    });
+  }
+
+  private moveTo(stop: Stop, instant = false) {
+    if (this.settled) this.readCamera();
+    this.goal = copy(stop);
     this.settled = false;
     this.controls.enabled = false;
-    if (this.options.reducedMotion) this.current = { ...this.stops[index], target: [...this.stops[index].target] };
+    if (instant || this.options.reducedMotion) this.current = copy(stop);
     this.start();
+  }
+
+  /** Development only: the surface under a rough pin, found from outside along its normal, for
+   *  views.PARTS. Returns the hit and the face's normal, or null if the ray misses. */
+  debugSnap(at: [number, number, number], normal: [number, number, number]) {
+    const dir = new Vector3(...normal).normalize();
+    const ray = new Raycaster(new Vector3(...at).addScaledVector(dir, 0.15), dir.clone().negate(), 0, 0.3);
+    const hit = ray.intersectObject(this.scene, true).find((h) => h.object instanceof Mesh && h.face);
+    if (!hit?.face) return null;
+    const n = hit.face.normal.clone().transformDirection(hit.object.matrixWorld);
+    const round = (v: Vector3, k: number) => v.toArray().map((x) => Number(x.toFixed(k)));
+    return { at: round(hit.point, 4), normal: round(n, 2) };
   }
 
   /** Development only (tools/compare.mjs): one frame from a source photo's camera, as a JPEG data URL,
@@ -290,16 +316,16 @@ export class HeroScene {
       }
       this.update();
       this.renderer.render(this.scene, this.camera);
-      this.reportHotspots();
+      this.reportPins();
       this.frame = requestAnimationFrame(tick);
     };
     this.frame = requestAnimationFrame(tick);
   }
 
   private update() {
-    // The status light: green at the lock stop, like the real lock when a finger opens it.
+    // The status light: green on the lock's side, like the real lock when a finger opens it.
     if (this.light && this.halo) {
-      const on = this.stop === 1 ? 1 : 0;
+      const on = this.view === 'side' ? 1 : 0;
       this.halo.opacity += (on - this.halo.opacity) * 0.08;
       this.light.emissiveIntensity = this.halo.opacity * 2.4;
     }
@@ -309,7 +335,7 @@ export class HeroScene {
       this.aimLight(Math.atan2(offset.x, offset.z) / DEG);
       return;
     }
-    const goal = this.stops[this.stop];
+    const goal = this.goal;
     const k = 0.075; // fraction of the way per frame: about half a second to arrive
     let az = goal.az - this.current.az;
     az = ((az + 540) % 360) - 180; // the short way round
@@ -319,10 +345,11 @@ export class HeroScene {
     this.current.frame += (goal.frame - this.current.frame) * k;
     this.current.target = this.current.target.map((t, i) => t + (goal.target[i] - t) * k) as Stop['target'];
     this.place(this.current);
-    const arrived = Math.abs(az) < 0.3 && Math.abs(goal.dist - this.current.dist) < 0.002;
-    if (arrived && this.stop === 0) {
+    const near = (a: number, b: number, d: number) => Math.abs(a - b) < d;
+    if (near(az, 0, 0.3) && near(goal.el, this.current.el, 0.3) && near(goal.dist, this.current.dist, 0.002) &&
+      near(goal.frame, this.current.frame, 0.002) && goal.target.every((t, i) => near(t, this.current.target[i], 0.0005))) {
       this.settled = true;
-      this.controls.target.set(...goal.target);
+      this.controls.target.set(...this.current.target);
       this.controls.enabled = true;
     }
   }
@@ -354,7 +381,7 @@ export class HeroScene {
     this.key.position.set(0.7 * Math.sin(a), 0.85, 0.7 * Math.cos(a));
   }
 
-  /** Where the user left the camera, so leaving the hero starts from there. */
+  /** Where the user left the camera, so the next move starts from there. */
   private readCamera() {
     const t = this.controls.target;
     const offset = this.camera.position.clone().sub(t);
@@ -368,22 +395,21 @@ export class HeroScene {
     };
   }
 
-  private reportHotspots() {
-    const positions = new Map<string, Vector2 | null>();
-    const rect = this.container.getBoundingClientRect();
+  /** Where each pin is on the stage, in pixels, or null where its side faces away (or it's off the
+   *  stage, which would put it over the page around). */
+  private reportPins() {
+    const { clientWidth: w, clientHeight: h } = this.container;
     const toCamera = new Vector3();
-    for (const spot of this.hotspots) {
-      const at = new Vector3(...spot.at);
+    const at = new Vector3();
+    this.onPins(this.pins.map((pin) => {
+      at.set(...pin.at);
       toCamera.copy(this.camera.position).sub(at).normalize();
-      const facing = toCamera.dot(new Vector3(...spot.normal)) > 0.25;
-      if (this.stop !== 0 || !facing) {
-        positions.set(spot.id, null);
-        continue;
-      }
+      if (toCamera.dot(new Vector3(...pin.normal)) < 0.2) return null;
       const p = at.project(this.camera);
-      positions.set(spot.id, new Vector2(((p.x + 1) / 2) * rect.width, ((1 - p.y) / 2) * rect.height));
-    }
-    this.onHotspots(positions);
+      const x = ((p.x + 1) / 2) * w;
+      const y = ((1 - p.y) / 2) * h;
+      return x < 12 || x > w - 12 || y < 12 || y > h - 12 ? null : new Vector2(x, y);
+    }));
   }
 
   private resize() {
@@ -394,7 +420,6 @@ export class HeroScene {
     // Keep the whole bag in frame on narrow screens.
     this.camera.fov = w / h < 0.9 ? 38 : 28;
     this.camera.updateProjectionMatrix();
-    this.controls.maxDistance = Math.max(0.85, this.fitDistance(this.stops[0].frame) * 1.15);
     if (!this.settled) this.place(this.current);
   }
 }

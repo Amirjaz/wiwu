@@ -3,7 +3,7 @@
 //
 //   node tools/compare.mjs [http://127.0.0.1:8030/] [out-dir]
 //
-// Needs the dev servers running (the page exposes window.__hero in development) and headless Microsoft
+// Needs the dev servers running (the page exposes window.__bag in development) and headless Microsoft
 // Edge through patchright (on this machine it comes with the CodeGPT VS Code extension). Writes
 // <out-dir>/<photo>-render.jpg, the same size as the photo, to lay over it.
 import { createRequire } from 'node:module';
@@ -79,12 +79,14 @@ const js = async (expression) => {
   if (r.exceptionDetails) throw new Error(JSON.stringify(r.exceptionDetails).slice(0, 400));
   return r.result.value;
 };
-for (let i = 0; i < 120 && !(await js('!!window.__hero')); i++) await new Promise((r) => setTimeout(r, 500));
+// The model loads once the parts section is near.
+await js(`document.getElementById('parts').scrollIntoView()`);
+for (let i = 0; i < 120 && !(await js('!!window.__bag')); i++) await new Promise((r) => setTimeout(r, 500));
 await new Promise((r) => setTimeout(r, 800));
 for (const [name, cam] of Object.entries(cams.cameras)) {
   const { eye, q, fov } = threeCamera(cam);
   const args = JSON.stringify([eye, q, fov, cams.width, cams.height]);
-  const dataUrl = await js(`window.__hero.debugRender(...${args})`);
+  const dataUrl = await js(`window.__bag.debugRender(...${args})`);
   fs.writeFileSync(path.join(out, `${name}-render.jpg`), Buffer.from(dataUrl.split(',')[1], 'base64'));
   console.log('rendered', name);
 }

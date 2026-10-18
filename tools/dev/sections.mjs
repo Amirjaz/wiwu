@@ -37,7 +37,7 @@ const to = async (selector, offset = 64) => {
 };
 
 await page.goto(base + '/', { waitUntil: 'load' });
-await page.waitForTimeout(6000);
+await page.waitForTimeout(2500);
 console.log('overflow', await page.evaluate(() => document.documentElement.scrollWidth - innerWidth));
 await shot('home-0-hero');
 if (phone) {
@@ -47,9 +47,21 @@ if (phone) {
   await page.locator('[data-menu-toggle]').click();
   await page.waitForTimeout(300);
 }
-await to('[data-stop="1"]', phone ? height * 0.5 : 120);
+// The slider's second photo, after its six seconds.
+await page.waitForTimeout(6000);
+await shot('home-0-hero-2');
+// The parts with the 3D bag: each tab's view once the camera has turned there.
+await to('#parts');
+for (let i = 0; i < 40 && !(await page.locator('[data-bag-stage][data-3d], [data-bag-stage][data-photos]').count()); i++) await page.waitForTimeout(500);
 await page.waitForTimeout(1500);
-await shot('home-1-lock');
+await page.locator('#parts-front button[data-part="1"]').hover();
+await page.waitForTimeout(300);
+await shot('home-1-parts-front');
+for (const tab of ['side', 'back']) {
+  await page.locator(`#parts-tab-${tab}`).click();
+  await page.waitForTimeout(2200);
+  await shot(`home-1-parts-${tab}`);
+}
 await to('#try');
 await shot('home-2-try');
 // Hold the sensor for 0.7 s.
@@ -61,16 +73,6 @@ await shot('home-2-try-reading');
 await page.waitForTimeout(500);
 await page.mouse.up();
 await shot('home-2-try-open');
-await to('#parts');
-await page.locator('#parts-back li[data-part="1"]').hover();
-await page.waitForTimeout(300);
-await shot('home-3-parts-back');
-await page.locator('#parts-tab-side').click();
-await page.waitForTimeout(500);
-await shot('home-3-parts-side');
-await page.locator('#parts-tab-front').click();
-await page.waitForTimeout(500);
-await shot('home-3-parts-front');
 await to('#specs');
 await page.waitForTimeout(600);
 await shot('home-4-specs');

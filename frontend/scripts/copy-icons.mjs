@@ -8,7 +8,8 @@ import { fileURLToPath } from 'node:url';
 const ICONS = [
   'fingerprint', 'lock-simple', 'lock-simple-open', 'truck', 'arrow-u-up-left', 'credit-card', 'seal-check',
   'clock', 'map-pin', 'phone', 'envelope-simple', 'instagram-logo', 'arrow-left', 'caret-down', 'drop',
-  'battery-charging', 'hand-grabbing', 'package', 'shield-check', 'list', 'x', 'magnifying-glass',
+  'battery-charging', 'hand-grabbing', 'package', 'shield-check', 'list', 'x', 'magnifying-glass', 'pause',
+  'play',
 ];
 const here = dirname(fileURLToPath(import.meta.url));
 const from = join(here, '..', 'node_modules', '@phosphor-icons', 'core', 'assets', 'regular');

@@ -21,7 +21,12 @@ written down anywhere else.
     change;
   - **nginx no longer gzips the 3D models** (8c41240): this only applies when the admin re-runs the
     server setup;
-  - **a 3D-only hero** (0881c7b): no white glow or ring, with the photos only as the backup.
+  - **a 3D-only hero** (0881c7b): no white glow or ring, with the photos only as the backup;
+  - **the hero as a photo slider, the 3D bag moved to جزء به جزء** (branch
+    `claude/hero-slider-3d-model-a5edb7`, 2026-10-18, not merged yet): Amir's six new photos of the bag
+    in use, one at a time over the whole first screen as a campaign page (text at the bottom, the photos
+    as thumbnails); the parts section shows the 3D bag with a tab per side and numbered pins.
+    Supersedes the 3D-only hero.
 - **Checks:** `manage.py test shop` runs 43 tests and they pass; `npx tsc --noEmit` and `npm run build`
   pass. Desktop and phone were checked in headless Edge (`tools/dev/`).
 - **Repo:** one branch, `main`, and **no remote**. The repo exists only in `E:\Work\Nisatech\PurseShop`
@@ -30,7 +35,9 @@ written down anywhere else.
 - **Store features:** product page, checkout with an SMS code, card-to-card payment with a unique amount
   per order, "I've paid" review, the minute timer, shipping, returns, staff panel, SMS templates, SEO,
   colours.
-- **Client:** no answers yet. PLAN.md §11 is the message to send, in Persian, ready to paste.
+- **Client:** no answers yet. The questions to ask, 15 in Persian, are on Amir's Claude doc
+  "پرسش‌ها از کارفرما" (https://claude.ai/code/artifact/be30c57a-d3c2-42ce-a3fc-8a2d160a2f0e, private
+  until he shares it); they take in PLAN.md §11.
 
 ## Waiting on Amir
 
@@ -95,15 +102,20 @@ hard way:
     switched to the "instrument" look (README, *Look*).
   - Avoid template patterns: cream and gold, an eyebrow label on every section, three equal cards,
     plain minimal pages.
-- **Each section must look different** as you scroll: grey tour, black lock demo, light parts table,
-  steel specs, graphite buying, grey FAQ, green closing band, black footer.
-- **The hero is 3D only.**
-  - He called a white glow and a circular fade around the bag ugly. They were the photo shown while
-    the 3D loaded, and an elliptical mask on the canvas.
-  - The photos are the backup only. Don't bring back the edge fade, wheel zoom, or a glow behind
-    the bag.
-- **Phones:** he found the old layout "mid". The tour is now one screen with swipe cards, and the
-  sections have more room.
+- **Each section must look different** as you scroll: the hero's dark photo, light parts table with the 3D bag,
+  black lock demo, steel specs, graphite buying, grey FAQ, green closing band, black footer.
+- **The hero is a photo slider; the 3D bag is in جزء به جزء** (his call on 2026-10-18, when he sent six
+  photos of the bag in use). He picked: autoplay that pauses, the parts section right after the hero,
+  and its tabs turning the 3D bag. He didn't like the photo beside the text: he wants the photo as the
+  background with the text on top (he sent a Pinterest pin: a full-bleed landscape, a floating pill menu,
+  centred text). Of three designs built on that (centred poster, campaign page, frosted panel) he kept
+  the campaign page: a large line at the bottom, the photos as thumbnails.
+  - Earlier, as the hero, he called a white glow and a circular fade around the bag ugly. They were the
+    photo shown while the 3D loaded, and an elliptical mask on the canvas.
+  - The parts photos are the 3D's backup only. Don't bring back the edge fade, wheel zoom, or a glow
+    behind the bag, and keep the whole bag inside the stage (no zooming in past its edges).
+- **Phones:** he found an older layout "mid". Now the hero photo fills the screen with the headline and
+  the buy button at its bottom, and the sections have more room.
 - **Persian text must join properly.** A self-hosted font missing ی ک گ پ broke words apart on his
   phone. Vazirmatn is the text font; Vazir Code is used only for figures and Latin
   (`unicode-range`).
@@ -113,6 +125,11 @@ hard way:
 
 - **Setup:** README → *Running it locally*.
 - **Ports:** Django on `127.0.0.1:8030`, Vite on `127.0.0.1:5180`; port 8000 belongs to Contech.
+- **A second checkout** (a git worktree) runs beside the first on other ports: `VITE_PORT=5181` for
+  Vite, and `VITE_DEV_SERVER=http://127.0.0.1:5181` and `PUBLIC_URL=http://127.0.0.1:8031` for Django
+  (`runserver 127.0.0.1:8031`). Give it its own `npm ci`: Vite won't serve the fonts through a link to
+  another checkout's `node_modules`, so the page falls back to other fonts. Copy `backend/.env` and
+  `db.sqlite3` in.
 - **Desktop app:** `E:\Work\Nisatech\.claude\launch.json` has `purseshop-backend` and
   `purseshop-frontend` for the preview pane. If a port is taken, another chat's servers are probably
   still running; check with `curl` first.
@@ -140,9 +157,9 @@ extension, or `npm i patchright` and change the two lines that load it.
 | Script | What it does |
 | --- | --- |
 | `sections.mjs <w> <h> <dir>` | Every home section and the other pages. Set `BASE=` for staging. |
-| `phone.mjs <dir> [base]` | Phone tour: swiping the cards, the tabs, the sections. |
-| `hero-states.mjs <base> <dir>` | The hero when the 3D loads, when the model is blocked, and without WebGL2. |
-| `shots.mjs`, `orbits.mjs`, `overflow.mjs` | The older tour, 3D and width checks. |
+| `phone.mjs <dir> [base]` | The phone: swiping the hero's photos, the parts tabs with the 3D bag, the sections. |
+| `bag-states.mjs <base> <dir>` | The 3D stage in `#parts` when it loads, when the model is blocked, and without WebGL2. |
+| `shots.mjs`, `orbits.mjs`, `overflow.mjs` | Each side and tapped part of the 3D bag; close-ups of the model; phone width. |
 
 - **Local only:** the scripts pass `--disable-features=LocalNetworkAccessChecks,…`. Without it, Edge
   blocks the page (port 8030) from loading Vite's modules (port 5180), and the page comes out
@@ -197,11 +214,16 @@ node tools/compare.mjs && .venv-3d/Scripts/python tools/dev/compose.py
 node tools/dev/orbits.mjs
 ```
 
-Results go to `media/3d/compare/` (not in git). For the tour, run `node tools/dev/shots.mjs 1440 900`
+Results go to `media/3d/compare/` (not in git). For the 3D section, run `node tools/dev/shots.mjs 1440 900`
 and `390 844`.
 
-- **Framing:** with no edge fade, each tour stop's `frame` in `hero/scene.ts` must keep the bag and its
-  shadow inside the stage. Check every stop after changing the model or the stage.
+- **Framing:** with no edge fade, each side's view (`VIEWS` in `bag3d/scene.ts`) must keep the bag and
+  its shadow inside the stage. Check every side and tapped part after changing the model or the stage
+  (`shots.mjs`).
+- **Pins:** each part's point on the model is in `views.PARTS`. After a rebuild, snap them to the new
+  surface with `window.__bag.debugSnap(at, normal)` (through CDP, see below) and check them in `shots.mjs`.
+  The lock's three are worked out from the module's measurements (`details.module` in the model's .json:
+  origin + v × the part's height + n × thickness).
 - **The AI shape** (`tools/ai_shape/`) only needs redoing if the new photos show it is wrong somewhere.
   In that case, check the cameras' marked features again (see the note in `run_hunyuan.py`).
 
@@ -215,8 +237,11 @@ and `390 844`.
 - **Page cache and `.update()`.** `shop/pagecache.py` empties the cache on `post_save`/`post_delete`. A
   queryset `.update()` sends no signal, so it leaves stale pages for up to 60 s. Use `.save()` in
   anything that changes what the home or policy pages show.
-- **Hero first paint.** The inline script in `home.html`'s head sets `html.three-d`, using the same test
-  as `canRender3d()` in `hero.ts`. Change both together.
+- **CSS layers.** A rule in `@layer components` loses to any Tailwind utility on the same element (the
+  `flex` on a photo kept it showing behind the transparent 3D canvas). The 3D stage's state rules sit
+  outside the layers, at the end of `site.css`.
+- **The 3D loads late.** Only after the page's `load` and when `#parts` is about a screen away, so
+  scripts that need the model (`compare.mjs`, `orbits.mjs`, `shots.mjs`) scroll there first.
 - **Output encoding.** Python run from Git Bash on Windows prints in cp1252, so printing Persian raises
   unless `PYTHONIOENCODING=utf-8` is set.
 - **Line endings.** Python on Windows writes CRLF, and `makemigrations` too, but the repo is LF
@@ -224,9 +249,9 @@ and `390 844`.
   committing.
 - **Heredocs.** Long inline Python in a bash heredoc gets mangled, Windows paths especially. Write a
   script file instead.
-- **`window.__hero`.** patchright evaluates in an isolated world, so `window.__hero` is only reachable
+- **`window.__bag`.** patchright evaluates in an isolated world, so `window.__bag` is only reachable
   through CDP `Runtime.evaluate` (see `tools/compare.mjs`). It exists in development only, with
-  `debugRender` and `debugOrbit`.
+  `debugRender`, `debugOrbit` and `debugSnap`.
 - **`cv2.remap`** can't take maps over 32767 px, so `bake.py` samples in rows (`sample()`).
 - **`fit_cameras.py`** merges into `cameras.json`, so `shape_scale`/`shape_centre` from
   `fit_proportions.py` are kept.

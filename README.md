@@ -11,7 +11,7 @@ SMS by cartbecart.com, or by staff in the panel.
 | `frontend/` | Vite + React 18 + Tailwind v4 *islands* on Django's pages (checkout, order page, lookup) and the staff panel at `/panel` |
 | `deploy/` | nginx site, systemd units (gunicorn + a minute timer) and deploy scripts for the Nisatech server |
 | `media/` | the client's photos, the background-removed cutouts, 3D sources (not served) |
-| `tools/` | `cutout.py`/`fix2.py` (background removal), `web_images.py` (the site's product images), the 3D model's pipeline (see *The 3D hero*), `ai_shape/` (the AI shape it starts from), `dev/` (screenshots and checks) |
+| `tools/` | `cutout.py`/`fix2.py` (background removal), `web_images.py` (the site's product images), the 3D model's pipeline (see *The hero and the 3D bag*), `ai_shape/` (the AI shape it starts from), `dev/` (screenshots and checks) |
 
 ## Running it locally
 
@@ -84,30 +84,42 @@ Roles (`manage.py setup_roles`, every deploy): **Staff** ship and handle returns
 and reject payments, cancel, record refunds and edit the store. Create people in `/admin/` → Users and
 add them to a group. Sign-in lasts two weeks, 10 attempts per 15 minutes per address.
 
-## The 3D hero (`frontend/src/hero/`, `frontend/src/islands/hero.ts`, `tools/build_model.py`)
+## The hero and the 3D bag (`frontend/src/islands/home.ts`, `frontend/src/bag3d/`, `frontend/src/islands/bag3d.ts`, `tools/build_model.py`)
 
-The home page opens with a tour: the bag stays pinned (beside the text on desktop, on top on phones),
-with a switcher for its five views under it, while five stops scroll past: the hero, the lock, the
-back pocket, the wrist strap, the leather.
+The home page opens with the bag in use, as a campaign page: six photos (`views.LOOK`, the originals
+in `media/source-photos/look/`, the site's copies 160, 600 and 1200 px wide in `public/images/look/`),
+one at a time over the whole first screen, a large line at the bottom over a dark fade with the price
+and the buy button, and the photos as thumbnails beside it (Amir's pick of three designs, 2026-10-18).
+The header lies over the photo, see-through until the hero scrolls away (`data-header="clear"`). Each
+photo has a crop point for tall screens and one for wide ones, where only a band of the tall photo
+shows. A bar under each thumbnail fills over 6 s, then the next photo fades in while the last drifts
+slowly closer. It waits while the thumbnails are pointed at, keyboard focus is in the hero, it's touched
+or off screen; the pause button stops it, and with reduced motion it never moves by itself. A swipe
+anywhere on the hero, the thumbnails, or the arrow keys on them move it (right to left: the next photo
+is to the left). Without JavaScript the first photo stays.
 
-Devices with WebGL2 (and no data saver, 2 GB+ memory) show only the 3D bag: plain three.js, loaded as
-a separate chunk (170 KB gzipped), plus the model (`public/models/alpha.glb` 720 KB,
-`alpha-mobile.glb` 300 KB).
+The 3D bag is the next section, **جزء به جزء** (`#parts`): a tab per side (روبه‌رو، کنار، پشت), the
+side's numbered parts listed beside the bag, the same numbers pinned on it (`views.PARTS`: each part's
+point on the model and the way that surface faces; a pin hides when its side turns away or it leaves the
+stage). A tab turns the bag to that side (`VIEWS` in `bag3d/scene.ts`), a tapped row or pin turns it
+toward the part, and people can drag it round (sideways on phones; vertical swipes still scroll). The
+lock's numbers sit beside the module with lines to its parts, kept apart as the view changes. The
+fingerprint sensor's light turns green on the lock's side.
 
-- **While it loads:** a script in the page head marks those devices (`html.three-d`), so the stop
-  photos stay hidden from the first paint, and a thin line shows the download.
-- **The photos are the backup.** They show on devices without the 3D, and when it fails or takes over
-  6 s. If the script never runs at all, CSS brings them back after 8 s.
+Devices with WebGL2 (and no data saver, 2 GB+ memory) get the 3D: plain three.js, loaded as a separate
+chunk (170 KB gzipped), plus the model (`public/models/alpha.glb` 720 KB, `alpha-mobile.glb` 300 KB). It
+loads once the page has (the hero's photos come first) and the section is about a screen away.
 
-At the hero people can drag the bag (sideways on phones; vertical swipes still scroll) and open three
-hotspots (text in `views.HOTSPOTS`); further down the camera moves to each stop. The fingerprint
-sensor's light turns green at the lock stop.
-
-- **No zoom:** the mouse wheel scrolls the page.
+- **While it loads:** the stage is `[data-pending]`: a thin line shows the download.
+- **The photos are the backup.** Each side's photo with the same numbers (the earlier parts diagram)
+  shows on devices without the 3D, and when it fails or takes over 6 s.
+- **No zoom, no turning by itself:** the pins stay readable; the mouse wheel scrolls the page.
 - **No fade at the canvas edge:** it read as a white ring.
-- **Framing:** each stop's `frame` keeps the bag and its shadow inside the stage.
-- **Photos:** the hero photos have no drop shadow.
-- **Reduced motion:** no turning by itself, no camera glides.
+- **Framing:** each side's view, and a tapped part's, keeps the whole bag and its shadow inside the
+  stage (a closer look cut it off at the edges).
+- **Reduced motion:** no camera glides.
+- **Pin positions** came from `window.__bag.debugSnap(at, normal)` (development only), which finds the
+  model's surface under a rough point. Re-check them after rebuilding the model (`tools/dev/shots.mjs`).
 
 The model is built from the client's three photos, checked against them view by view:
 
@@ -123,7 +135,7 @@ The model is built from the client's three photos, checked against them view by 
    The retailers' sizes disagree (24x14x6 to 26x17x7 cm); at 25 cm wide the photos give about
    14.2 x 7.7 cm.
 5. **Details** (`tools/details.py`): what the AI shape blurs and the photos have too few pixels for, so
-   the page models it (`frontend/src/hero/details.ts`):
+   the page models it (`frontend/src/bag3d/details.ts`):
    - the lock module, traced in the side photo (outline, cap with the pull's slot and latch, groove,
      light window, sensor glass and frame) and projected through the fitted camera onto its face;
    - the zipper: tape and interlocked teeth (2.4 mm apart) along the seam, up the lock end, over the
@@ -135,11 +147,12 @@ The model is built from the client's three photos, checked against them view by 
    photos onto it (each texel from the photos that see it head-on and unblocked, colour-matched),
    sorts faces into leather / front panel / zipper / metal and compresses it (meshopt, JPEG texture):
    `alpha.glb` 720 KB, `alpha-mobile.glb` 300 KB. The `.json` beside each holds the details' measurements,
-   the hotspots and the leather grain's repeat.
+   hotspot anchors (unused since the pins moved to `views.PARTS`) and the leather grain's repeat.
 7. **Check** (`node tools/compare.mjs`, dev servers running): renders the site's 3D bag from each photo's
    camera, the same size as the photo, to lay over it; `python tools/dev/compose.py` puts them in a
    photo | render | blend sheet. `tools/dev/orbits.mjs` renders close-ups (lock, zipper from above, far
-   end), `tools/dev/shots.mjs` screenshots the tour's stops, `tools/dev/overflow.mjs` checks phone width.
+   end), `tools/dev/shots.mjs` screenshots each side and tapped part in `#parts`, `tools/dev/overflow.mjs`
+   checks phone width.
    All write to `media/3d/compare/` (not in git).
 
 The front, back, top and lock end come from the photos; the lock, zipper and far-end hardware are
@@ -160,24 +173,18 @@ Vazirmatn, since Persian set in a monospace stretches and reads as broken. Both 
 Pro was tried first: Fontsource's copy has no ی ک گ پ, so words fell apart on phones.) Corners 4px.
 The panel and the other pages share these tokens.
 
-On phones the tour is one screen: the bag with its view tabs on top, and the five stops as cards
-under it, swiped sideways (`[data-stops]` in `site.css`). The card mostly in view turns the bag
-(`hero.ts` observes the row), and a tab scrolls to its card. Desktop keeps the pinned scroll tour.
-
-Each home section has its own ground, so moving down the page reads as moving between parts: the tour
-on aluminium grey (`page`), the lock demo on ink, the parts on a light table (`raised`), the specs on
+Each home section has its own ground, so moving down the page reads as moving between parts: the hero
+on aluminium grey (`page`), the parts on a light table (`raised`), the lock on ink, the specs on
 `steel`, buying on `graphite` with the bill in white, the questions on grey, a closing band in signal
 green, and an ink footer. No white glows behind the bag. On phones the menu is a solid ink panel under
 the header (outside it, since the header's blur would trap a fixed panel), with the buy button at the
 bottom; the page doesn't scroll under it, and Escape closes it.
 
-The home page, after the tour:
-- **Lock demo** (`#try`, the one dark block): a drawing of the real module. Holding it for half a second
-  (the lock's own speed) fills the print and lights the status light; letting go early asks again. It
-  reads nothing, it only times the press. Works by keyboard (hold Space or Enter).
-- **Parts** (`#parts`, `views.PARTS`): the three photos as tabs, with numbered markers at measured
-  positions (percent of each photo) and the list beside; pointing at either lights both. On the side
-  photo the numbers sit beside the bag with lines to the parts, so they don't hide the lock.
+The home page, after the hero and the parts (above):
+- **Lock** (`#try`, the one dark block): what the lock does in three readouts (10 fingerprints, about
+  half a second, USB-C), and a drawing of the real module. Holding it for half a second (the lock's own
+  speed) fills the print and lights the status light; letting go early asks again. It reads nothing, it
+  only times the press. Works by keyboard (hold Space or Enter).
 - **Specs**: the size drawn on the front and side photos over a centimetre mat (`.cm-grid`, `--cm` per
   breakpoint), then the specs as cells.
 - **Buying**: the steps on a rail beside a sample bill that explains the odd amount (`.receipt`, printed
@@ -238,6 +245,6 @@ transfer screenshots are in `backend/private/`, never served by nginx, only thro
 ## Still to do
 
 - The 3D model: photos of the bottom and the far end (no photo shows them yet) and a sharper front
-  photo would make every side exact (README, "The 3D hero").
+  photo would make every side exact (README, "The hero and the 3D bag").
 - cartbecart: finish `payments.py` with their docs.
 - The client's answers (PLAN.md §11): name, domain, cards, SMS account, Enamad details, specs, warranty.

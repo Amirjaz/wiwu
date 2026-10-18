@@ -1,4 +1,4 @@
-"""The hero's 3D model (frontend/public/models/alpha*.glb + .json) from the AI shape and the three photos.
+"""The 3D bag's model (frontend/public/models/alpha*.glb + .json) from the AI shape and the three photos.
 
     python tools/build_model.py   (numpy, scipy, opencv-python-headless, trimesh, fast-simplification, xatlas)
     Before it: tools/photo_masks.py, tools/fit_proportions.py, tools/fit_cameras.py (see README).
@@ -16,8 +16,9 @@
 4. Faces are sorted into parts the page lights differently (leather, zipper tape, zipper teeth, metal).
 5. One uniform scale makes it 25 cm wide (the photos give the proportions, not the retailers' listings,
    which disagree); it rests on y = 0, front +z, lock end -x. Compressed: meshopt, JPEG texture.
-The .json beside each model holds the measurements of step 2, the hotspots' anchors and the leather
-grain's repeat. Coordinates below are the unscaled AI shape's (width about 1.97).
+The .json beside each model holds the measurements of step 2, the hotspots' anchors (no longer read by the
+page: its pins are in views.PARTS) and the leather grain's repeat. Coordinates below are the unscaled AI
+shape's (width about 1.97).
 """
 import json
 import subprocess

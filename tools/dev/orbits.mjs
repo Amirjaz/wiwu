@@ -4,7 +4,7 @@
 //   node tools/dev/orbits.mjs [out-dir] [url]
 //
 // Defaults: media/3d/compare/orbits, http://127.0.0.1:8030/. Needs the dev servers running (the page has
-// window.__hero.debugOrbit in development only) and headless Edge through patchright (tools/compare.mjs).
+// window.__bag.debugOrbit in development only) and headless Edge through patchright (tools/compare.mjs).
 // Writes <out-dir>/<view>.jpg, 900 x 900; the lock views have the sensor's light on.
 import { createRequire } from 'node:module';
 import fs from 'node:fs';
@@ -46,10 +46,12 @@ const js = async (expression) => {
   if (r.exceptionDetails) throw new Error(JSON.stringify(r.exceptionDetails).slice(0, 400));
   return r.result.value;
 };
-for (let i = 0; i < 120 && !(await js('!!window.__hero')); i++) await new Promise((r) => setTimeout(r, 500));
+// The model loads once the parts section is near.
+await js(`document.getElementById('parts').scrollIntoView()`);
+for (let i = 0; i < 120 && !(await js('!!window.__bag')); i++) await new Promise((r) => setTimeout(r, 500));
 await new Promise((r) => setTimeout(r, 800));
 for (const [name, [az, el, dist, target, light]] of Object.entries(views)) {
-  const dataUrl = await js(`window.__hero.debugOrbit(${az}, ${el}, ${dist}, ${JSON.stringify(target)}, 900, 900, ${light})`);
+  const dataUrl = await js(`window.__bag.debugOrbit(${az}, ${el}, ${dist}, ${JSON.stringify(target)}, 900, 900, ${light})`);
   fs.writeFileSync(path.join(out, `${name}.jpg`), Buffer.from(dataUrl.split(',')[1], 'base64'));
 }
 console.log('wrote', Object.keys(views).join(' '), 'to', out);

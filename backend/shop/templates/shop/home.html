@@ -6,150 +6,168 @@
 {% block og_title %}{{ product.name }}{% endblock %}
 {% block og_description %}{{ product.subtitle }}{% endblock %}
 {% block og_type %}product{% endblock %}
-{% block vite %}{% vite 'src/site.ts' 'src/islands/hero.ts' 'src/islands/home.ts' %}{% endblock %}
+{% block vite %}{% vite 'src/site.ts' 'src/islands/bag3d.ts' 'src/islands/home.ts' %}{% endblock %}
 {% block head %}
-{# Devices that will show the 3D bag (the same test as islands/hero.ts) keep the hero photos hidden while it loads. #}
-<script>
-(function () {
-  try {
-    var nav = navigator, connection = nav.connection;
-    if ((connection && connection.saveData) || (nav.deviceMemory !== undefined && nav.deviceMemory < 2)) return;
-    var gl = document.createElement('canvas').getContext('webgl2');
-    if (!gl) return;
-    document.documentElement.classList.add('three-d');
-    var lose = gl.getExtension('WEBGL_lose_context');
-    if (lose) lose.loseContext();
-  } catch (error) {}
-})();
-</script>
-<link rel="preload" as="image" href="{% asset 'images/front.webp' %}" fetchpriority="high">
 {% for item in jsonld %}<script type="application/ld+json">{{ item|jsonld }}</script>{% endfor %}
 {% endblock %}
+
+{% block header_mode %} data-header="clear"{% endblock %}
 
 {% block main %}
 
 {% comment %}
-The tour. Desktop: the bag stays pinned beside the stops while they scroll past. Phones: one screen, the
-bag on top and the stops as cards under it, swiped sideways ([data-stops], site.css). Either way the stop
-in view turns the 3D bag (islands/hero.ts) and lights its tab; each stop has a photo for devices without 3D.
+The hero, a campaign page: the bag in use, one photo at a time over the whole first screen (views.LOOK,
+islands/home.ts), the header laid over it. A large line at the bottom over a dark fade, the price and the
+button under it, the photos as thumbnails beside it. Without JavaScript the first photo stays and the
+thumbnails stay hidden.
 {% endcomment %}
-<section id="tour" class="mx-auto max-w-7xl md:px-6 flex flex-col md:grid md:grid-cols-[0.8fr_1.3fr] md:gap-x-12">
-  <div class="md:order-last md:sticky md:top-16 z-10 h-[min(50svh,440px)] md:h-[calc(100dvh-4rem)] md:self-start bg-page flex flex-col overflow-x-clip">
-    <div data-hero-stage data-model="{% asset 'models/alpha.glb' %}" data-model-small="{% asset 'models/alpha-mobile.glb' %}" class="relative flex-1 min-h-0 rise" style="--i:1">
-      <img data-poster="0" src="{% asset 'images/front.webp' %}" alt="کیف دستی آلفا از روبه‌رو، مشکی با زیپ فلزی و پلاک کوچک برند" width="844" height="540" fetchpriority="high"
-           class="absolute inset-0 m-auto max-h-full max-w-full object-contain p-3 md:p-6 transition-opacity duration-500">
-      <img data-poster="1" src="{% asset 'images/side.webp' %}" alt="کنار کیف با ماژول قفل اثر انگشت" width="422" height="757" loading="lazy"
-           class="absolute inset-0 m-auto max-h-full max-w-full object-contain p-6 md:p-16 opacity-0 transition-opacity duration-500">
-      <img data-poster="2 3 4" src="{% asset 'images/back.webp' %}" alt="پشت کیف با جیب زیپ‌دار و بند مچی" width="897" height="642" loading="lazy"
-           class="absolute inset-0 m-auto max-h-full max-w-full object-contain p-6 md:p-10 opacity-0 transition-opacity duration-500">
-      <div data-hero-loading class="absolute inset-0 flex-col items-center justify-center gap-3 pointer-events-none" aria-hidden="true">
-        <span class="relative block h-0.5 w-28 overflow-hidden rounded-full bg-line-strong/50"><span data-hero-progress class="hero-progress absolute inset-y-0 start-0 w-full bg-ink"></span></span>
-        <span class="font-mono text-xs text-muted">در حال آماده شدن سه‌بعدی</span>
-      </div>
-      <div data-hotspots class="hidden absolute inset-0 z-10 pointer-events-none transition-opacity duration-300">
-        {% for id, label, note in hotspots %}
-        <button type="button" data-hotspot="{{ id }}" aria-expanded="false" hidden
-                class="group absolute top-0 left-0 pointer-events-auto -translate-x-1/2 -translate-y-1/2">
-          <span class="absolute -inset-3" aria-hidden="true"></span>
-          <span class="relative grid size-6 place-items-center rounded-[var(--radius-field)] bg-raised ring-1 ring-ink/25 shadow-[0_2px_8px_rgba(15,16,18,0.25)] group-aria-expanded:bg-ink">
-            <span class="size-1.5 rounded-full bg-signal"></span>
-          </span>
-          <span class="sr-only">{{ label }}</span>
-          <span class="pointer-events-none absolute top-8 left-1/2 w-52 rounded-[var(--radius-field)] bg-ink px-3 py-2.5 text-start text-[0.82rem] leading-relaxed text-raised opacity-0 transition-opacity group-aria-expanded:opacity-100" style="translate: calc(-50% + var(--tip-shift, 0px)) 0">
-            <strong class="block font-medium">{{ label }}</strong><span class="text-raised/80">{{ note }}</span>
-          </span>
-        </button>
-        {% endfor %}
-      </div>
-      <p data-drag-hint class="hidden absolute bottom-2 inset-x-0 text-center font-mono text-xs text-muted transition-opacity duration-300 pointer-events-none">برای چرخاندن، بکشید</p>
+<section id="hero" class="hero relative isolate -mt-16 overflow-hidden bg-ink text-raised">
+  <div data-slider class="h-full touch-pan-y" style="--slide-time: 6s" aria-roledescription="carousel" aria-label="عکس‌های کیف">
+    <div data-slides class="absolute inset-0 -z-10">
+      {% for name, alt, focus, wide in look %}
+      <img data-slide{% if forloop.first %} data-on{% else %} hidden aria-hidden="true"{% endif %}
+           src="{% asset 'images/look/'|add:name|add:'-1200.webp' %}" srcset="{% asset 'images/look/'|add:name|add:'-600.webp' %} 600w, {% asset 'images/look/'|add:name|add:'-1200.webp' %} 1200w"
+           sizes="100vw" alt="{{ alt }}" width="1200" height="1800" draggable="false"
+           {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %} class="absolute inset-0 size-full object-cover" style="--focus: {{ focus }}; --focus-wide: {{ wide }}">
+      {% endfor %}
     </div>
-    <div class="grid grid-cols-5 h-11 md:h-14 md:mb-4 border-y md:border md:rounded-[var(--radius-surface)] border-line text-[0.78rem] md:text-sm bg-page" role="group" aria-label="نماهای کیف">
-      <button type="button" data-view="0" aria-current="true" class="flex items-center justify-center gap-1.5 md:gap-2 text-muted hover:text-ink aria-[current=true]:text-ink aria-[current=true]:bg-surface"><span class="led"></span>روبه‌رو</button>
-      <button type="button" data-view="1" aria-current="false" class="flex items-center justify-center gap-1.5 md:gap-2 border-s border-line text-muted hover:text-ink aria-[current=true]:text-ink aria-[current=true]:bg-surface"><span class="led"></span>قفل</button>
-      <button type="button" data-view="2" aria-current="false" class="flex items-center justify-center gap-1.5 md:gap-2 border-s border-line text-muted hover:text-ink aria-[current=true]:text-ink aria-[current=true]:bg-surface"><span class="led"></span>جیب پشت</button>
-      <button type="button" data-view="3" aria-current="false" class="flex items-center justify-center gap-1.5 md:gap-2 border-s border-line text-muted hover:text-ink aria-[current=true]:text-ink aria-[current=true]:bg-surface"><span class="led"></span>بند مچی</button>
-      <button type="button" data-view="4" aria-current="false" class="flex items-center justify-center gap-1.5 md:gap-2 border-s border-line text-muted hover:text-ink aria-[current=true]:text-ink aria-[current=true]:bg-surface"><span class="led"></span>بدنه</button>
-    </div>
-  </div>
+    <div class="hero-scrim pointer-events-none absolute inset-0 -z-10" aria-hidden="true"></div>
 
-  <div data-stops>
-    <div data-stop="0" class="flex flex-col justify-center gap-4 md:gap-6 md:py-8 md:min-h-[calc(100dvh-4rem)]">
-      <p class="rise hidden md:flex items-center gap-2 font-mono text-sm text-muted" style="--i:0">{% if product.is_available %}<span class="led led-on"></span>{% endif %}{{ product.name }}</p>
-      <h1 class="rise text-[1.6rem] leading-[1.5] sm:text-5xl lg:text-[3.5rem] font-bold sm:leading-[1.35]" style="--i:0">فقط با اثر انگشت شما باز می‌شود.</h1>
-      <p class="rise text-[0.98rem] leading-[1.85] md:text-lg md:leading-[1.9] text-ink-soft max-w-[36ch] md:text-xl" style="--i:1">کیف دستی آلفا با قفل اثر انگشت؛ جای امنی برای کارت، مدارک و گوشی، هر جا که می‌روید.</p>
-      {% if colors|length > 1 %}
-      {# Shown once a second colour is on show in the panel; the pick rides along to checkout (?color=, islands/home.ts). #}
-      <div class="rise flex items-center gap-3" style="--i:2" role="radiogroup" aria-label="رنگ" data-color-picker>
-        {% for color in colors %}
-        <button type="button" role="radio" aria-checked="false" data-color="{{ color.id }}" data-color-name="{{ color.name }}"{% if not color.available %} aria-disabled="true"{% endif %}
-                class="size-8 rounded-full ring-1 ring-ink/25 ring-offset-2 ring-offset-page aria-checked:ring-2 aria-checked:ring-ink aria-disabled:opacity-35 aria-disabled:cursor-not-allowed" style="background: {{ color.swatch }}">
-          <span class="sr-only">{{ color.name }}{% if not color.available %}، ناموجود{% endif %}</span>
-        </button>
-        {% endfor %}
-        <span class="text-sm text-ink-soft" data-color-label aria-hidden="true"></span>
-      </div>
-      {% endif %}
-      <div class="rise flex flex-wrap items-center gap-x-6 gap-y-3 md:pt-2" style="--i:2">
-        {% if product.is_available %}
-        <a href="{% url 'checkout' %}" class="btn btn-primary min-h-13 md:min-h-14 px-10 text-lg max-md:flex-1">خرید</a>
-        {% else %}
-        <span class="btn btn-ghost min-h-14 px-8 text-lg" aria-disabled="true">فعلاً موجود نیست</span>
-        {% endif %}
-        <p class="leading-tight">
-          <span class="block text-xl md:text-2xl font-bold">{{ price }}</span>
-          <span class="block font-mono text-xs text-muted">تومان</span>
-        </p>
-      </div>
-    </div>
-
-    <div data-stop="1" id="lock" class="md:scroll-mt-24 flex flex-col justify-center gap-4 md:gap-10 md:py-16 md:min-h-[85dvh]">
-      <div class="reveal space-y-2 md:space-y-4">
-        <h2 class="text-[1.35rem] leading-[1.6] md:text-[2.5rem] md:leading-[1.45] font-bold">کلید این قفل همیشه همراه شماست.</h2>
-        <p class="text-[0.98rem] leading-[1.85] md:text-lg md:leading-[1.9] text-ink-soft max-w-[46ch]">انگشتتان را روی حسگر بگذارید، چراغ سبز می‌شود و زیپ باز است. بدون رمز، بدون کلیدی که گم شود.</p>
-      </div>
-      <dl class="reveal grid grid-cols-[1fr_1.3fr_1fr] rounded-[var(--radius-surface)] border border-line-strong bg-surface max-md:bg-raised [&>div+div]:border-s [&>div+div]:border-line">
-        <div class="flex flex-col gap-2 md:gap-3 p-3 sm:p-5"><dt class="readout-label">اثر انگشت، تا</dt><dd class="text-2xl sm:text-5xl font-medium">۱۰</dd></div>
-        <div class="flex flex-col gap-2 md:gap-3 p-3 sm:p-5"><dt class="readout-label">باز شدن، حدود</dt><dd class="text-2xl sm:text-5xl font-medium">۰٫۵ <span class="text-sm sm:text-xl text-ink-soft">ثانیه</span></dd></div>
-        <div class="flex flex-col gap-2 md:gap-3 p-3 sm:p-5"><dt class="readout-label">شارژ قفل</dt><dd class="text-xl sm:text-3xl lg:text-4xl font-medium ltr text-end whitespace-nowrap">USB-C</dd></div>
-      </dl>
-      <a href="#try" class="reveal inline-flex items-center gap-2 self-start font-medium hover:text-ink-soft">{% icon 'fingerprint' 'size-5' %} امتحانش کنید {% icon 'arrow-left' 'size-4' %}</a>
-    </div>
-
-    <div data-stop="2" id="features" class="md:scroll-mt-24 flex flex-col justify-center md:py-16 md:min-h-[75dvh]">
-      <div class="reveal space-y-2 md:space-y-4">
-        <h2 class="text-[1.35rem] leading-[1.6] md:text-[2.5rem] md:leading-[1.45] font-bold">جیب زیپ‌دار پشت</h2>
-        <p class="text-[0.98rem] leading-[1.85] md:text-lg md:leading-[1.9] text-ink-soft max-w-[44ch]">برای چیزهایی که زود به آن‌ها نیاز دارید: کارت مترو، بلیت، رسید. بی‌آنکه قفل اصلی را باز کنید.</p>
-        <p class="font-mono text-sm"><span class="text-muted">جیب‌ها</span>&ensp;جیب زیپ‌دار پشت، جای کارت و مدارک در داخل</p>
-      </div>
-    </div>
-
-    <div data-stop="3" class="flex flex-col justify-center md:py-16 md:min-h-[75dvh]">
-      <div class="reveal space-y-2 md:space-y-4">
-        <h2 class="text-[1.35rem] leading-[1.6] md:text-[2.5rem] md:leading-[1.45] font-bold">بند مچی</h2>
-        <p class="text-[0.98rem] leading-[1.85] md:text-lg md:leading-[1.9] text-ink-soft max-w-[44ch]">بند پشت کیف با دکمه فلزی بسته می‌شود تا کیف از دستتان سُر نخورد.</p>
-        <p class="font-mono text-sm"><span class="text-muted">بند</span>&ensp;بند مچی با دکمه فلزی</p>
-      </div>
-    </div>
-
-    <div data-stop="4" class="flex flex-col justify-center md:py-16 md:min-h-[85dvh]">
-      <div class="reveal space-y-2 md:space-y-4">
-        <h2 class="text-[1.35rem] leading-[1.6] md:text-[2.5rem] md:leading-[1.45] font-bold">چرم مصنوعی مقاوم</h2>
-        <p class="text-[0.98rem] leading-[1.85] md:text-lg md:leading-[1.9] text-ink-soft max-w-[44ch]">بدنه PU در برابر آب و خط و خش مقاوم است و با یک دستمال تمیز می‌شود.</p>
-        <p class="font-mono text-sm"><span class="text-muted">آستر</span>&ensp;میکروفایبر</p>
+    <div class="mx-auto flex h-full max-w-7xl flex-col justify-end px-4 sm:px-6 pt-24 pb-6 md:pb-12">
+      <div class="grid gap-7 md:grid-cols-[1fr_auto] md:items-end md:gap-12">
+        <div class="max-w-[42rem]">
+          <p class="rise flex items-center gap-2 font-mono text-sm text-raised/70" style="--i:0">{% if product.is_available %}<span class="led led-on"></span>{% endif %}{{ product.name }}</p>
+          <h1 class="rise mt-4 text-[2.5rem] leading-[1.3] sm:text-6xl lg:text-[5.4rem] font-bold lg:leading-[1.15]" style="--i:1">فقط با اثر انگشت شما باز می‌شود.</h1>
+          <p class="rise mt-5 max-w-[40ch] text-[1rem] leading-[1.9] md:text-lg text-raised/80" style="--i:2">کیف دستی آلفا با قفل اثر انگشت؛ جای امنی برای کارت، مدارک و گوشی، هر جا که می‌روید.</p>
+          {% if colors|length > 1 %}
+          {# Shown once a second colour is on show in the panel; the pick rides along to checkout (?color=, islands/home.ts). #}
+          <div class="rise mt-6 flex items-center gap-3" style="--i:3" role="radiogroup" aria-label="رنگ" data-color-picker>
+            {% for color in colors %}
+            <button type="button" role="radio" aria-checked="false" data-color="{{ color.id }}" data-color-name="{{ color.name }}"{% if not color.available %} aria-disabled="true"{% endif %}
+                    class="size-8 rounded-full ring-1 ring-raised/40 ring-offset-2 ring-offset-transparent aria-checked:ring-2 aria-checked:ring-raised aria-disabled:opacity-35 aria-disabled:cursor-not-allowed" style="background: {{ color.swatch }}">
+              <span class="sr-only">{{ color.name }}{% if not color.available %}، ناموجود{% endif %}</span>
+            </button>
+            {% endfor %}
+            <span class="text-sm text-raised/80" data-color-label aria-hidden="true"></span>
+          </div>
+          {% endif %}
+          <div class="rise mt-7 flex flex-wrap items-center gap-x-6 gap-y-3" style="--i:3">
+            {% if product.is_available %}
+            <a href="{% url 'checkout' %}" class="btn min-h-13 md:min-h-14 px-10 text-lg bg-raised text-ink hover:bg-white max-md:flex-1">خرید</a>
+            {% else %}
+            <span class="btn min-h-14 px-8 text-lg border border-raised/40" aria-disabled="true">فعلاً موجود نیست</span>
+            {% endif %}
+            <p class="leading-tight"><span class="block text-xl md:text-2xl font-bold">{{ price }}</span><span class="block font-mono text-xs text-raised/60">تومان</span></p>
+          </div>
+        </div>
+        <div data-slider-controls hidden class="rise flex items-end gap-2 md:gap-2.5" style="--i:3">
+          {% for name, alt, focus, wide in look %}
+          <button type="button" data-goto="{{ forloop.counter0 }}" aria-label="عکس {{ forloop.counter|fa }}" aria-current="{% if forloop.first %}true{% else %}false{% endif %}"{% if forloop.first %} data-state="on"{% endif %} class="group w-10 sm:w-12 lg:w-14">
+            <img src="{% asset 'images/look/'|add:name|add:'-160.webp' %}" alt="" width="160" height="240" loading="lazy" class="block aspect-[2/3] w-full rounded-[3px] object-cover opacity-50 ring-1 ring-raised/25 transition-opacity group-hover:opacity-80 group-aria-[current=true]:opacity-100 group-aria-[current=true]:ring-raised">
+            <span class="relative mt-2 block h-0.5 overflow-hidden rounded-full bg-raised/25"><span class="slide-fill absolute inset-0 bg-raised"></span></span>
+          </button>
+          {% endfor %}
+          <div class="flex flex-col items-center gap-1 ps-1">
+            <button type="button" data-slider-toggle aria-label="توقف" class="grid size-9 place-items-center rounded-[var(--radius-field)] hover:bg-raised/15">{% icon 'pause' 'size-4' %}{% icon 'play' 'size-4 hidden' %}</button>
+            <span data-slider-count class="font-mono text-xs text-raised/70 whitespace-nowrap">۱ / {{ look|length|fa }}</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 </section>
 
-{# The lock demo, the page's one dark block: a drawing of the real module to hold for half a second (islands/home.ts). #}
+{% comment %}
+The parts, on a light table: the bag in 3D (islands/bag3d.ts) with a tab per side, numbered pins on it and
+the list beside it. A tab turns the bag to its side, a row or a pin tapped turns it to that part, and it
+can be dragged round. Where the 3D can't run, the same numbers sit on a photo per side (views.PARTS).
+{% endcomment %}
+<section id="parts" class="scroll-mt-16 overflow-x-clip bg-raised">
+  <div class="mx-auto max-w-7xl px-4 sm:px-6 py-16 md:py-24">
+    <div class="reveal flex flex-wrap items-end justify-between gap-6 mb-4 md:mb-8">
+      <div class="space-y-3">
+        <h2 class="text-3xl sm:text-[2.6rem] font-bold leading-[1.45]">جزء به جزء</h2>
+        <p class="text-ink-soft leading-relaxed max-w-[46ch]">هر سطر را بزنید تا جایش روی کیف روشن شود.</p>
+      </div>
+      <div role="tablist" aria-label="نمای کیف" class="max-md:grid max-md:w-full max-md:grid-cols-3 md:inline-flex gap-1 rounded-[var(--radius-surface)] border border-line bg-surface p-1 text-sm">
+        {% for key, label, image, w, h, items in parts %}
+        <button type="button" role="tab" id="parts-tab-{{ key }}" aria-controls="parts-{{ key }}" aria-selected="{% if forloop.first %}true{% else %}false{% endif %}" tabindex="{% if forloop.first %}0{% else %}-1{% endif %}" data-parts-tab="{{ key }}"
+                class="flex items-center justify-center gap-2 h-10 md:h-9 px-4 rounded-[3px] text-muted hover:text-ink aria-selected:bg-ink aria-selected:text-raised"><span class="led"></span>{{ label }}</button>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="reveal grid gap-4 lg:grid-cols-[1.4fr_1fr] lg:gap-16 items-center">
+      <div data-bag-stage data-model="{% asset 'models/alpha.glb' %}" data-model-small="{% asset 'models/alpha-mobile.glb' %}" class="relative -mx-4 sm:mx-0 h-[23rem] sm:h-[28rem] lg:h-[34rem]">
+        {% for key, label, image, w, h, items in parts %}
+        <figure data-parts-photo data-parts-group="{{ key }}"{% if not forloop.first %} hidden{% endif %} class="absolute inset-0 flex items-center justify-center p-4">
+          <div class="relative">
+            <img src="{% asset image %}" alt="کیف از {{ label }}" width="{{ w }}" height="{{ h }}" loading="lazy"
+                 class="block w-auto h-auto max-w-full {% if key == 'side' %}max-h-[20rem] sm:max-h-[25rem] lg:max-h-[30rem]{% else %}max-h-[20rem] sm:max-h-[24rem] lg:max-h-[28rem]{% endif %} drop-shadow-[0_22px_26px_rgba(36,40,48,0.24)]">
+            {% for x, y, name, note, bx, at, n in items %}
+            {% if bx %}{# The number beside the bag, a line to a pin on the part. #}
+            <span class="absolute h-px bg-ink/55" style="top: {{ y }}%; left: {{ bx }}%; right: calc(100% - {{ x }}%)" aria-hidden="true"></span>
+            <span class="absolute size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-raised ring-2 ring-ink/70" style="left: {{ x }}%; top: {{ y }}%" aria-hidden="true"></span>
+            {% endif %}
+            <span class="marker absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer" style="left: {% if bx %}{{ bx }}{% else %}{{ x }}{% endif %}%; top: {{ y }}%" data-part="{{ forloop.counter }}" aria-hidden="true">{{ forloop.counter|fa }}</span>
+            {% endfor %}
+          </div>
+        </figure>
+        {# The same numbers on the 3D bag: bag3d.ts moves them with it and hides the ones turned away. Where the photo puts a number beside the bag, it sits off to the side here too, joined by a line. #}
+        <div data-pins data-parts-group="{{ key }}"{% if not forloop.first %} hidden{% endif %} class="absolute inset-0 z-10 pointer-events-none">
+          {% for x, y, name, note, bx, at, n in items %}
+          <span data-pin data-part="{{ forloop.counter }}" data-at="{{ at }}" data-normal="{{ n }}"{% if bx %} data-lead{% endif %} hidden aria-hidden="true" class="absolute top-0 left-0 size-0 pointer-events-auto cursor-pointer">
+            {% if bx %}
+            <svg class="absolute top-0 left-0 overflow-visible text-ink/55" width="1" height="1"><line x1="0" y1="0" x2="-96" y2="0" stroke="currentColor"/></svg>
+            <span class="absolute size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-raised ring-2 ring-ink/70"></span>
+            {% endif %}
+            <span data-pin-number class="marker absolute -translate-x-1/2 -translate-y-1/2{% if bx %} -left-24{% endif %}">{{ forloop.counter|fa }}</span>
+          </span>
+          {% endfor %}
+        </div>
+        {% endfor %}
+        <div data-bag-loading class="absolute inset-0 flex-col items-center justify-center gap-3 pointer-events-none" aria-hidden="true">
+          <span class="relative block h-0.5 w-28 overflow-hidden rounded-full bg-line-strong/50"><span data-bag-progress class="bag-progress absolute inset-y-0 start-0 w-full bg-ink"></span></span>
+          <span class="font-mono text-xs text-muted">در حال آماده شدن سه‌بعدی</span>
+        </div>
+        <p data-drag-hint hidden class="absolute bottom-2 inset-x-0 z-10 flex items-center justify-center gap-2 font-mono text-xs text-muted transition-opacity duration-300 pointer-events-none">{% icon 'hand-grabbing' 'size-4' %}برای چرخاندن، بکشید</p>
+      </div>
+      {% for key, label, image, w, h, items in parts %}
+      <div role="tabpanel" id="parts-{{ key }}" aria-labelledby="parts-tab-{{ key }}" data-parts-group="{{ key }}"{% if not forloop.first %} hidden{% endif %}>
+        <ol class="border-t border-ink">
+          {% for x, y, name, note, bx, at, n in items %}
+          <li class="border-b border-line">
+            <button type="button" data-part="{{ forloop.counter }}" class="flex w-full gap-4 py-4 sm:px-3 text-start transition-colors data-[active]:bg-surface">
+              <span class="marker mt-0.5" aria-hidden="true">{{ forloop.counter|fa }}</span>
+              <span>
+                <span class="block font-bold">{{ name }}</span>
+                <span class="block mt-1 text-[0.95rem] text-ink-soft leading-relaxed">{{ note }}</span>
+              </span>
+            </button>
+          </li>
+          {% endfor %}
+        </ol>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+{# The lock, the page's one dark block: what it does in three readouts, and a drawing of the real module to hold for half a second (islands/home.ts). #}
 <section id="try" class="scroll-mt-16 bg-ink text-raised bg-[radial-gradient(ellipse_40%_60%_at_28%_50%,#25272c_0%,rgba(15,16,18,0)_75%)]">
   <div class="mx-auto max-w-7xl px-4 sm:px-6 py-20 md:py-28 grid gap-14 md:grid-cols-[1.1fr_0.9fr] items-center">
-    <div class="reveal space-y-6">
-      <h2 class="text-3xl sm:text-[2.6rem] font-bold leading-[1.45]">امتحانش کنید.</h2>
-      <p class="text-lg text-raised/75 leading-[1.9] max-w-[42ch]">انگشتتان را روی حسگر نگه دارید. قفل واقعی هم همین‌قدر طول می‌کشد: حدود نیم ثانیه.</p>
-      <p class="flex items-start gap-2 font-mono text-[0.8rem] text-raised/55 leading-relaxed max-w-[48ch]">{% icon 'shield-check' 'size-4 mt-0.5' %}این فقط یک نمایش است. چیزی خوانده یا ذخیره نمی‌شود؛ فقط مدت نگه داشتن را می‌سنجد.</p>
+    <div class="reveal space-y-8">
+      <div class="space-y-5">
+        <h2 class="text-3xl sm:text-[2.6rem] font-bold leading-[1.45]">کلید این قفل همیشه همراه شماست.</h2>
+        <p class="text-lg text-raised/75 leading-[1.9] max-w-[42ch]">انگشتتان را روی حسگر بگذارید، چراغ سبز می‌شود و زیپ باز است. بدون رمز، بدون کلیدی که گم شود.</p>
+      </div>
+      <dl class="grid grid-cols-[1fr_1.3fr_1fr] rounded-[var(--radius-surface)] border border-raised/20 [&>div+div]:border-s [&>div+div]:border-raised/15">
+        <div class="flex flex-col gap-2 md:gap-3 p-3 sm:p-5"><dt class="readout-label text-raised/55">اثر انگشت، تا</dt><dd class="text-2xl sm:text-5xl font-medium">۱۰</dd></div>
+        <div class="flex flex-col gap-2 md:gap-3 p-3 sm:p-5"><dt class="readout-label text-raised/55">باز شدن، حدود</dt><dd class="text-2xl sm:text-5xl font-medium">۰٫۵ <span class="text-sm sm:text-xl text-raised/65">ثانیه</span></dd></div>
+        <div class="flex flex-col gap-2 md:gap-3 p-3 sm:p-5"><dt class="readout-label text-raised/55">شارژ قفل</dt><dd class="text-xl sm:text-3xl lg:text-4xl font-medium ltr text-end whitespace-nowrap">USB-C</dd></div>
+      </dl>
     </div>
     <div class="reveal flex flex-col items-center gap-6">
+      <p class="text-2xl font-bold">امتحانش کنید.</p>
       <button type="button" class="sensor" data-sensor data-state="idle" aria-describedby="sensor-status">
         <span class="sensor-light" aria-hidden="true"></span>
         <span class="sensor-glass" aria-hidden="true">
@@ -160,52 +178,8 @@ in view turns the 3D bag (islands/hero.ts) and lights its tab; each stop has a p
         <span class="sr-only">حسگر نمایشی: نگه دارید</span>
       </button>
       <p id="sensor-status" data-sensor-status class="min-h-6 font-mono text-sm text-raised/75 text-center" aria-live="polite">انگشتتان را روی حسگر نگه دارید</p>
+      <p class="flex items-start gap-2 font-mono text-[0.78rem] text-raised/50 leading-relaxed max-w-[40ch]">{% icon 'shield-check' 'size-4 mt-0.5' %}این فقط یک نمایش است. چیزی خوانده یا ذخیره نمی‌شود؛ فقط مدت نگه داشتن را می‌سنجد.</p>
     </div>
-  </div>
-</section>
-
-{# The parts, marked on the three photos (views.PARTS), on a light table: a tab per photo, the list beside it. #}
-<section id="parts" class="scroll-mt-16 overflow-x-clip bg-raised">
-  <div class="mx-auto max-w-7xl px-4 sm:px-6 py-20 md:py-28">
-    <div class="reveal flex flex-wrap items-end justify-between gap-6 mb-10 md:mb-14">
-      <div class="space-y-3">
-        <h2 class="text-3xl sm:text-[2.6rem] font-bold leading-[1.45]">جزء به جزء</h2>
-        <p class="text-ink-soft leading-relaxed max-w-[46ch]">هر سطر را بزنید تا جایش روی کیف روشن شود.</p>
-      </div>
-      <div role="tablist" aria-label="نمای کیف" class="max-md:grid max-md:w-full max-md:grid-cols-3 md:inline-flex gap-1 rounded-[var(--radius-surface)] border border-line bg-surface p-1 text-sm">
-        {% for key, label, image, w, h, items in parts %}
-        <button type="button" role="tab" id="parts-tab-{{ key }}" aria-controls="parts-{{ key }}" aria-selected="{% if forloop.first %}true{% else %}false{% endif %}" tabindex="{% if forloop.first %}0{% else %}-1{% endif %}" data-parts-tab
-                class="flex items-center justify-center gap-2 h-10 md:h-9 px-4 rounded-[3px] text-muted hover:text-ink aria-selected:bg-ink aria-selected:text-raised"><span class="led"></span>{{ label }}</button>
-        {% endfor %}
-      </div>
-    </div>
-    {% for key, label, image, w, h, items in parts %}
-    <div role="tabpanel" id="parts-{{ key }}" aria-labelledby="parts-tab-{{ key }}" data-parts-panel {% if not forloop.first %}hidden{% endif %}
-         class="reveal grid gap-10 lg:grid-cols-[1.4fr_1fr] lg:gap-16 items-center">
-      <figure class="relative mx-auto w-fit">
-        <img src="{% asset image %}" alt="کیف از {{ label }}" width="{{ w }}" height="{{ h }}" loading="lazy"
-             class="block w-auto h-auto max-w-full {% if key == 'side' %}max-h-[24rem] sm:max-h-[30rem]{% else %}max-h-[30rem]{% endif %} drop-shadow-[0_22px_26px_rgba(36,40,48,0.24)]">
-        {% for x, y, name, note, bx in items %}
-        {% if bx %}{# The number beside the bag, a line to a pin on the part. #}
-        <span class="absolute h-px bg-ink/55" style="top: {{ y }}%; left: {{ bx }}%; right: calc(100% - {{ x }}%)" aria-hidden="true"></span>
-        <span class="absolute size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-raised ring-2 ring-ink/70" style="left: {{ x }}%; top: {{ y }}%" aria-hidden="true"></span>
-        {% endif %}
-        <span class="marker absolute -translate-x-1/2 -translate-y-1/2 cursor-default" style="left: {% if bx %}{{ bx }}{% else %}{{ x }}{% endif %}%; top: {{ y }}%" data-part="{{ forloop.counter }}" aria-hidden="true">{{ forloop.counter|fa }}</span>
-        {% endfor %}
-      </figure>
-      <ol class="border-t border-ink">
-        {% for x, y, name, note, bx in items %}
-        <li data-part="{{ forloop.counter }}" class="flex gap-4 py-4 border-b border-line cursor-default transition-colors data-[active]:bg-surface sm:px-3">
-          <span class="marker mt-0.5" aria-hidden="true">{{ forloop.counter|fa }}</span>
-          <div>
-            <p class="font-bold">{{ name }}</p>
-            <p class="mt-1 text-[0.95rem] text-ink-soft leading-relaxed">{{ note }}</p>
-          </div>
-        </li>
-        {% endfor %}
-      </ol>
-    </div>
-    {% endfor %}
   </div>
 </section>
 

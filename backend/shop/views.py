@@ -27,12 +27,19 @@ PROVINCES = [
     'سیستان و بلوچستان', 'فارس', 'قزوین', 'قم', 'کردستان', 'کرمان', 'کرمانشاه', 'کهگیلویه و بویراحمد',
     'گلستان', 'گیلان', 'لرستان', 'مازندران', 'مرکزی', 'هرمزگان', 'همدان', 'یزد',
 ]
-# The 3D hero's hotspots (positions in frontend/src/hero/scene.ts): id, label, note.
-HOTSPOTS = [
-    ('lock', 'قفل اثر انگشت', 'تا ۱۰ اثر انگشت؛ در حدود نیم ثانیه باز می‌شود و با USB-C شارژ می‌شود.'),
-    ('leather', 'چرم مصنوعی PU', 'مقاوم در برابر آب و خط و خش؛ با یک دستمال تمیز می‌شود.'),
-    ('pocket', 'جیب زیپ‌دار پشت', 'برای کارت مترو، بلیت و رسید، بی‌آنکه قفل اصلی را باز کنید.'),
+# The hero's photos, in the slider's order (frontend/public/images/look/<name>-160/-600/-1200.webp, the
+# originals in media/source-photos/look/): name, alt text, and the point kept in view when the photo
+# fills a frame of another shape (CSS object-position): on tall screens, and on wide ones, where only a
+# band of the tall photo shows, around the bag.
+LOOK = [
+    ('by-the-car', 'کیف دستی آلفا در دست، کنار در باز خودرویی با صندلی‌های قرمز', '50% 40%', '50% 50%'),
+    ('plate', 'نمای نزدیک کیف آلفا در دست: چرم دانه‌دار و پلاک فلزی برند', '50% 45%', '50% 36%'),
+    ('low-angle', 'کیف آلفا در دست، از زاویه‌ی پایین، با درختان پاییزی پشت سر', '50% 50%', '50% 50%'),
+    ('in-the-car', 'کیف آلفا جلوی دوربین، داخل خودرو', '50% 62%', '50% 62%'),
+    ('seated', 'کیف آلفا در دست، نشسته کنار خودرو', '50% 58%', '50% 56%'),
+    ('door', 'کیف آلفا در دست، با کت چرمی و شلوار جین کنار خودرو', '50% 38%', '50% 28%'),
 ]
+
 CLAIM_TYPES = {'image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'application/pdf'}
 
 
@@ -89,33 +96,47 @@ def home(request):
     return render(request, 'shop/home.html', {
         'product': product, 'faqs': faqs, 'price': persian.toman(product.price_rial),
         'shipping': shipping, 'example_total': persian.toman(example),
-        'hotspots': HOTSPOTS, 'parts': PARTS, 'colors': product.shown_colors(),
+        'look': LOOK, 'parts': PARTS, 'colors': product.shown_colors(),
         'dims': dims, 'spec_cells': spec_cells,
         'jsonld': _jsonld(request, store, product, faqs),
     })
 
 
-# The parts diagram: per photo (tab id, name, file, width, height), the parts marked on it: x and y as
-# percentages of the photo (strings, so the template doesn't localise them), a name, a note, and where
-# the number goes when it would hide what it points at (x in %, beside the bag, joined by a line).
+# The parts, a tab per side of the bag (id, name, and its photo: file, width, height). Each part: x and y
+# on the photo as percentages (strings, so the template doesn't localise them), a name, a note, where
+# the number goes on the photo when it would hide what it points at (x in %, beside the bag, joined by
+# a line), and its pin on the 3D bag: the point, and the way that surface faces (the pin hides when it
+# turns away), in the model's metres (frontend/src/bag3d/scene.ts).
 PARTS = [
-    ('back', 'پشت', 'images/back.webp', 897, 642, [
-        ('84', '34', 'جیب زیپ‌دار پشت', 'جدا از قفل اصلی؛ برای کارت مترو، بلیت و رسید.', ''),
-        ('45', '12', 'زیپ اصلی', 'دور بالای کیف؛ سرِ آن در ماژول قفل جا می‌خورد و قفل می‌شود.', ''),
-        ('30', '76', 'بند مچی', 'پشت کیف، تا کیف از دستتان سُر نخورد.', ''),
-        ('80', '70.5', 'دکمه فلزی', 'بند مچی با این دکمه بسته می‌شود.', ''),
-        ('42', '54', 'چرم مصنوعی دانه‌دار', 'PU، مقاوم در برابر آب و خط و خش؛ با یک دستمال تمیز می‌شود.', ''),
+    ('front', 'روبه‌رو', 'images/front.webp', 844, 540, [
+        ('81', '73', 'پلاک برند', 'پلاک کوچک برند روی رویه‌ی جلو.', '',
+         '0.077 0.038 0.0347', '0.01 0.15 0.99'),
+        ('40', '50', 'رویه‌ی جلو', 'صاف و مات؛ صاف‌تر از پشت کیف.', '',
+         '-0.025 0.07 0.0296', '0 0.2 0.98'),
+        ('47', '9', 'زیپ اصلی', 'زیپ فلزی بالای کیف.', '',
+         '-0.003 0.1415 0.0002', '0 0.92 0.39'),
     ]),
     ('side', 'کنار', 'images/side.webp', 422, 757, [
-        ('38.4', '81.5', 'حسگر اثر انگشت', 'تا ۱۰ اثر انگشت؛ حدود نیم ثانیه تا باز شدن.', '-8'),
-        ('46', '73.6', 'چراغ وضعیت', 'وقتی قفل باز می‌شود سبز می‌شود.', '-8'),
-        ('39', '65.5', 'جای سرِ زیپ', 'سرِ زیپ اصلی اینجا قفل می‌شود.', '-8'),
-        ('35.5', '33', 'زیپ اصلی', 'از بالای کیف تا ماژول قفل.', '-8'),
+        ('38.4', '81.5', 'حسگر اثر انگشت', 'تا ۱۰ اثر انگشت؛ حدود نیم ثانیه تا باز شدن.', '-8',
+         '-0.13036 0.0389 -0.00235', '-0.9958 0.0296 -0.0864'),
+        ('46', '73.6', 'چراغ وضعیت', 'وقتی قفل باز می‌شود سبز می‌شود.', '-8',
+         '-0.13003 0.0489 -0.00275', '-0.9958 0.0296 -0.0864'),
+        ('39', '65.5', 'جای سرِ زیپ', 'سرِ زیپ اصلی اینجا قفل می‌شود.', '-8',
+         '-0.12965 0.06279 -0.00229', '-0.9958 0.0296 -0.0864'),
+        ('35.5', '33', 'زیپ اصلی', 'از بالای کیف تا ماژول قفل.', '-8',
+         '-0.1223 0.102 0.0002', '-0.9 0.08 0.42'),
     ]),
-    ('front', 'روبه‌رو', 'images/front.webp', 844, 540, [
-        ('81', '73', 'پلاک برند', 'پلاک کوچک برند روی رویه‌ی جلو.', ''),
-        ('40', '50', 'رویه‌ی جلو', 'صاف و مات؛ صاف‌تر از پشت کیف.', ''),
-        ('47', '9', 'زیپ اصلی', 'زیپ فلزی بالای کیف.', ''),
+    ('back', 'پشت', 'images/back.webp', 897, 642, [
+        ('84', '34', 'جیب زیپ‌دار پشت', 'جدا از قفل اصلی؛ برای کارت مترو، بلیت و رسید.', '',
+         '-0.08 0.093 -0.0235', '-0.05 0.31 -0.95'),
+        ('45', '12', 'زیپ اصلی', 'دور بالای کیف؛ سرِ آن در ماژول قفل جا می‌خورد و قفل می‌شود.', '',
+         '0.012 0.1416 -0.0002', '0 0.92 -0.39'),
+        ('30', '76', 'بند مچی', 'پشت کیف، تا کیف از دستتان سُر نخورد.', '',
+         '0.05 0.034 -0.0373', '0.03 0.06 -1'),
+        ('80', '70.5', 'دکمه فلزی', 'بند مچی با این دکمه بسته می‌شود.', '',
+         '-0.0875 0.0295 -0.0365', '0.11 0.03 -0.99'),
+        ('42', '54', 'چرم مصنوعی دانه‌دار', 'PU، مقاوم در برابر آب و خط و خش؛ با یک دستمال تمیز می‌شود.', '',
+         '0.02 0.065 -0.0314', '0.01 0.18 -0.98'),
     ]),
 ]
 

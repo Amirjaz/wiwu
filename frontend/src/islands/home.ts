@@ -1,33 +1,121 @@
-// The home page's small interactions, besides the 3D (hero.ts): the view switcher under the bag, the
-// colour picker, the lock demo, and the tabs and markers of the parts diagram. Everything here works by
-// keyboard too.
+// The home page's small interactions, besides the 3D bag (bag3d.ts): the hero's photo slider, the colour
+// picker, the lock demo, and the tabs and numbers of the parts section. Everything here works by keyboard
+// too.
 
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+const fa = (n: number) => n.toLocaleString('fa-IR');
 
-// View switcher: names the tour's five views and follows the tour (hero.ts sends 'hero:stop'). A tap
-// brings that view's text to where the tour picks it up: on phones, its card in the sideways row under
-// the bag; on desktop, the middle of the screen.
-function viewSwitcher() {
-  const stage = document.querySelector<HTMLElement>('[data-hero-stage]');
-  const scroller = document.querySelector<HTMLElement>('[data-stops]');
-  const views = [...document.querySelectorAll<HTMLButtonElement>('[data-view]')];
-  const mark = (index: number) =>
-    views.forEach((view) => view.setAttribute('aria-current', String(Number(view.dataset.view) === index)));
-  stage?.addEventListener('hero:stop', (event) => mark((event as CustomEvent<number>).detail));
-  views.forEach((view) =>
-    view.addEventListener('click', () => {
-      const index = Number(view.dataset.view);
-      const stop = document.querySelector<HTMLElement>(`[data-stop="${index}"]`);
-      if (!stop) return;
-      const behavior = reducedMotion() ? 'auto' : 'smooth';
-      if (scroller && getComputedStyle(scroller).overflowX === 'auto') {
-        stop.scrollIntoView({ behavior, block: 'nearest', inline: 'center' });
-        return;
-      }
-      const top = index === 0 ? 0 : stop.getBoundingClientRect().top + scrollY - innerHeight * 0.3;
-      scrollTo({ top, behavior });
-    }),
-  );
+// The hero's photos, one at a time behind its text. Each has a bar that fills over --slide-time; when
+// it's full the next photo fades in (the CSS animation is the clock, so pausing is pausing it). It waits
+// while its controls are pointed at, while keyboard focus is in the hero, while it's touched or off
+// screen; it stays put after the pause button, and never moves on its own for people who turn motion
+// off. A swipe anywhere on the hero, the bars, or the arrow keys on them move it by hand. Right to left:
+// the next photo is to the left.
+function photoSlider() {
+  const slider = document.querySelector<HTMLElement>('[data-slider]');
+  const controls = slider?.querySelector<HTMLElement>('[data-slider-controls]');
+  if (!slider || !controls) return;
+  const slides = [...slider.querySelectorAll<HTMLImageElement>('[data-slide]')];
+  const bars = [...controls.querySelectorAll<HTMLButtonElement>('[data-goto]')];
+  const count = slider.querySelector<HTMLElement>('[data-slider-count]');
+  const toggle = slider.querySelector<HTMLButtonElement>('[data-slider-toggle]');
+  if (slides.length < 2) return;
+  controls.hidden = false;
+
+  let current = 0;
+  let stopped = reducedMotion();
+  const holds = new Set<string>();
+  const sync = () => {
+    slider.toggleAttribute('data-still', stopped);
+    slider.toggleAttribute('data-paused', holds.size > 0);
+    const [pause, play] = toggle?.querySelectorAll('.icon') ?? [];
+    pause?.classList.toggle('hidden', stopped);
+    play?.classList.toggle('hidden', !stopped);
+    toggle?.setAttribute('aria-label', stopped ? 'پخش' : 'توقف');
+  };
+  const hold = (reason: string, on: boolean) => {
+    if (on) holds.add(reason);
+    else holds.delete(reason);
+    sync();
+  };
+
+  const show = (index: number) => {
+    const next = (index + slides.length) % slides.length;
+    if (next === current) return;
+    slides.forEach((slide, i) => {
+      slide.toggleAttribute('data-was', i === current);
+      slide.toggleAttribute('data-on', i === next);
+      slide.setAttribute('aria-hidden', String(i !== next));
+    });
+    current = next;
+    slides[(current + 1) % slides.length].hidden = false; // the one after starts loading
+    bars.forEach((bar, i) => {
+      bar.dataset.state = i < current ? 'done' : i === current ? 'on' : '';
+      bar.setAttribute('aria-current', String(i === current));
+    });
+    if (count) count.textContent = `${fa(current + 1)} / ${fa(slides.length)}`;
+  };
+
+  // The other photos load once the page has (the first one is the page's largest picture).
+  const reveal = () => slides.forEach((slide) => (slide.hidden = false));
+  if (document.readyState === 'complete') reveal();
+  else addEventListener('load', reveal, { once: true });
+
+  controls.addEventListener('animationend', (event) => {
+    if ((event.target as Element).closest('[data-goto]') === bars[current]) show(current + 1);
+  });
+  bars.forEach((bar, i) => bar.addEventListener('click', () => show(i)));
+  toggle?.addEventListener('click', () => {
+    stopped = !stopped;
+    sync();
+  });
+  controls.addEventListener('keydown', (event) => {
+    const step = event.key === 'ArrowLeft' ? 1 : event.key === 'ArrowRight' ? -1 : 0;
+    if (step) show(current + step);
+  });
+
+  // The hero fills the screen, so a mouse anywhere on it would stop it for good: only the controls.
+  controls.addEventListener('pointerenter', (event) => event.pointerType === 'mouse' && hold('pointer', true));
+  controls.addEventListener('pointerleave', (event) => event.pointerType === 'mouse' && hold('pointer', false));
+  // Keyboard focus only: a tapped bar keeps focus, and the photos shouldn't stop for good after a tap.
+  slider.addEventListener('focusin', (event) => hold('focus', (event.target as Element).matches(':focus-visible')));
+  slider.addEventListener('focusout', (event) => {
+    if (!slider.contains(event.relatedTarget as Node | null)) hold('focus', false);
+  });
+  new IntersectionObserver(([entry]) => hold('away', !entry.isIntersecting)).observe(slider);
+
+  // A sideways swipe anywhere but on a link or button; up and down still scroll the page (touch-action:
+  // pan-y on the hero).
+  let start: { x: number; y: number } | null = null;
+  slider.addEventListener('pointerdown', (event) => {
+    if ((event.pointerType === 'mouse' && event.button !== 0) || (event.target as Element).closest('a, button')) return;
+    start = { x: event.clientX, y: event.clientY };
+    hold('touch', true);
+  });
+  slider.addEventListener('pointerup', (event) => {
+    hold('touch', false);
+    if (!start) return;
+    const dx = event.clientX - start.x;
+    const dy = event.clientY - start.y;
+    start = null;
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) show(current + (dx > 0 ? 1 : -1));
+  });
+  slider.addEventListener('pointercancel', () => {
+    start = null;
+    hold('touch', false);
+  });
+  sync();
+}
+
+// The header laid over the hero's photo (data-header="clear"): see-through until the hero has scrolled
+// up under it, then solid as on the other pages (site.css).
+function headerOverHero() {
+  const header = document.querySelector<HTMLElement>('header[data-header="clear"]');
+  const hero = document.getElementById('hero');
+  if (!header || !hero) return;
+  new IntersectionObserver(([entry]) => header.toggleAttribute('data-solid', !entry.isIntersecting), {
+    rootMargin: `-${header.offsetHeight}px 0px 0px 0px`,
+  }).observe(hero);
 }
 
 // Colour picker, shown once more than one colour is on show: the pick is named beside the dots and
@@ -102,17 +190,25 @@ function lockDemo() {
   });
 }
 
-// Parts diagram: one tab per photo; pointing at a marker or its line in the list lights up both.
+// Parts: a tab per side of the bag. Each side's numbers appear three times, in its group
+// ([data-parts-group]): in the list, as pins on the 3D bag and on the side's photo (whichever of the two
+// is showing). Pointing at a number lights it everywhere; a tap also turns the 3D bag to that part. The 3D
+// (bag3d.ts) hears about it on the section: 'parts:view' (a side) and 'parts:focus' (a part).
 function partsDiagram() {
-  const tabs = [...document.querySelectorAll<HTMLButtonElement>('[role="tab"][data-parts-tab]')];
+  const section = document.getElementById('parts');
+  if (!section) return;
+  const tabs = [...section.querySelectorAll<HTMLButtonElement>('[role="tab"][data-parts-tab]')];
+  const group = (key: string) => [...section.querySelectorAll<HTMLElement>(`[data-parts-group="${key}"]`)];
   const select = (tab: HTMLButtonElement, focus = false) => {
+    if (focus) tab.focus();
+    if (tab.getAttribute('aria-selected') === 'true') return;
     tabs.forEach((other) => {
       const on = other === tab;
       other.setAttribute('aria-selected', String(on));
       other.tabIndex = on ? 0 : -1;
-      document.getElementById(other.getAttribute('aria-controls') ?? '')?.toggleAttribute('hidden', !on);
+      group(other.dataset.partsTab ?? '').forEach((el) => (el.hidden = !on));
     });
-    if (focus) tab.focus();
+    section.dispatchEvent(new CustomEvent('parts:view', { detail: tab.dataset.partsTab }));
   };
   tabs.forEach((tab, i) => {
     tab.addEventListener('click', () => select(tab));
@@ -123,20 +219,32 @@ function partsDiagram() {
     });
   });
 
-  document.querySelectorAll<HTMLElement>('[data-parts-panel]').forEach((panel) => {
-    const items = [...panel.querySelectorAll<HTMLElement>('[data-part]')];
+  tabs.forEach((tab) => {
+    const view = tab.dataset.partsTab ?? '';
+    const items = group(view).flatMap((el) => [...el.querySelectorAll<HTMLElement>('[data-part]')]);
     const light = (part: string | null) =>
       items.forEach((item) => item.toggleAttribute('data-active', part !== null && item.dataset.part === part));
     // A mouse lights a part while it's over it; a tap lights it until the next tap.
+    let tapped: string | null = null;
     items.forEach((item) => {
-      item.addEventListener('pointerenter', (event) => event.pointerType === 'mouse' && light(item.dataset.part ?? null));
-      item.addEventListener('pointerleave', (event) => event.pointerType === 'mouse' && light(null));
-      item.addEventListener('click', () => light(item.dataset.part ?? null));
+      const part = item.dataset.part ?? null;
+      item.addEventListener('pointerenter', (event) => event.pointerType === 'mouse' && light(part));
+      item.addEventListener('pointerleave', (event) => event.pointerType === 'mouse' && light(tapped));
+      item.addEventListener('click', () => {
+        tapped = part;
+        light(part);
+        section.dispatchEvent(new CustomEvent('parts:focus', { detail: { view, part: Number(part) } }));
+      });
+    });
+    section.addEventListener('parts:view', () => {
+      tapped = null;
+      light(null);
     });
   });
 }
 
-viewSwitcher();
+photoSlider();
+headerOverHero();
 colorPicker();
 lockDemo();
 partsDiagram();

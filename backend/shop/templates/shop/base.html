@@ -22,13 +22,13 @@
 
   {# Each link says what's behind it, in the small type devices use for their labels. #}
   {% block header %}
-  <header class="sticky top-0 z-40 bg-page/90 backdrop-blur-md border-b border-line">
+  {# A page can lay the header over its first photo: its header_mode block gives data-header="clear" (site.css). #}
+  <header{% block header_mode %}{% endblock %} class="sticky top-0 z-40 bg-page/90 backdrop-blur-md border-b border-line">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 h-16 flex items-center gap-10">
       <a href="{% url 'home' %}" class="flex items-center gap-2 text-lg font-bold">{% icon 'fingerprint' 'size-6' %}{{ store.store_name }}</a>
       <nav class="hidden xl:flex items-center gap-7 text-[0.92rem]" aria-label="اصلی">
-        <a href="{% url 'home' %}#lock" class="leading-tight hover:text-ink-soft"><span class="block font-medium">قفل</span><span class="block font-mono text-[0.72rem] text-muted">۱۰ اثر انگشت</span></a>
-        <a href="{% url 'home' %}#features" class="leading-tight hover:text-ink-soft"><span class="block font-medium">ویژگی‌ها</span><span class="block font-mono text-[0.72rem] text-muted">جیب، بند، بدنه</span></a>
-        <a href="{% url 'home' %}#parts" class="leading-tight hover:text-ink-soft"><span class="block font-medium">اجزا</span><span class="block font-mono text-[0.72rem] text-muted">روی عکس‌ها</span></a>
+        <a href="{% url 'home' %}#parts" class="leading-tight hover:text-ink-soft"><span class="block font-medium">اجزا</span><span class="block font-mono text-[0.72rem] text-muted">از هر طرف</span></a>
+        <a href="{% url 'home' %}#try" class="leading-tight hover:text-ink-soft"><span class="block font-medium">قفل</span><span class="block font-mono text-[0.72rem] text-muted">۱۰ اثر انگشت</span></a>
         <a href="{% url 'home' %}#specs" class="leading-tight hover:text-ink-soft"><span class="block font-medium">مشخصات</span><span class="block font-mono text-[0.72rem] text-muted">اندازه و جنس</span></a>
         <a href="{% url 'home' %}#faq" class="leading-tight hover:text-ink-soft"><span class="block font-medium">پرسش‌ها</span><span class="block font-mono text-[0.72rem] text-muted">پرداخت، ارسال، بازگشت</span></a>
         <a href="{% url 'lookup' %}" class="leading-tight hover:text-ink-soft"><span class="block font-medium">پیگیری سفارش</span><span class="block font-mono text-[0.72rem] text-muted">با شماره موبایل</span></a>
@@ -45,9 +45,8 @@
   <nav id="mobile-menu" hidden class="xl:hidden fixed inset-x-0 top-16 bottom-0 z-30 overflow-y-auto overscroll-contain bg-ink text-raised" aria-label="منوی موبایل">
     <div class="mx-auto flex min-h-full max-w-7xl flex-col px-5 sm:px-6 py-6">
       <ul class="divide-y divide-raised/10 border-y border-raised/10">
-        <li><a href="{% url 'home' %}#lock" class="flex items-center justify-between gap-4 py-4 hover:text-signal"><span class="text-2xl font-bold">قفل</span><span class="font-mono text-xs text-raised/55">۱۰ اثر انگشت</span></a></li>
-        <li><a href="{% url 'home' %}#features" class="flex items-center justify-between gap-4 py-4 hover:text-signal"><span class="text-2xl font-bold">ویژگی‌ها</span><span class="font-mono text-xs text-raised/55">جیب، بند، بدنه</span></a></li>
-        <li><a href="{% url 'home' %}#parts" class="flex items-center justify-between gap-4 py-4 hover:text-signal"><span class="text-2xl font-bold">اجزا</span><span class="font-mono text-xs text-raised/55">روی عکس‌ها</span></a></li>
+        <li><a href="{% url 'home' %}#parts" class="flex items-center justify-between gap-4 py-4 hover:text-signal"><span class="text-2xl font-bold">اجزا</span><span class="font-mono text-xs text-raised/55">از هر طرف</span></a></li>
+        <li><a href="{% url 'home' %}#try" class="flex items-center justify-between gap-4 py-4 hover:text-signal"><span class="text-2xl font-bold">قفل</span><span class="font-mono text-xs text-raised/55">۱۰ اثر انگشت</span></a></li>
         <li><a href="{% url 'home' %}#specs" class="flex items-center justify-between gap-4 py-4 hover:text-signal"><span class="text-2xl font-bold">مشخصات</span><span class="font-mono text-xs text-raised/55">اندازه و جنس</span></a></li>
         <li><a href="{% url 'home' %}#faq" class="flex items-center justify-between gap-4 py-4 hover:text-signal"><span class="text-2xl font-bold">پرسش‌ها</span><span class="font-mono text-xs text-raised/55">پرداخت، ارسال، بازگشت</span></a></li>
         <li><a href="{% url 'lookup' %}" class="flex items-center justify-between gap-4 py-4 hover:text-signal"><span class="text-2xl font-bold">پیگیری سفارش</span><span class="font-mono text-xs text-raised/55">با شماره موبایل</span></a></li>

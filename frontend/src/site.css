@@ -385,67 +385,82 @@
       0 0 30px 6px color-mix(in srgb, var(--color-signal) 45%, transparent);
   }
 
-  /* The hero stage where the 3D is coming (html.three-d): the photos wait hidden behind a loading line,
-     and come out only if hero.ts gives up on the 3D ([data-photos]), or, if the script never runs at all,
-     after 8 s. [data-3d]: the bag has loaded. */
-  .three-d [data-hero-stage]:not([data-photos], [data-3d]) [data-poster] {
-    visibility: hidden;
-    animation: hero-backup 0s 8s forwards;
+  /* The hero: the whole first screen, starting 4rem up behind the header. Its photos fill it, each kept
+     around its own point: --focus on tall screens, --focus-wide on wide ones, where only a band of the
+     tall photo shows (views.LOOK). */
+  .hero {
+    height: 100svh;
+    min-height: 34rem;
+    max-height: 62rem;
   }
-  [data-hero-loading] {
+  .hero [data-slide] {
+    object-position: var(--focus, 50% 50%);
+  }
+  @media (min-aspect-ratio: 1/1) {
+    .hero [data-slide] {
+      object-position: var(--focus-wide, 50% 50%);
+    }
+  }
+  /* The shade over the photo: dark under the text at the bottom, and a little at the top, under the
+     header. */
+  .hero-scrim {
+    background:
+      linear-gradient(to top, rgb(15 16 18 / 0.92), rgb(15 16 18 / 0.6) 35%, rgb(15 16 18 / 0) 68%),
+      linear-gradient(to bottom, rgb(15 16 18 / 0.55), rgb(15 16 18 / 0) 18%);
+  }
+  /* The photos cross-fade: the new one fades in over the last, which stays under it meanwhile. */
+  [data-slide] {
+    opacity: 0;
+    transition: opacity 0.9s var(--ease-out);
+  }
+  [data-slide][data-on] {
+    opacity: 1;
+    z-index: 1;
+  }
+  [data-slide][data-was] {
+    opacity: 1;
+    transition: none;
+  }
+  /* A bar per photo: the one on screen fills over its time, and when it's full the next photo comes
+     (islands/home.ts). It waits while the slider is [data-paused]; [data-still]: no moving on its own. */
+  .slide-fill {
+    transform: scaleX(0);
+    transform-origin: right;
+  }
+  [data-state="done"] > * > .slide-fill {
+    transform: none;
+  }
+  [data-state="on"] > * > .slide-fill {
+    animation: slide-fill var(--slide-time, 6s) linear forwards;
+  }
+  [data-slider][data-paused] .slide-fill {
+    animation-play-state: paused;
+  }
+  [data-slider][data-still] [data-state="on"] > * > .slide-fill {
+    animation: none;
+    transform: none;
+  }
+
+  /* The 3D bag's loading line (the stage's states are at the end of this file). */
+  [data-bag-loading] {
     display: none;
   }
-  .three-d [data-hero-stage]:not([data-photos], [data-3d]) [data-hero-loading] {
+  [data-bag-stage][data-pending] [data-bag-loading] {
     display: flex;
-    animation: hero-loading-out 0s 8s forwards;
   }
-  .hero-progress {
+  .bag-progress {
     transform-origin: right;
     transform: scaleX(0);
     transition: transform 0.2s linear;
   }
-  [data-hero-loading]:not([data-known]) .hero-progress {
+  [data-bag-loading]:not([data-known]) .bag-progress {
     width: 35%;
     transform: none;
-    animation: hero-indeterminate 1.1s ease-in-out infinite;
+    animation: bag-indeterminate 1.1s ease-in-out infinite;
   }
 
-  /* Phones: the tour's stops as cards in a row under the bag, swiped sideways, the next one peeking in.
-     (Desktop lays them out one under the other beside the pinned bag.) */
-  @media (width < 48rem) {
-    [data-stops] {
-      display: flex;
-      gap: 0.75rem;
-      padding: 1rem;
-      overflow-x: auto;
-      overscroll-behavior-x: contain;
-      scroll-snap-type: x mandatory;
-      scroll-padding-inline: 1rem;
-      scrollbar-width: none;
-    }
-    [data-stops]::-webkit-scrollbar {
-      display: none;
-    }
-    [data-stops] > [data-stop] {
-      flex: none;
-      width: 86%;
-      padding: 1.25rem;
-      border: 1px solid var(--color-line);
-      border-radius: var(--radius-surface);
-      background: var(--color-surface);
-      scroll-snap-align: center;
-    }
-    [data-stops] > [data-stop="0"] {
-      background: var(--color-raised);
-    }
-    /* Scroll-driven reveals would follow the sideways scroller and could stay hidden. */
-    [data-stops] .reveal {
-      animation: none;
-    }
-  }
-
-  /* The parts diagram's numbered markers, on the photos and in the list beside them. A marker or its
-     list line that is pointed at gets [data-active] (on the marker, or on the line around it). */
+  /* The parts' numbered markers: pinned on the 3D bag (or on the photos) and in the list beside them. A
+     number pointed at gets [data-active], on the marker or on the pin or list line around it. */
   .marker {
     display: grid;
     flex: none;
@@ -503,6 +518,10 @@
     animation: rise 0.6s var(--ease-out) both;
     animation-delay: calc(var(--i, 0) * 70ms + 60ms);
   }
+  /* The photo on screen drifts slowly closer; it keeps drifting under the next while that fades in. */
+  .hero [data-slide]:is([data-on], [data-was]) {
+    animation: hero-drift calc(var(--slide-time, 6s) + 1.5s) linear both;
+  }
   @supports (animation-timeline: view()) {
     .reveal {
       animation: settle linear both;
@@ -547,19 +566,7 @@
   }
 }
 
-@keyframes hero-backup {
-  to {
-    visibility: visible;
-  }
-}
-
-@keyframes hero-loading-out {
-  to {
-    visibility: hidden;
-  }
-}
-
-@keyframes hero-indeterminate {
+@keyframes bag-indeterminate {
   from {
     translate: 100% 0;
   }
@@ -569,8 +576,23 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  [data-hero-loading]:not([data-known]) .hero-progress {
+  [data-bag-loading]:not([data-known]) .bag-progress {
     animation: none;
+  }
+}
+
+@keyframes slide-fill {
+  to {
+    transform: none;
+  }
+}
+
+@keyframes hero-drift {
+  from {
+    scale: 1.07;
+  }
+  to {
+    scale: 1;
   }
 }
 
@@ -578,4 +600,41 @@
   from {
     transform: scaleX(0);
   }
+}
+
+/* The 3D bag's stage (#parts, islands/bag3d.ts). [data-pending]: the 3D is coming, so the photos wait
+   behind the loading line. [data-3d]: the bag is on, with its pins. [data-photos]: the photos instead (no
+   3D here, or it failed or was too slow). Without the script the photos simply stay. Outside the layers,
+   so these win over the utilities that lay the photos out. */
+[data-bag-stage][data-pending] [data-parts-photo],
+[data-bag-stage][data-3d] [data-parts-photo],
+[data-bag-stage]:not([data-3d]) [data-pins] {
+  display: none;
+}
+
+/* The header laid over the hero's photo (home.html: data-header="clear"). Outside the layers too, to win
+   over its utilities: see-through with light type until the page scrolls past the hero ([data-solid],
+   islands/home.ts) or the phone menu opens. */
+header[data-header] {
+  transition: background-color 0.3s, border-color 0.3s, color 0.3s;
+}
+:root:not(.overflow-hidden) header[data-header="clear"]:not([data-solid]) {
+  background-color: transparent;
+  border-color: transparent;
+  backdrop-filter: none;
+  color: var(--color-raised);
+}
+:root:not(.overflow-hidden) header[data-header="clear"]:not([data-solid]) .text-muted {
+  color: color-mix(in srgb, var(--color-raised) 62%, transparent);
+}
+:root:not(.overflow-hidden) header[data-header="clear"]:not([data-solid]) a:hover {
+  color: var(--color-raised);
+}
+:root:not(.overflow-hidden) header[data-header="clear"]:not([data-solid]) .btn-primary {
+  background: var(--color-raised);
+  color: var(--color-ink);
+}
+:root:not(.overflow-hidden) header[data-header="clear"]:not([data-solid]) .btn-ghost {
+  border-color: color-mix(in srgb, var(--color-raised) 45%, transparent);
+  color: var(--color-raised);
 }
