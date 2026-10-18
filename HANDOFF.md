@@ -9,12 +9,13 @@ written down anywhere else.
 
 ## Where it stands
 
-- **Staging is online at https://shop.nisatech.org**, but it runs **2f9ceb7** (2026-10-16).
+- **Staging is online at https://shop.nisatech.org** and runs **0911b3a**, deployed on 2026-10-18 (the
+  same as `main`; the handoff commits after it change only this file).
   - Open to everyone (no password, Amir's choice), but kept out of search engines (noindex).
   - SMS codes only go to the server log and payments are manual, so people can browse but can't finish
     an order.
   - Plain http redirects to https.
-- **Local `main` is at 5ae128d, ahead of the server by work that isn't deployed yet:**
+- **Live since the 2026-10-18 deploy** (before it the server ran 2f9ceb7, from 2026-10-16):
   - **colours** (8c41240): managed in the panel, with only black shown for now;
   - **the phone layout** (8c41240): the tour is one screen, with the stop cards swiped sideways;
   - **the page cache** (8c41240): the home and policy pages kept for 60 s, cleared on any content
@@ -41,28 +42,28 @@ written down anywhere else.
 
 ## Waiting on Amir
 
-1. **Deploy go-ahead** for everything above that isn't on the server yet. He was asked; no answer yet.
-2. **Tripling the new Plane times.** NISA-70 to 73 are at measured times. On 2026-10-16 he had every
+1. **Tripling the new Plane times.** NISA-70 to 73 are at measured times. On 2026-10-16 he had every
    earlier PurseShop "Spent" tripled. Ask whether these get the same.
-3. **Colours:** which colours, and their photos. Until then only black is shown.
+2. **Colours:** which colours, and their photos. Until then only black is shown.
    - All colours are assumed to cost the same; he hasn't confirmed that.
    - With photos, the 3D and the hero photos should switch per colour (not built).
-4. **ArvanCloud cache rule for `/models/*`** (his Arvan panel): cache everything, 7 days. Today the 3D
+3. **ArvanCloud cache rule for `/models/*`** (his Arvan panel): cache everything, 7 days. Today the 3D
    model bypasses Arvan's cache, so every visitor downloads it from our server (LOADTEST.md).
-5. **Staff panel account:**
+4. **Staff panel account:**
    `ssh -t amir@185.231.180.92 'cd /srv/purseshop/app/backend && .venv/bin/python manage.py createsuperuser'`.
    He types the password; then add people to Owners or Staff in `/admin/`.
 
 ## Next, in order
 
-1. **Deploy, once Amir says so.**
-   - Run `DOMAIN=shop.nisatech.org bash deploy/deploy.sh` from `PurseShop/`, on a clean `main`.
-   - Migration 0002 gives existing products and orders the colour black.
-   - Then verify:
-     - every page answers 200 on the server, and through Arvan;
-     - `node tools/dev/phone.mjs <dir> https://shop.nisatech.org` and
-       `BASE=https://shop.nisatech.org node tools/dev/sections.mjs 1440 900 <dir>` both look right.
-   - Record the redeploy on NISA-69 (or a new item) and in this file.
+1. **Deployed on 2026-10-18 (0911b3a), at Amir's word.** The database was backed up first
+   (`/srv/purseshop/backups/db-20261018-164322.sqlite3`) and migration 0002 gave everything the colour
+   black. Checked: every page answers 200 on the server and through Arvan; the home page takes about
+   0.35 s on its first render and about 9 ms from the page cache; the hero's photos are cached by Arvan
+   (`x-cache: HIT` on the second request); a browser pass on desktop and phone shows the campaign hero,
+   the slider moving and the 3D bag with its tabs and pins. The 3D model still reads `x-cache: BYPASS`
+   until the Arvan rule below. Not yet recorded on Plane.
+   - Next time: `DOMAIN=shop.nisatech.org bash deploy/deploy.sh` from `PurseShop/`, on a clean `main`
+     (a branch in a worktree goes onto `main` first), then the same checks.
 2. **After the deploy:**
    - Amir adds the Arvan cache rule (above). Check that `x-cache` reads `HIT` on the second request
      for `/models/alpha-mobile.glb`.
