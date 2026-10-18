@@ -68,7 +68,8 @@ written down anywhere else.
    the server and through Arvan; both pickers show the three swatches; image and model addresses carry
    their `?v=` hash, and Arvan serves the new front photo (MISS, then HIT, at the new size); the search
    data names WiWU; checkout shows each colour's photo; a browser pass on the live site turns the 3D bag
-   black, brown and white, front, lock end and back, on desktop, and brown on a phone. Not yet on Plane.
+   black, brown and white, front, lock end and back, on desktop, and brown on a phone. Recorded on
+   NISA-77 (the work) and NISA-69 (Spent +45m), both tripled.
 2. **Deployed on 2026-10-18 (0911b3a), at Amir's word.** The database was backed up first
    (`/srv/purseshop/backups/db-20261018-164322.sqlite3`) and migration 0002 gave everything the colour
    black. Checked: every page answers 200 on the server and through Arvan; the home page takes about
@@ -314,13 +315,14 @@ and `390 844`.
 | NISA-66 | Store core | 3h* |
 | NISA-67 | 3D hero and scroll tour | 9h* (1h30m + 3h + 3h + 1h30m) |
 | NISA-68 | Site design around the 3D bag, instrument look | 6h* (3h + 1h30m + 1h30m) |
-| NISA-69 | Staging online at shop.nisatech.org, redeploys | 3h* (1h30m + 45m + 45m) |
+| NISA-69 | Staging online at shop.nisatech.org, redeploys | 3h45m* (1h30m + 45m + 45m + 45m) |
 | NISA-70 | Load test of the live server, page cache | 30m |
 | NISA-71 | Colours (panel, product page, checkout, orders) | 30m |
 | NISA-72 | Phone layout (one-screen tour, roomier sections) | 15m |
 | NISA-73 | Hero shows only the 3D bag (no ring, no glow, photos as backup) | 30m |
 | NISA-75 | Hero as a photo campaign page, the 3D bag in the parts section | 6h* |
 | NISA-76 | Questions for the client, server and SMS costs | 1h30m* |
+| NISA-77 | WiWU name, brown and white colours, the 3D bag recoloured, studio photos | 3h* |
 
 \* Amir's figures: three times the measured time (from the session logs' active time), at his
-request on 2026-10-16 and again on 2026-10-18. NISA-70 to 73 are measured; ask him about tripling them.
+request on 2026-10-16, 2026-10-18 and 2026-10-19. NISA-70 to 73 are measured; ask him about tripling them.
