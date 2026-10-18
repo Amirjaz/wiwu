@@ -353,3 +353,76 @@ class PanelTests(Base):
                                     content_type='application/json')
         self.assertEqual(response.json()['product']['price_rial'], 98_000_000)
         self.assertTrue(AuditLog.objects.filter(action='price').exists())
+
+
+@override_settings(CACHES={
+    'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache', 'LOCATION': 'test-default'},
+    'pages': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache', 'LOCATION': 'test-pages'},
+})
+class PageCacheTests(Base):
+    """The home page comes from the cache until something it shows is saved."""
+
+    def setUp(self):
+        super().setUp()
+        from django.core.cache import caches
+        caches['pages'].clear()
+
+    def test_cached_until_the_product_is_saved(self):
+        product = Product.objects.get()
+        self.client.get('/')
+        Product.objects.filter(pk=product.pk).update(name='نام بی‌خبر')  # no save signal: still cached
+        self.assertNotIn('نام بی‌خبر', self.client.get('/').content.decode())
+        product.name = 'نام تازه'
+        product.save()  # a save empties the cache
+        self.assertIn('نام تازه', self.client.get('/').content.decode())
+
+
+class ColorTests(Base):
+    """One colour on show: nobody is asked and orders get it. More: the buyer must pick a shown one in stock."""
+
+    otp = ApiTests.otp
+
+    def setUp(self):
+        super().setUp()
+        self.black = self.product.colors.get()
+        self.blue = self.product.colors.create(name='سرمه‌ای', swatch='#1f2a44', shown=False)
+
+    def test_single_colour_is_given_to_every_order(self):
+        self.assertEqual(self.place().color_name, 'مشکی')
+        self.assertEqual(self.client.get('/checkout/').status_code, 200)
+
+    def test_a_second_shown_colour_must_be_picked_before_the_code_is_used(self):
+        self.blue.shown = True
+        self.blue.save()
+        code = self.otp()
+        response = self.client.post('/api/orders/', {**ADDRESS, 'code': code}, content_type='application/json')
+        self.assertEqual(response.json()['error'], 'color')
+        response = self.client.post('/api/orders/', {**ADDRESS, 'code': code, 'color': self.blue.pk},
+                                    content_type='application/json')
+        self.assertEqual(response.status_code, 200, response.content)  # the code still worked
+        self.assertEqual(Order.objects.get().color_name, 'سرمه‌ای')
+
+    def test_hidden_or_sold_out_colours_cannot_be_bought(self):
+        self.blue.shown = True
+        self.blue.available = False
+        self.blue.save()
+        with self.assertRaises(OrderError) as raised:
+            orders.pick_color(self.product, self.blue.pk)
+        self.assertEqual(raised.exception.code, 'color_unavailable')
+        self.blue.shown = False
+        self.blue.save()
+        with self.assertRaises(OrderError):
+            orders.pick_color(self.product, self.blue.pk)
+
+    def test_panel_adds_and_retires_colours(self):
+        user = User.objects.create_user('owner', password='pw-123456!')
+        user.groups.add(Group.objects.get(name='Owners'))
+        self.client.post('/api/panel/login/', {'username': 'owner', 'password': 'pw-123456!'}, content_type='application/json')
+        response = self.client.post('/api/panel/colors/', {'name': 'گردویی', 'swatch': '#6B4A2F'}, content_type='application/json')
+        self.assertEqual([c['name'] for c in response.json()['colors']], ['مشکی', 'سرمه‌ای', 'گردویی'])
+        response = self.client.post('/api/panel/colors/', {'name': 'بد', 'swatch': 'blue'}, content_type='application/json')
+        self.assertEqual(response.json()['fields'], {'swatch': 'swatch'})
+        orders.place(self.product, ADDRESS, color=self.black)  # a black order: deleting black only hides it
+        self.client.post('/api/panel/colors/', {'id': self.black.pk, 'delete': True}, content_type='application/json')
+        self.black.refresh_from_db()
+        self.assertFalse(self.black.shown)

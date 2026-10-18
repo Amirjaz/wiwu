@@ -1,13 +1,15 @@
 // The home page's small interactions, besides the 3D (hero.ts): the view switcher under the bag, the
-// lock demo, and the tabs and markers of the parts diagram. Everything here works by keyboard too.
+// colour picker, the lock demo, and the tabs and markers of the parts diagram. Everything here works by
+// keyboard too.
 
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 // View switcher: names the tour's five views and follows the tour (hero.ts sends 'hero:stop'). A tap
-// scrolls that view's text to where the tour picks it up: the middle of the screen, or on phones the
-// middle of what the pinned bag leaves visible.
+// brings that view's text to where the tour picks it up: on phones, its card in the sideways row under
+// the bag; on desktop, the middle of the screen.
 function viewSwitcher() {
   const stage = document.querySelector<HTMLElement>('[data-hero-stage]');
+  const scroller = document.querySelector<HTMLElement>('[data-stops]');
   const views = [...document.querySelectorAll<HTMLButtonElement>('[data-view]')];
   const mark = (index: number) =>
     views.forEach((view) => view.setAttribute('aria-current', String(Number(view.dataset.view) === index)));
@@ -17,11 +19,36 @@ function viewSwitcher() {
       const index = Number(view.dataset.view);
       const stop = document.querySelector<HTMLElement>(`[data-stop="${index}"]`);
       if (!stop) return;
-      const narrow = matchMedia('(max-width: 767px)').matches;
-      const top = index === 0 ? 0 : stop.getBoundingClientRect().top + scrollY - innerHeight * (narrow ? 0.5 : 0.3);
-      scrollTo({ top, behavior: reducedMotion() ? 'auto' : 'smooth' });
+      const behavior = reducedMotion() ? 'auto' : 'smooth';
+      if (scroller && getComputedStyle(scroller).overflowX === 'auto') {
+        stop.scrollIntoView({ behavior, block: 'nearest', inline: 'center' });
+        return;
+      }
+      const top = index === 0 ? 0 : stop.getBoundingClientRect().top + scrollY - innerHeight * 0.3;
+      scrollTo({ top, behavior });
     }),
   );
+}
+
+// Colour picker, shown once more than one colour is on show: the pick is named beside the dots and
+// rides along to checkout on every buy link (?color=).
+function colorPicker() {
+  const picker = document.querySelector<HTMLElement>('[data-color-picker]');
+  if (!picker) return;
+  const dots = [...picker.querySelectorAll<HTMLButtonElement>('[data-color]')];
+  const label = picker.querySelector<HTMLElement>('[data-color-label]');
+  const pick = (dot: HTMLButtonElement) => {
+    dots.forEach((other) => other.setAttribute('aria-checked', String(other === dot)));
+    if (label) label.textContent = dot.dataset.colorName ?? '';
+    document.querySelectorAll<HTMLAnchorElement>('a[href*="/checkout/"]').forEach((link) => {
+      const url = new URL(link.href);
+      url.searchParams.set('color', dot.dataset.color ?? '');
+      link.href = url.pathname + url.search;
+    });
+  };
+  const usable = dots.filter((dot) => dot.getAttribute('aria-disabled') !== 'true');
+  usable.forEach((dot) => dot.addEventListener('click', () => pick(dot)));
+  if (usable[0]) pick(usable[0]);
 }
 
 // Lock demo: hold the sensor for half a second (the real lock's speed) and the light turns green.
@@ -110,5 +137,6 @@ function partsDiagram() {
 }
 
 viewSwitcher();
+colorPicker();
 lockDemo();
 partsDiagram();

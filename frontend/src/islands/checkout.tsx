@@ -13,9 +13,17 @@ interface Shipping {
   days: string;
 }
 
+interface Color {
+  id: number;
+  name: string;
+  swatch: string;
+  available: boolean;
+}
+
 interface Data {
   store: string;
   product: { name: string; price_rial: number; available: boolean };
+  colors: Color[]; // the colours on show; the buyer picks only when there's more than one
   shipping: Shipping[];
   provinces: string[];
   payment_minutes: number;
@@ -32,9 +40,10 @@ interface Form {
   postal_code: string;
   shipping: 'post' | 'tipax';
   is_gift: boolean;
+  color: number | null;
 }
 
-const EMPTY: Form = { name: '', phone: '', province: '', city: '', address: '', postal_code: '', shipping: 'post', is_gift: false };
+const EMPTY: Form = { name: '', phone: '', province: '', city: '', address: '', postal_code: '', shipping: 'post', is_gift: false, color: null };
 const DRAFT_KEY = 'checkout-draft';
 
 // The form survives leaving the page (switching apps, the in-app browser reloading). Best effort:
@@ -56,8 +65,15 @@ function saveDraft(form: Form) {
   }
 }
 
-function validate(form: Form): Record<string, string> {
+// The colour picked on the product page (?color=), else the draft's, if it's still on offer.
+function startingColor(form: Form, colors: Color[]): number | null {
+  const wanted = Number(new URLSearchParams(window.location.search).get('color')) || form.color;
+  return colors.some((c) => c.id === wanted && c.available) ? wanted : null;
+}
+
+function validate(form: Form, colors: Color[]): Record<string, string> {
   const errors: Record<string, string> = {};
+  if (colors.length > 1 && !colors.some((c) => c.id === form.color && c.available)) errors.color = 'color';
   if (form.name.trim().length < 3) errors.name = 'required';
   if (!cleanPhone(form.phone)) errors.phone = 'phone';
   if (!form.province) errors.province = 'required';
@@ -68,7 +84,12 @@ function validate(form: Form): Record<string, string> {
 }
 
 function Checkout({ data }: { data: Data }) {
-  const [form, setForm] = useState<Form>(loadDraft);
+  const [form, setForm] = useState<Form>(() => {
+    const draft = loadDraft();
+    return { ...draft, color: startingColor(draft, data.colors) };
+  });
+  const asksColor = data.colors.length > 1;
+  const color = data.colors.find((c) => c.id === form.color);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [step, setStep] = useState<'form' | 'code'>('form');
   const [code, setCode] = useState('');
@@ -99,7 +120,7 @@ function Checkout({ data }: { data: Data }) {
   async function askCode(event?: FormEvent) {
     event?.preventDefault();
     setProblem('');
-    const found = validate(form);
+    const found = validate(form, data.colors);
     setErrors(found);
     if (Object.values(found).some(Boolean)) {
       setProblem(message('fields'));
@@ -133,7 +154,9 @@ function Checkout({ data }: { data: Data }) {
     }
     setBusy(true);
     try {
-      const result = await post<{ url: string }>('/api/orders/', { ...form, code: latin(code).replace(/\D/g, '') });
+      const result = await post<{ url: string }>('/api/orders/', {
+        ...form, color: asksColor ? form.color : null, code: latin(code).replace(/\D/g, ''),
+      });
       try {
         localStorage.removeItem(DRAFT_KEY);
       } catch {
@@ -145,6 +168,10 @@ function Checkout({ data }: { data: Data }) {
       if (!isApiError(err)) return;
       if (err.error === 'fields' && err.fields) {
         setErrors(err.fields);
+        setStep('form');
+      }
+      if (err.error === 'color' || err.error === 'color_unavailable') {
+        setErrors({ color: err.error });
         setStep('form');
       }
       setProblem(message(err.error));
@@ -196,6 +223,32 @@ function Checkout({ data }: { data: Data }) {
 
   return (
     <form onSubmit={askCode} className="grid gap-8" noValidate>
+      {asksColor && (
+        <fieldset className="grid gap-3" aria-describedby={errors.color ? 'color-error' : undefined}>
+          <legend className="label mb-2">رنگ</legend>
+          <div className="flex flex-wrap gap-3">
+            {data.colors.map((option) => (
+              <label
+                key={option.id}
+                className={clsx(
+                  'flex items-center gap-3 rounded-[var(--radius-field)] border py-2.5 ps-3 pe-4 transition-colors',
+                  !option.available ? 'cursor-not-allowed opacity-55 border-line' : 'cursor-pointer',
+                  form.color === option.id ? 'border-ink bg-raised' : option.available && 'border-line-strong hover:border-ink-soft',
+                )}
+              >
+                <input type="radio" name="color" className="sr-only peer" disabled={!option.available}
+                  checked={form.color === option.id} onChange={() => set('color', option.id)} />
+                <span className="size-7 rounded-full ring-1 ring-ink/25 ring-offset-2 ring-offset-raised peer-checked:ring-2 peer-checked:ring-ink peer-focus-visible:ring-2 peer-focus-visible:ring-signal"
+                  style={{ background: option.swatch }} aria-hidden="true" />
+                <span className="font-semibold">{option.name}</span>
+                {!option.available && <span className="text-sm text-muted">ناموجود</span>}
+              </label>
+            ))}
+          </div>
+          {errors.color && <p id="color-error" className="error-text">{message(errors.color)}</p>}
+        </fieldset>
+      )}
+
       <fieldset className="grid gap-5 sm:grid-cols-2">
         <legend className="sr-only">گیرنده</legend>
         <Field label="نام و نام خانوادگی گیرنده" error={errorText('name')}>
@@ -254,7 +307,7 @@ function Checkout({ data }: { data: Data }) {
       </label>
 
       <div className="grid gap-3 rounded-[var(--radius-surface)] bg-surface border border-line p-5">
-        <div className="flex justify-between gap-4"><span className="text-ink-soft">{data.product.name}</span><span>{toman(data.product.price_rial)} تومان</span></div>
+        <div className="flex justify-between gap-4"><span className="text-ink-soft">{data.product.name}{asksColor && color ? `، ${color.name}` : ''}</span><span>{toman(data.product.price_rial)} تومان</span></div>
         <div className="flex justify-between gap-4"><span className="text-ink-soft">ارسال با {shipping.name}</span><span>{shipping.price_rial ? `${toman(shipping.price_rial)} تومان` : 'رایگان'}</span></div>
         <div className="flex justify-between gap-4 border-t border-line pt-3 text-lg font-bold"><span>جمع</span><span>{toman(total)} تومان</span></div>
         <p className="text-sm text-muted leading-relaxed">برای اینکه واریز شما بی‌اشتباه شناخته شود، چند تومان (کمتر از هزار تومان) به مبلغ پرداخت اضافه می‌شود.</p>

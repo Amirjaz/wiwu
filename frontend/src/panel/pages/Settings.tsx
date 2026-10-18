@@ -14,6 +14,7 @@ interface Store {
 }
 interface Product { name: string; subtitle: string; description: string; price_rial: number; is_available: boolean; specs: [string, string][] }
 interface Card { id: number; bank: string; number: string; holder: string; active: boolean }
+interface Color { id: number; name: string; swatch: string; shown: boolean; available: boolean; orders: number }
 
 /** A toman input stored as rials. */
 function TomanInput({ id, rial, onChange, describedBy }: { id: string; rial: number; onChange: (rial: number) => void; describedBy?: string }) {
@@ -184,11 +185,84 @@ function Cards() {
   );
 }
 
+/** The bag's colours. The site asks buyers for a colour only while more than one is shown. */
+function Colors() {
+  const { data, setData, error } = useLoad<{ colors: Color[] }>('/api/panel/colors/');
+  const [draft, setDraft] = useState({ name: '', swatch: '#17181b' });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [problem, setProblem] = useState('');
+
+  async function save(body: Record<string, unknown>) {
+    setProblem('');
+    setErrors({});
+    try {
+      setData(await post<{ colors: Color[] }>('/api/panel/colors/', body));
+      return true;
+    } catch (e) {
+      if (isApiError(e)) {
+        setErrors(e.fields ?? {});
+        setProblem(message(e.error));
+      }
+      return false;
+    }
+  }
+
+  const shown = data?.colors.filter((c) => c.shown).length ?? 0;
+  return (
+    <section className="grid gap-4">
+      <h2 className="text-lg font-bold">رنگ‌ها</h2>
+      <p className="text-ink-soft leading-relaxed -mt-2">
+        {shown > 1
+          ? 'چند رنگ نمایش داده می‌شود: خریدار در صفحه‌ی کالا و هنگام خرید رنگ را انتخاب می‌کند.'
+          : 'فقط یک رنگ نمایش داده می‌شود، پس از خریدار رنگ پرسیده نمی‌شود. رنگ تازه را تا عکس‌هایش نرسیده پنهان نگه دارید.'}
+      </p>
+      {error && <Notice tone="error">{message(error.error)}</Notice>}
+      <ul className="grid gap-2">
+        {data?.colors.map((color) => (
+          <li key={color.id} className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-field)] border border-line bg-raised p-4">
+            <span className="flex items-center gap-3">
+              <span className="size-7 rounded-full ring-1 ring-ink/20" style={{ background: color.swatch }} aria-hidden="true" />
+              <span className="grid gap-0.5">
+                <span className="font-semibold">{color.name}</span>
+                <span className="text-sm text-muted">{color.orders ? `${fa(color.orders)} سفارش` : 'بدون سفارش'}</span>
+              </span>
+            </span>
+            <span className="flex flex-wrap items-center gap-4">
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" className="size-4 accent-[var(--color-ink)]" checked={color.shown} onChange={(e) => save({ ...color, shown: e.target.checked })} /> نمایش در سایت
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" className="size-4 accent-[var(--color-ink)]" checked={color.available} onChange={(e) => save({ ...color, available: e.target.checked })} /> موجود
+              </label>
+              <button type="button" className="btn btn-ghost btn-sm !px-3" aria-label={`حذف رنگ ${color.name}`}
+                onClick={() => window.confirm('رنگ حذف شود؟ (اگر سفارشی با این رنگ هست، فقط از سایت پنهان می‌شود.)') && save({ id: color.id, delete: true })}>
+                <Trash size={18} />
+              </button>
+            </span>
+          </li>
+        ))}
+      </ul>
+      <form className="grid gap-3 sm:grid-cols-[1fr_auto_auto] sm:items-end rounded-[var(--radius-field)] border border-dashed border-line-strong p-4"
+        onSubmit={async (e) => { e.preventDefault(); if (await save({ ...draft, shown: false, available: true })) setDraft({ name: '', swatch: '#17181b' }); }}>
+        <Field label="نام رنگ" error={errors.name ? message(errors.name) : undefined} help="رنگ تازه پنهان افزوده می‌شود؛ وقتی عکس‌هایش آماده شد «نمایش در سایت» را بزنید.">
+          {(id, d) => <input id={id} aria-describedby={d} className="input" placeholder="مثلاً سرمه‌ای" value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} />}
+        </Field>
+        <Field label="رنگ" error={errors.swatch ? message(errors.swatch) : undefined}>
+          {(id, d) => <input id={id} aria-describedby={d} type="color" className="input !p-1 h-12 w-20" value={draft.swatch} onChange={(e) => setDraft({ ...draft, swatch: e.target.value })} />}
+        </Field>
+        <button type="submit" className="btn btn-primary">افزودن</button>
+      </form>
+      {problem && !Object.keys(errors).length && <Notice tone="error">{problem}</Notice>}
+    </section>
+  );
+}
+
 export default function Settings() {
   return (
     <>
       <Title>فروشگاه</Title>
       <div className="grid gap-12">
+        <Colors />
         <Cards />
         <StoreForm />
       </div>

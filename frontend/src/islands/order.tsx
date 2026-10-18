@@ -21,6 +21,7 @@ interface Order {
   shipping_rial: number;
   offset_rial: number;
   product: string;
+  color: string;
   shipping: string;
   is_gift: boolean;
   name: string;
@@ -89,7 +90,7 @@ function Amount({ order }: { order: Order }) {
       <details className="text-sm text-muted">
         <summary className="cursor-pointer w-fit">ریز مبلغ</summary>
         <dl className="mt-2 grid grid-cols-[1fr_auto] gap-x-6 gap-y-1">
-          <dt>{order.product}</dt><dd>{toman(order.price_rial)}</dd>
+          <dt>{order.product}{order.color && `، ${order.color}`}</dt><dd>{toman(order.price_rial)}</dd>
           <dt>ارسال ({order.shipping})</dt><dd>{toman(order.shipping_rial)}</dd>
           <dt>شناسه واریز</dt><dd>{toman(order.offset_rial)}</dd>
         </dl>
@@ -370,7 +371,7 @@ function OrderView({ token }: { token: string }) {
       <div className="grid gap-8">
         <div className="grid gap-2">
           <h1 className="page-title">{order.status === 'delivered' ? 'سفارش تحویل شد.' : 'سفارش شما ثبت و پرداخت شد.'}</h1>
-          <p className="text-ink-soft">{order.product} برای {order.name}، {order.city}{order.is_gift ? ' (هدیه)' : ''}</p>
+          <p className="text-ink-soft">{order.product}{order.color && `، ${order.color}`} برای {order.name}، {order.city}{order.is_gift ? ' (هدیه)' : ''}</p>
         </div>
         <Progress order={order} />
         {order.tracking && (

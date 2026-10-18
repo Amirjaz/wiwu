@@ -115,7 +115,7 @@ def _luhn_complete(prefix15):
 
 
 class Command(BaseCommand):
-    help = 'Add the starting product, FAQ, policy pages and a sample card (only what is missing).'
+    help = 'Add the starting product (in black), FAQ, policy pages and a sample card (only what is missing).'
 
     def handle(self, *args, **options):
         store = StoreSettings.load()
@@ -124,6 +124,9 @@ class Command(BaseCommand):
             store.save()
         product, created = Product.objects.get_or_create(slug=PRODUCT['slug'], defaults=PRODUCT)
         self.stdout.write(f'Product: {"added" if created else "kept"} {product.name}')
+        if not product.colors.exists():
+            product.colors.create(name='مشکی', swatch='#17181b')
+            self.stdout.write('Color: added black')
         if not Faq.objects.exists():
             for i, (question, answer) in enumerate(FAQS):
                 Faq.objects.create(question=question, answer=answer, position=i)

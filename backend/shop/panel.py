@@ -10,13 +10,14 @@ Every change is in the order's history (AuditLog) with who did it.
 """
 import json
 import mimetypes
+import re
 from datetime import timedelta
 from functools import wraps
 
 from django.conf import settings
 from django.contrib.auth import authenticate, login, logout
 from django.core.cache import cache
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, Max, Q, Sum
 from django.http import FileResponse, Http404, JsonResponse
 from django.middleware.csrf import get_token
 from django.shortcuts import get_object_or_404, render
@@ -24,7 +25,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from . import orders, persian
-from .models import AuditLog, Card, Faq, Order, Page, PaymentEvent, Product, ReturnRequest, SmsLog, StoreSettings
+from .models import AuditLog, Card, Color, Faq, Order, Page, PaymentEvent, Product, ReturnRequest, SmsLog, StoreSettings
 from .views import PRODUCT_SLUG
 
 LOGIN_LIMIT = (10, 15 * 60)  # attempts per address per 15 minutes
@@ -129,7 +130,7 @@ def _row(order):
     return {
         'id': order.id, 'code': order.code, 'status': order.status, 'status_label': order.get_status_display(),
         'name': order.name, 'phone': order.phone, 'city': order.city, 'amount_rial': order.amount_rial,
-        'shipping': order.get_shipping_display(), 'is_gift': order.is_gift,
+        'shipping': order.get_shipping_display(), 'is_gift': order.is_gift, 'color': order.color_name,
         'created': order.created_at.isoformat(), 'paid_at': order.paid_at.isoformat() if order.paid_at else None,
         'claimed': bool(order.claimed_at),
     }
@@ -453,6 +454,44 @@ def cards(request):
             card.save()
         orders.audit('cards', None, request.user)
     return JsonResponse({'cards': [_card_json(c) for c in Card.objects.all()]})
+
+
+def _color_json(color):
+    return {'id': color.id, 'name': color.name, 'swatch': color.swatch, 'shown': color.shown,
+            'available': color.available, 'position': color.position, 'orders': color.orders.count()}
+
+
+@require_http_methods(['GET', 'POST'])
+@staff('shop.change_storesettings')
+def colors(request):
+    """The product's colours. The site asks for a colour only while more than one is shown."""
+    product = Product.objects.order_by('id').first()
+    if request.method == 'POST':
+        data = _json(request)
+        color = get_object_or_404(Color, pk=data['id'], product=product) if data.get('id') else Color(product=product)
+        if data.get('delete') and color.pk:
+            if color.orders.exists():
+                color.shown = False  # orders name it: keep it, just take it off the site
+                color.save(update_fields=['shown'])
+            else:
+                color.delete()
+        else:
+            name = persian.clean_text(data.get('name'), 40)
+            swatch = str(data.get('swatch') or '').strip().lower()
+            errors = {}
+            if not name:
+                errors['name'] = 'required'
+            if not re.fullmatch(r'#[0-9a-f]{6}', swatch):
+                errors['swatch'] = 'swatch'
+            if errors:
+                return _error('fields', fields=errors)
+            color.name, color.swatch = name, swatch
+            color.shown, color.available = bool(data.get('shown', True)), bool(data.get('available', True))
+            if not color.pk:
+                color.position = (product.colors.aggregate(m=Max('position'))['m'] or 0) + 1
+            color.save()
+        orders.audit('colors', None, request.user)
+    return JsonResponse({'colors': [_color_json(c) for c in product.colors.all()] if product else []})
 
 
 @require_http_methods(['GET', 'POST'])

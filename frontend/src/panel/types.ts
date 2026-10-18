@@ -17,6 +17,7 @@ export interface OrderRow {
   amount_rial: number;
   shipping: string;
   is_gift: boolean;
+  color: string; // the colour as ordered; empty for products without colours
   created: string;
   paid_at: string | null;
   claimed: boolean;

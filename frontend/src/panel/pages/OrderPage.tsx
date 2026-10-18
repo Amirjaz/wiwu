@@ -149,7 +149,7 @@ export default function OrderPage() {
           </div>
         </Box>
         <Box title="مبلغ">
-          <Row label={order.product}>{toman(order.price_rial)}</Row>
+          <Row label={order.color ? `${order.product}، ${order.color}` : order.product}>{toman(order.price_rial)}</Row>
           <Row label={`ارسال (${order.shipping})`}>{toman(order.shipping_rial)}</Row>
           <Row label="شناسه واریز">{toman(order.offset_rial)}</Row>
           <Row label="جمع (تومان)"><span className="text-lg">{toman(order.amount_rial)}</span></Row>

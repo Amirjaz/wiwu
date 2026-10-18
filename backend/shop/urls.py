@@ -36,6 +36,7 @@ urlpatterns = [
     path('api/panel/sms/', panel.sms_log),
     path('api/panel/settings/', panel.store_settings),
     path('api/panel/cards/', panel.cards),
+    path('api/panel/colors/', panel.colors),
     path('api/panel/texts/', panel.texts),
     path('api/panel/activity/', panel.activity),
 ]

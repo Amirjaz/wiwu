@@ -45,16 +45,19 @@ function setup(stage: HTMLElement) {
     closeTips();
   };
 
-  // The stop crossing the middle of the screen is the active one; on phones, the middle of what the
-  // pinned bag leaves visible below it.
-  const narrow = matchMedia('(max-width: 767px)').matches;
+  // The stop crossing the middle of the screen is the active one. On phones the stops are cards in a
+  // sideways scroller under the bag ([data-stops], site.css): there it's the card mostly in view.
+  const scroller = document.querySelector<HTMLElement>('[data-stops]');
+  const sideways = !!scroller && getComputedStyle(scroller).overflowX === 'auto';
   const stopObserver = new IntersectionObserver(
     (entries) => {
       for (const entry of entries) {
-        if (entry.isIntersecting) setActive(Number((entry.target as HTMLElement).dataset.stop));
+        if (entry.isIntersecting && (!sideways || entry.intersectionRatio >= 0.6)) {
+          setActive(Number((entry.target as HTMLElement).dataset.stop));
+        }
       }
     },
-    { rootMargin: narrow ? '-66% 0px -30% 0px' : '-45% 0px -45% 0px' },
+    sideways ? { root: scroller, threshold: 0.6 } : { rootMargin: '-45% 0px -45% 0px' },
   );
   stops.forEach((stop) => stopObserver.observe(stop));
 

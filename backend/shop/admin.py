@@ -1,10 +1,20 @@
 """Django admin: the fallback for everything the panel (/panel) doesn't cover, and for users and roles."""
 from django.contrib import admin
 
-from .models import AuditLog, Card, Faq, Order, Page, PaymentEvent, Product, ReturnRequest, SmsLog, StoreSettings
+from .models import AuditLog, Card, Color, Faq, Order, Page, PaymentEvent, Product, ReturnRequest, SmsLog, StoreSettings
 
 admin.site.register(StoreSettings)
-admin.site.register(Product)
+
+
+class ColorInline(admin.TabularInline):
+    model = Color
+    extra = 0
+
+
+@admin.register(Product)
+class ProductAdmin(admin.ModelAdmin):
+    inlines = [ColorInline]
+
 admin.site.register(Page)
 admin.site.register(Faq)
 
@@ -16,7 +26,7 @@ class CardAdmin(admin.ModelAdmin):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display = ('code', 'status', 'name', 'phone', 'amount_rial', 'created_at')
+    list_display = ('code', 'status', 'name', 'phone', 'color_name', 'amount_rial', 'created_at')
     list_filter = ('status', 'shipping')
     search_fields = ('code', 'phone', 'name', 'tracking_code')
     readonly_fields = ('token', 'created_at')

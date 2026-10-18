@@ -385,6 +385,40 @@
       0 0 30px 6px color-mix(in srgb, var(--color-signal) 45%, transparent);
   }
 
+  /* Phones: the tour's stops as cards in a row under the bag, swiped sideways, the next one peeking in.
+     (Desktop lays them out one under the other beside the pinned bag.) */
+  @media (width < 48rem) {
+    [data-stops] {
+      display: flex;
+      gap: 0.75rem;
+      padding: 1rem;
+      overflow-x: auto;
+      overscroll-behavior-x: contain;
+      scroll-snap-type: x mandatory;
+      scroll-padding-inline: 1rem;
+      scrollbar-width: none;
+    }
+    [data-stops]::-webkit-scrollbar {
+      display: none;
+    }
+    [data-stops] > [data-stop] {
+      flex: none;
+      width: 86%;
+      padding: 1.25rem;
+      border: 1px solid var(--color-line);
+      border-radius: var(--radius-surface);
+      background: var(--color-surface);
+      scroll-snap-align: center;
+    }
+    [data-stops] > [data-stop="0"] {
+      background: var(--color-raised);
+    }
+    /* Scroll-driven reveals would follow the sideways scroller and could stay hidden. */
+    [data-stops] .reveal {
+      animation: none;
+    }
+  }
+
   /* The parts diagram's numbered markers, on the photos and in the list beside them. A marker or its
      list line that is pointed at gets [data-active] (on the marker, or on the line around it). */
   .marker {

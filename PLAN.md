@@ -17,8 +17,8 @@ still sets the order of work (see *Phases*).
 | --- | --- | --- |
 | Domain | **Client's own `.ir`**, registered at IRNIC under the client's national ID | Enamad is issued to the domain's owner, so a `nisatech.org` subdomain can't get it. We still host it. Staging runs on a nisatech.org subdomain until the domain exists. |
 | Store name | **None yet.** We send a shortlist of 8–10 with `.ir` availability checked, and the client picks | This blocks the domain and therefore Enamad, so it's the first task. Must not be "WiWU" or anything that sounds official. |
-| Product | **One product, black only**, no variants | WiWU Alpha fingerprint-lock clutch. Imported and **unofficial** (not an authorized WiWU reseller). |
-| Stock | **Not counted** (effectively unlimited) | Sold-out is handled by hand: a switch in the panel. |
+| Product | **One product**; **colours from the panel** (2026-10-18), all at one price; only black is shown until the client sends photos of the others | WiWU Alpha fingerprint-lock clutch. Imported and **unofficial** (not an authorized WiWU reseller). Which colours: not decided yet. |
+| Stock | **Not counted** (effectively unlimited) | Sold-out is handled by hand: a switch in the panel, for the product and per colour. |
 | Price | **Manual**, one field in the panel | The price is copied into each order when it's created, so a price change never breaks a pending payment. |
 | Payment | **Card-to-card only**, hard-wired, through **cartbecart.com** with **5 cards, all in the owner's name** | cartbecart reads the bank's deposit SMS and matches the exact amount. 5 cards needs the **Max plan, 440k toman/month** (Pro only allows 3). No gateway or installments planned. |
 | Unique amount | **Offset added on top**: price + shipping + 1…999 toman, unique among open orders | See risk R1: the total ends up just above 10M toman. |
@@ -300,3 +300,7 @@ poor, phase 3 grows toward the top of its range.
   (Readex Pro's self-hosted copy has no ی ک گ پ) → Vazirmatn, with Vazir Code kept to figures; the
   white glow behind the bag removed; each section on its own ground; a solid phone menu; a new dark
   footer.
+- **Colours, phone layout, load test** (2026-10-18): colours managed in the panel (only black shown
+  until photos arrive), picked on the page and at checkout, kept on orders. The tour on phones is one
+  screen with swipeable cards. The live server was load-tested (LOADTEST.md): about 36 pages/s on its
+  one CPU. The home and policy pages are now cached; ArvanCloud should cache the 3D models.

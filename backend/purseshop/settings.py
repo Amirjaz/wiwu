@@ -108,7 +108,14 @@ CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
         'LOCATION': 'cache_table',
-    }
+    },
+    # Rendered home and policy pages (shop/pagecache.py), in their own table so emptying it leaves
+    # the rate limits alone. Off in development, where templates change all the time.
+    'pages': {
+        'BACKEND': 'django.core.cache.backends.dummy.DummyCache' if DEVELOPMENT
+        else 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'page_cache_table',
+    },
 }
 
 AUTH_PASSWORD_VALIDATORS = [

@@ -14,7 +14,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
 
-from . import jalali, orders, payments, persian, text
+from . import jalali, orders, pagecache, payments, persian, text
 from .models import Faq, Order, Page, Product, StoreSettings
 from .orders import OrderError
 
@@ -60,6 +60,9 @@ def _store_json(store, product):
     return {
         'store': store.store_name,
         'product': {'name': product.name, 'price_rial': product.price_rial, 'available': product.is_available},
+        # Only asked for when more than one colour is on show.
+        'colors': [{'id': c.id, 'name': c.name, 'swatch': c.swatch, 'available': c.available}
+                   for c in product.shown_colors()],
         'shipping': store.shipping_options(),
         'provinces': PROVINCES,
         'payment_minutes': store.payment_minutes,
@@ -71,6 +74,7 @@ def _store_json(store, product):
 # ── Pages ───────────────────────────────────────────────────────────────────────────────────────
 
 @require_GET
+@pagecache.cached
 def home(request):
     store, product = StoreSettings.load(), _product()
     if product is None:
@@ -85,7 +89,7 @@ def home(request):
     return render(request, 'shop/home.html', {
         'product': product, 'faqs': faqs, 'price': persian.toman(product.price_rial),
         'shipping': shipping, 'example_total': persian.toman(example),
-        'hotspots': HOTSPOTS, 'parts': PARTS,
+        'hotspots': HOTSPOTS, 'parts': PARTS, 'colors': product.shown_colors(),
         'dims': dims, 'spec_cells': spec_cells,
         'jsonld': _jsonld(request, store, product, faqs),
     })
@@ -169,6 +173,7 @@ def lookup_page(request):
 
 
 @require_GET
+@pagecache.cached
 def page(request, slug):
     item = get_object_or_404(Page, slug=slug)
     return render(request, 'shop/page.html', {'page': item, 'body': text.render(item.body)})
@@ -246,9 +251,11 @@ def api_place(request):
     clean, errors = _clean_checkout(data)
     if errors:
         return _error('fields', fields=errors)
+    product = _product()
     try:
+        color = orders.pick_color(product, data.get('color'))
         orders.check_otp(clean['phone'], persian.latin_digits(data.get('code', '')))
-        order = orders.place(_product(), clean, _ip(request))
+        order = orders.place(product, clean, _ip(request), color=color)
     except OrderError as exc:
         return _error(exc.code, **exc.extra)
     return JsonResponse({'token': order.token, 'url': reverse('order', args=[order.token])})
@@ -270,6 +277,7 @@ def order_json(order):
         'shipping_rial': order.shipping_rial,
         'offset_rial': order.offset_rial,
         'product': order.product_name,
+        'color': order.color_name,
         'shipping': order.get_shipping_display(),
         'is_gift': order.is_gift,
         'name': order.name,

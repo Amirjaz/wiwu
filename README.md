@@ -146,6 +146,10 @@ Vazirmatn, since Persian set in a monospace stretches and reads as broken. Both 
 Pro was tried first: Fontsource's copy has no ی ک گ پ, so words fell apart on phones.) Corners 4px.
 The panel and the other pages share these tokens.
 
+On phones the tour is one screen: the bag with its view tabs on top, and the five stops as cards
+under it, swiped sideways (`[data-stops]` in `site.css`). The card mostly in view turns the bag
+(`hero.ts` observes the row), and a tab scrolls to its card. Desktop keeps the pinned scroll tour.
+
 Each home section has its own ground, so moving down the page reads as moving between parts: the tour
 on aluminium grey (`page`), the lock demo on ink, the parts on a light table (`raised`), the specs on
 `steel`, buying on `graphite` with the bill in white, the questions on grey, a closing band in signal
@@ -166,6 +170,29 @@ The home page, after the tour:
   in as it scrolls into view).
 
 Motion is CSS: scroll-driven where the browser has it, nothing otherwise, nothing with reduced motion.
+
+## Colours (`shop.models.Color`, panel → فروشگاه → رنگ‌ها)
+
+The bag can come in several colours, all at the product's price. Each colour has a name, a swatch
+(#rrggbb) and two switches: *shown on the site* and *in stock*. While only one colour is shown (black,
+until the client sends photos of the others) nobody is asked and every order gets that colour. With two
+or more shown:
+
+- the hero shows the swatches (`data-color-picker`, `islands/home.ts`);
+- the pick rides along to checkout as `?color=`, where the buyer can change it;
+- sold-out colours are visible but can't be picked.
+
+`orders.pick_color` checks the pick before the SMS code is used up. Orders keep the colour's name as it
+was (`color_name`), which the panel, the order page and the packing slip show. A colour with orders is
+hidden rather than deleted. New colours start hidden: add the photos first, then show them. The 3D model
+and the photos are still the black bag; switching them per colour is the next step once photos exist.
+
+## Load and caching
+
+See [LOADTEST.md](LOADTEST.md) (2026-10-18). The home and policy pages are cached for 60 s in the
+`pages` database cache (`shop/pagecache.py`), which is off in development. Any save of the product, a
+colour, the settings, a card, an FAQ or a page empties it. Each page then costs about 2 ms of CPU
+instead of about 26 ms.
 
 ## Pages and SEO
 

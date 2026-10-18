@@ -20,7 +20,7 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from . import sms
-from .models import AuditLog, Card, Order, OtpCode, PaymentEvent, ReturnRequest, StoreSettings
+from .models import AuditLog, Card, Color, Order, OtpCode, PaymentEvent, ReturnRequest, StoreSettings
 from .persian import fa_digits, toman
 
 log = logging.getLogger(__name__)
@@ -122,11 +122,30 @@ def _next_card():
     return card
 
 
-def place(product, data, ip=None):
-    """data is already cleaned (views.checkout). Returns the new order."""
+def pick_color(product, color_id):
+    """The colour for a new order: the one the buyer picked, or the only one on show. None for a product
+    with no colours. Checked before the SMS code is used, so a bad pick doesn't cost the buyer a code."""
+    shown = product.shown_colors()
+    if not shown:
+        return None
+    if len(shown) == 1 and not color_id:
+        color = shown[0]
+    else:
+        color = next((c for c in shown if str(c.pk) == str(color_id)), None)
+        if color is None:
+            raise OrderError('color')
+    if not color.available:
+        raise OrderError('color_unavailable')
+    return color
+
+
+def place(product, data, ip=None, color=None):
+    """data is already cleaned (views.checkout); color from pick_color. Returns the new order."""
     store = StoreSettings.load()
     if not product.is_available:
         raise OrderError('unavailable')
+    if color is None and product.shown_colors():
+        color = pick_color(product, None)
     shipping_rial = store.shipping_fee(data['shipping'])
     for _ in range(5):
         try:
@@ -138,6 +157,7 @@ def place(product, data, ip=None):
                     phone=data['phone'], name=data['name'], province=data['province'], city=data['city'],
                     address=data['address'], postal_code=data['postal_code'], shipping=data['shipping'],
                     is_gift=data['is_gift'], product=product, product_name=product.name,
+                    color=color, color_name=color.name if color else '',
                     unit_price_rial=product.price_rial, shipping_rial=shipping_rial, offset_rial=offset,
                     amount_rial=amount, card=card, card_bank=card.bank, card_number=card.number,
                     card_holder=card.holder, expires_at=timezone.now() + timedelta(minutes=store.payment_minutes),

@@ -74,6 +74,29 @@ class Product(models.Model):
     def __str__(self):
         return self.name
 
+    def shown_colors(self):
+        return [color for color in self.colors.all() if color.shown]
+
+
+class Color(models.Model):
+    """A colour the product comes in, all at the product's price. While only one colour is on show (black,
+    at launch) the site doesn't ask; with more, the buyer picks one on the page and at checkout."""
+
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='colors')
+    name = models.CharField('نام رنگ', max_length=40)
+    swatch = models.CharField('کد رنگ', max_length=7, default='#17181b', help_text='مثل #17181b، برای دایره‌ی رنگ در سایت')
+    shown = models.BooleanField('نمایش در سایت', default=True)
+    available = models.BooleanField('موجود', default=True)
+    position = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'رنگ'
+        verbose_name_plural = 'رنگ‌ها'
+        ordering = ['position', 'id']
+
+    def __str__(self):
+        return self.name
+
 
 class Card(models.Model):
     """A destination card for card-to-card payments. All in the owner's name (see PLAN.md)."""
@@ -132,6 +155,8 @@ class Order(models.Model):
 
     product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name='orders')
     product_name = models.CharField(max_length=120)
+    color = models.ForeignKey(Color, null=True, blank=True, on_delete=models.SET_NULL, related_name='orders')
+    color_name = models.CharField('رنگ', max_length=40, blank=True)  # as it was when ordered
     unit_price_rial = models.PositiveBigIntegerField()
     shipping_rial = models.PositiveBigIntegerField()
     offset_rial = models.PositiveBigIntegerField()  # makes the amount unique, see orders.choose_amount

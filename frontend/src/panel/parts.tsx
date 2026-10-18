@@ -44,7 +44,7 @@ export function OrderList({ orders }: { orders: OrderRow[] }) {
                 {o.claimed && <ChatCircleText size={18} className="text-warn" aria-label="خریدار اعلام پرداخت کرده" />}
               </span>
               <span className="text-sm text-muted">
-                {when(o.created)} · {o.city} · {o.shipping} · <span className="ltr">{fa(o.phone)}</span>
+                {when(o.created)} · {o.city} · {o.shipping}{o.color && ` · ${o.color}`} · <span className="ltr">{fa(o.phone)}</span>
               </span>
             </span>
             <span className="flex items-center justify-between gap-3 sm:justify-end">

@@ -23,6 +23,11 @@ written down anywhere else.
   grey, a lock demo, a parts diagram, the size on a centimetre mat, a sample bill, a different ground per
   section, Vazirmatn (Readex Pro broke Persian words apart). Checkout, order,
   lookup, policy pages and the panel follow through the shared tokens in `frontend/src/site.css`.
+- **Colours** (2026-10-18): managed in the panel (README, *Colours*). Only black is shown until the
+  client's photos of the other colours arrive; which colours is still open.
+- **Load test** (2026-10-18, [LOADTEST.md](LOADTEST.md)): the shared server handles 50,000 views a day.
+  For spikes it needs the page cache (in the code, not deployed yet), ArvanCloud caching `/models/` (Amir,
+  Arvan panel), and nginx no longer gzipping models (the admin re-runs `server-setup.sh`).
 - **Client:** no answers yet. PLAN.md §11 is the message to send, in Persian, ready to paste.
 - **Plane** (Nisatech project), all Done:
   - NISA-65: interview, cutouts and plan (3h).
@@ -40,6 +45,9 @@ written down anywhere else.
 1. **Get the client's answers (PLAN.md §11).** The store name blocks the `.ir` domain, and the domain
    blocks Enamad: the domain must belong to whoever applies.
 2. **Staging** is live (above). Still to do there:
+   - deploy 2026-10-18's work (colours, phone layout, page cache) once Amir says so; then the Arvan
+     cache rule for `/models/` and the admin's `server-setup.sh` re-run (LOADTEST.md, *Fixes*), and
+     re-run the load test;
    - a staff panel account: `ssh -t amir@185.231.180.92 'cd /srv/purseshop/app/backend && .venv/bin/python manage.py createsuperuser'`
      (Amir types the password), then add people to Owners or Staff in `/admin/`;
    - a test order end to end (the SMS code is in `journalctl -u purseshop`), then cancel it in the panel;
