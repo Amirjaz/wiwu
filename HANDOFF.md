@@ -42,7 +42,8 @@ written down anywhere else.
 
 ## Waiting on Amir
 
-1. **Tripling the new Plane times.** NISA-70 to 73 are at measured times. On 2026-10-16 he had every
+1. **Tripling the new Plane times.** NISA-70 to 76 and the 15m added to NISA-69 are at measured times.
+   On 2026-10-16 he had every
    earlier PurseShop "Spent" tripled. Ask whether these get the same.
 2. **Colours:** which colours, and their photos. Until then only black is shown.
    - All colours are assumed to cost the same; he hasn't confirmed that.
@@ -61,7 +62,7 @@ written down anywhere else.
    0.35 s on its first render and about 9 ms from the page cache; the hero's photos are cached by Arvan
    (`x-cache: HIT` on the second request); a browser pass on desktop and phone shows the campaign hero,
    the slider moving and the 3D bag with its tabs and pins. The 3D model still reads `x-cache: BYPASS`
-   until the Arvan rule below. Not yet recorded on Plane.
+   until the Arvan rule below. Recorded on NISA-69 (Spent +15m).
    - Next time: `DOMAIN=shop.nisatech.org bash deploy/deploy.sh` from `PurseShop/`, on a clean `main`
      (a branch in a worktree goes onto `main` first), then the same checks.
 2. **After the deploy:**
@@ -298,11 +299,13 @@ and `390 844`.
 | NISA-66 | Store core | 3h* |
 | NISA-67 | 3D hero and scroll tour | 9h* (1h30m + 3h + 3h + 1h30m) |
 | NISA-68 | Site design around the 3D bag, instrument look | 6h* (3h + 1h30m + 1h30m) |
-| NISA-69 | Staging online at shop.nisatech.org | 2h15m* (1h30m + 45m) |
+| NISA-69 | Staging online at shop.nisatech.org, redeploys | 2h30m (1h30m* + 45m* + 15m) |
 | NISA-70 | Load test of the live server, page cache | 30m |
 | NISA-71 | Colours (panel, product page, checkout, orders) | 30m |
 | NISA-72 | Phone layout (one-screen tour, roomier sections) | 15m |
 | NISA-73 | Hero shows only the 3D bag (no ring, no glow, photos as backup) | 30m |
+| NISA-75 | Hero as a photo campaign page, the 3D bag in the parts section | 2h |
+| NISA-76 | Questions for the client, server and SMS costs | 30m |
 
-\* Amir's figures: three times the measured time, at his request on 2026-10-16. NISA-70 to 73 are
-measured; ask him about tripling them.
+\* Amir's figures: three times the measured time, at his request on 2026-10-16. NISA-70 to 76 and
+NISA-69's last 15m are measured (from the session logs' active time); ask him about tripling them.
