@@ -78,7 +78,7 @@ written down anywhere else.
    until the Arvan rule below. Recorded on NISA-69 (Spent +45m, tripled).
    - Next time: `DOMAIN=shop.nisatech.org bash deploy/deploy.sh` from `PurseShop/`, on a clean `main`
      (a branch in a worktree goes onto `main` first), then the same checks.
-2. **After the deploy:**
+3. **After the deploy:**
    - Amir adds the Arvan cache rule (above). Check that `x-cache` reads `HIT` on the second request
      for `/models/alpha-mobile.glb`.
    - The server admin re-runs the root setup, so the nginx change takes effect. First send a fresh
@@ -87,25 +87,25 @@ written down anywhere else.
      - `sudo DOMAIN=shop.nisatech.org bash /home/amir/purseshop-deploy/server-setup.sh`
      - `amir` can't sudo, so the admin runs it.
    - Re-run the load test (LOADTEST.md, *Running it again*).
-3. **On staging:** a test order end to end (the SMS code is in `journalctl -u purseshop`), then cancel it
+4. **On staging:** a test order end to end (the SMS code is in `journalctl -u purseshop`), then cancel it
    in the panel. Replace the sample card and the placeholder shipping prices once the client sends them.
-4. **Client answers (PLAN.md §11).** The store name blocks the `.ir` domain, and the domain blocks
+5. **Client answers (PLAN.md §11).** The store name blocks the `.ir` domain, and the domain blocks
    Enamad: the domain must belong to whoever applies.
-5. **Price (risk R1).** 10,000,000 toman + shipping + the offset lands just above 10M, and some transfer
+6. **Price (risk R1).** 10,000,000 toman + shipping + the offset lands just above 10M, and some transfer
    channels stop at 10M. Recommend that price + shipping + 999 stay ≤ 10,000,000; the client decides.
-6. **cartbecart.** Once the client's Max account opens their API docs, finish `backend/shop/payments.py`
+7. **cartbecart.** Once the client's Max account opens their API docs, finish `backend/shop/payments.py`
    (`TODO(cartbecart docs)`):
    - the real field names and the unit;
    - checking each deposit through their API;
    - whether orders must be registered with them first.
 
    Until then, `PAYMENT_PROVIDER=manual`.
-7. **Kavenegar.** The client's account, with the 11 templates listed in README → *SMS*.
-8. **Policy pages.** The [bracketed] text waits for the client: the warranty, how the bag opens with
+8. **Kavenegar.** The client's account, with the 11 templates listed in README → *SMS*.
+9. **Policy pages.** The [bracketed] text waits for the client: the warranty, how the bag opens with
    an empty battery, and the card holder's name. It must be filled in before applying for Enamad.
-9. **Go live, then Enamad.** See PLAN.md §8 and phase 2 in §9: one real 10M payment end to end, then
+10. **Go live, then Enamad.** See PLAN.md §8 and phase 2 in §9: one real 10M payment end to end, then
    refund it. For the launch, consider giving the store its own small server (LOADTEST.md).
-10. **3D, only if new photos arrive** (see below).
+11. **3D, only if new photos arrive** (see below).
 
 ## What Amir has asked for, and how he reacts
 
