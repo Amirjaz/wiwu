@@ -42,13 +42,14 @@ written down anywhere else.
   - NISA-70: load test of the live server, page cache (30m, measured).
   - NISA-71: colours (30m, measured).
   - NISA-72: phone layout (15m, measured).
+  - NISA-73: hero shows only the 3D bag, no ring or glow, photos as backup (30m, measured).
 
 ## Next, in order
 
 1. **Get the client's answers (PLAN.md §11).** The store name blocks the `.ir` domain, and the domain
    blocks Enamad: the domain must belong to whoever applies.
 2. **Staging** is live (above). Still to do there:
-   - deploy 2026-10-18's work (colours, phone layout, page cache) once Amir says so; then the Arvan
+   - deploy 2026-10-18's work (colours, phone layout, page cache, 3D-only hero) once Amir says so; then the Arvan
      cache rule for `/models/` and the admin's `server-setup.sh` re-run (LOADTEST.md, *Fixes*), and
      re-run the load test;
    - a staff panel account: `ssh -t amir@185.231.180.92 'cd /srv/purseshop/app/backend && .venv/bin/python manage.py createsuperuser'`
