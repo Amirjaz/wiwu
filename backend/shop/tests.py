@@ -35,6 +35,9 @@ class Base(TestCase):
         self.store.owner_mobile = '09350000000'
         self.store.save()
         self.product = Product.objects.get(slug='alpha')
+        # The store as these tests assume it: black only (seed_store also adds brown and white; ColorTests
+        # add the colours they need).
+        self.product.colors.exclude(name='مشکی').delete()
 
     def place(self, **changes):
         return orders.place(self.product, {**ADDRESS, **changes})
@@ -426,3 +429,38 @@ class ColorTests(Base):
         self.client.post('/api/panel/colors/', {'id': self.black.pk, 'delete': True}, content_type='application/json')
         self.black.refresh_from_db()
         self.assertFalse(self.black.shown)
+
+
+class StartingColoursTests(TestCase):
+    def test_a_new_store_sells_three_colours_with_photos(self):
+        call_command('seed_store', stdout=io.StringIO())
+        product = Product.objects.get(slug='alpha')
+        self.assertEqual([(c.name, c.photo) for c in product.colors.all()], [
+            ('مشکی', 'images/colors/black.webp'), ('قهوه‌ای', 'images/colors/brown.webp'),
+            ('سفید', 'images/colors/white.webp')])
+        self.assertIn('ویوو', product.name)
+        page = self.client.get('/checkout/').content.decode()
+        self.assertEqual(page.count('data-color-photo='), 3)
+        home = self.client.get('/').content.decode()
+        self.assertEqual(home.count('data-color-picker'), 2)  # in the hero and beside the 3D bag
+        self.assertIn('"brand": {"@type": "Brand", "name": "WiWU"}', home)
+
+
+class AssetVersionTests(TestCase):
+    def test_production_addresses_carry_the_files_content_hash(self):
+        import hashlib
+        import tempfile
+        from pathlib import Path
+        from .templatetags import vite
+        with tempfile.TemporaryDirectory() as build:
+            (Path(build) / '.vite').mkdir()
+            (Path(build) / 'images').mkdir()
+            (Path(build) / 'images' / 'front.webp').write_bytes(b'new photo')
+            vite._versions.clear()
+            with override_settings(VITE_DEV_SERVER='', VITE_ASSETS_URL='/', VITE_MANIFEST=Path(build) / '.vite' / 'manifest.json'):
+                expected = hashlib.md5(b'new photo').hexdigest()[:8]
+                self.assertEqual(vite.asset('images/front.webp'), f'/images/front.webp?v={expected}')
+                self.assertEqual(vite.asset('images/missing.webp'), '/images/missing.webp')
+            vite._versions.clear()
+            with override_settings(VITE_DEV_SERVER='http://127.0.0.1:5180'):
+                self.assertEqual(vite.asset('images/front.webp'), 'http://127.0.0.1:5180/images/front.webp')

@@ -2,9 +2,13 @@
 {% vite 'src/site.ts' 'src/islands/checkout.tsx' %}: the script (and CSS) tags for Vite entries.
 In development they come straight from the Vite dev server (with React fast refresh); in production
 from the build's manifest, with each entry's CSS and its shared chunks preloaded.
-{% asset 'images/front.webp' %}: a file from frontend/public.
+{% asset 'images/front.webp' %}: a file from frontend/public. In production its address carries a short
+hash of its content (?v=), so a file changed under the same name (a new photo, a rebuilt 3D model) is
+fetched again rather than served from ArvanCloud's or a browser's week-long cache.
 """
+import hashlib
 import json
+from pathlib import Path
 
 from django import template
 from django.conf import settings
@@ -14,6 +18,7 @@ from django.utils.safestring import mark_safe
 register = template.Library()
 
 _manifest = {'mtime': None, 'data': {}}
+_versions = {}  # public file -> its content hash, per process (a deploy restarts the processes)
 
 _REFRESH = """<script type="module">
 import RefreshRuntime from '{dev}/@react-refresh'
@@ -67,7 +72,21 @@ def vite(*entries):
         format_html_join('\n', '<script type="module" src="{}"></script>', ((_url(f),) for f in scripts))
 
 
+def _version(path):
+    """The first 8 hex digits of a public file's MD5, from the build next to its manifest ('' if it
+    isn't there)."""
+    if path not in _versions:
+        try:
+            _versions[path] = hashlib.md5((Path(settings.VITE_MANIFEST).parent.parent / path).read_bytes()).hexdigest()[:8]
+        except OSError:
+            _versions[path] = ''
+    return _versions[path]
+
+
 @register.simple_tag
 def asset(path):
-    base = settings.VITE_DEV_SERVER or settings.VITE_ASSETS_URL.rstrip('/')
-    return format_html('{}/{}', base, path.lstrip('/'))
+    path = path.lstrip('/')
+    if settings.VITE_DEV_SERVER:
+        return format_html('{}/{}', settings.VITE_DEV_SERVER, path)
+    version = _version(path)
+    return format_html('{}/{}{}', settings.VITE_ASSETS_URL.rstrip('/'), path, f'?v={version}' if version else '')

@@ -21,8 +21,16 @@ export interface Details {
   farEnd: { ring: V3; tab_root: V3; tab_tip: V3 };
 }
 
-// Dark satin gunmetal, as in the side photo (not mirror-like: it would reflect the bright studio).
-const gunmetal = () => new MeshPhysicalMaterial({ color: '#3c3c3f', metalness: 0.75, roughness: 0.5 });
+/** A part's two looks (scene.ts setColor): satin gunmetal on the black bag, as on the maker's side photo
+ *  (lighter than the client's dim one), and silver on the brown and silver-white bags. */
+function finish<T extends MeshStandardMaterial>(material: T, black: string, light: string): T {
+  material.color.set(black);
+  material.userData.finish = { black, light };
+  return material;
+}
+
+// Satin, not mirror-like: a mirror would reflect the bright studio.
+const gunmetal = () => finish(new MeshPhysicalMaterial({ metalness: 0.8, roughness: 0.42 }), '#55585d', '#b4b7bc');
 
 function roundedRect(shape: Shape | Path, x0: number, y0: number, x1: number, y1: number, r: number) {
   const rr = Math.min(r, (x1 - x0) / 2, (y1 - y0) / 2);
@@ -73,9 +81,8 @@ export function buildLock(d: Details['module']) {
   capShape.lineTo(c0 + r, top);
   capShape.quadraticCurveTo(c0, top, c0, top - r);
   capShape.lineTo(c0, d.capBottom);
-  const cap = new Mesh(slab(capShape, 0.0008, 0.0005), new MeshPhysicalMaterial({
-    color: '#444447', metalness: 0.75, roughness: 0.45,
-  }));
+  const cap = new Mesh(slab(capShape, 0.0008, 0.0005),
+    finish(new MeshPhysicalMaterial({ metalness: 0.8, roughness: 0.4 }), '#5c5f64', '#bcbfc4'));
   cap.position.z = 0.0001;
   group.add(cap);
 
@@ -92,7 +99,7 @@ export function buildLock(d: Details['module']) {
   group.add(slot);
   const [l0, l1, l2, l3] = d.latch;
   const ridges = 7;
-  const ridgeMat = new MeshStandardMaterial({ color: '#5a5d62', metalness: 0.7, roughness: 0.5 });
+  const ridgeMat = finish(new MeshStandardMaterial({ metalness: 0.7, roughness: 0.5 }), '#6e7177', '#c3c6ca');
   for (let i = 0; i < ridges; i++) {
     const w = (l2 - l0) / (ridges * 2);
     const ridge = new Mesh(new RoundedBoxGeometry(w, l3 - l1, 0.0005, 2, w / 3), ridgeMat);
@@ -202,7 +209,8 @@ export function buildZipper(z: Details['zipper'], tapeMaterial: Material) {
   const count = Math.floor(path.length / pitch) - 1;
   const toothLength = 0.0041;
   const tooth = new RoundedBoxGeometry(toothLength, 0.0016, 0.0018, 2, 0.00045);
-  const teeth = new InstancedMesh(tooth, new MeshStandardMaterial({ color: '#56585d', metalness: 0.85, roughness: 0.38 }), count);
+  const teeth = new InstancedMesh(tooth,
+    finish(new MeshStandardMaterial({ metalness: 0.85, roughness: 0.36 }), '#6a6d73', '#c0c3c8'), count);
   const m = new Matrix4();
   const q = new Quaternion();
   const scale = new Vector3(1, 1, 1);
@@ -222,7 +230,7 @@ export function buildZipper(z: Details['zipper'], tapeMaterial: Material) {
 /** The far end: the ring at the top corner and the pull tab sticking out (as the front and back photos show). */
 export function buildFarEnd(f: Details['farEnd']) {
   const group = new Group();
-  const metal = new MeshStandardMaterial({ color: '#7d7f84', metalness: 1, roughness: 0.32, side: DoubleSide });
+  const metal = finish(new MeshStandardMaterial({ metalness: 1, roughness: 0.32, side: DoubleSide }), '#8a8c91', '#c8cbd0');
 
   const ring = new Mesh(new TorusGeometry(0.0042, 0.0008, 10, 28), metal);
   ring.position.set(...f.ring);

@@ -1,7 +1,8 @@
 # PurseShop
 
 Working name until the client picks one (see [PLAN.md](PLAN.md), the interview and all the decisions).
-An online store for one product, the WiWU Alpha fingerprint-lock clutch (black, about 10M toman), in
+An online store for one product, the WiWU Alpha fingerprint-lock clutch («کیف دستی ویوو آلفا»; black, brown
+and silver-white, about 10M toman), in
 Persian. Payment is card-to-card to the owner's cards, confirmed automatically from the bank's deposit
 SMS by cartbecart.com, or by staff in the panel.
 
@@ -11,7 +12,7 @@ SMS by cartbecart.com, or by staff in the panel.
 | `frontend/` | Vite + React 18 + Tailwind v4 *islands* on Django's pages (checkout, order page, lookup) and the staff panel at `/panel` |
 | `deploy/` | nginx site, systemd units (gunicorn + a minute timer) and deploy scripts for the Nisatech server |
 | `media/` | the client's photos, the background-removed cutouts, 3D sources (not served) |
-| `tools/` | `cutout.py`/`fix2.py` (background removal), `web_images.py` (the site's product images), the 3D model's pipeline (see *The hero and the 3D bag*), `ai_shape/` (the AI shape it starts from), `dev/` (screenshots and checks) |
+| `tools/` | `cutout.py`/`fix2.py` (background removal), `studio_images.py` (the site's product images, from WiWU's studio photos; `web_images.py` made them from the client's phone photos before), the 3D model's pipeline (see *The hero and the 3D bag*), `ai_shape/` (the AI shape it starts from), `dev/` (screenshots and checks) |
 
 ## Running it locally
 
@@ -106,6 +107,16 @@ toward the part, and people can drag it round (sideways on phones; vertical swip
 lock's numbers sit beside the module with lines to its parts, kept apart as the view changes. The
 fingerprint sensor's light turns green on the lock's side.
 
+The bag takes the colour picked on the page (the dots in the hero and beside the bag move together):
+`BagScene.setColor` with the colour's swatch from the panel. The baked texture comes from photos of the
+black bag, so every colour, black included, is drawn as a tint of it: the leather's colour times the
+photo's light and dark relative to its median (softened, so the grain, seams and pocket lines stay but
+the photo's lighting doesn't blotch), while pixels far brighter than the leather (the brand plate, the
+metal) keep the photo's own colour. The zipper tape is a dark shade of the leather; the modelled lock,
+teeth and far-end hardware carry two looks each (`finish` in `details.ts`): gunmetal on black, as on
+WiWU's side photo, and silver on the lighter colours, as on their brown and silver-white bags. A colour
+added in the panel tints the bag the same way, from its swatch.
+
 Devices with WebGL2 (and no data saver, 2 GB+ memory) get the 3D: plain three.js, loaded as a separate
 chunk (170 KB gzipped), plus the model (`public/models/alpha.glb` 720 KB, `alpha-mobile.glb` 300 KB). It
 loads once the page has (the hero's photos come first) and the section is about a screen away.
@@ -143,7 +154,8 @@ The model is built from the client's three photos, checked against them view by 
    - the far end's ring and pull tab, triangulated from the front and back photos.
 6. **Model** (`tools/build_model.py` + `tools/bake.py`): cleans and decimates the shape, gives it the
    photos' proportions, presses the AI's blurry versions of the details flat (and smooths away the
-   bracket it invented at the far end and the dents in the front), unwraps it (xatlas), projects the
+   bracket it invented at the far end), pulls the front onto a smooth fitted surface (taut, as on
+   WiWU's studio photos; the AI shape rippled there), unwraps it (xatlas), projects the
    photos onto it (each texel from the photos that see it head-on and unblocked, colour-matched),
    sorts faces into leather / front panel / zipper / metal and compresses it (meshopt, JPEG texture):
    `alpha.glb` 720 KB, `alpha-mobile.glb` 300 KB. The `.json` beside each holds the details' measurements,
@@ -194,26 +206,35 @@ Motion is CSS: scroll-driven where the browser has it, nothing otherwise, nothin
 
 ## Colours (`shop.models.Color`, panel → فروشگاه → رنگ‌ها)
 
-The bag can come in several colours, all at the product's price. Each colour has a name, a swatch
-(#rrggbb) and two switches: *shown on the site* and *in stock*. While only one colour is shown (black,
-until the client sends photos of the others) nobody is asked and every order gets that colour. With two
-or more shown:
+The bag comes in black, brown (قهوه‌ای) and silver-white (سفید), all at the product's price, all on
+show since 2026-10-19 (migration 0003; Amir's call). Each colour has a name, a swatch (#rrggbb, the
+leather's colour on WiWU's photos, which the 3D bag is tinted to), a photo (`images/colors/*.webp`,
+`tools/studio_images.py`) and two switches: *shown on the site* and *in stock*. While only one colour is
+shown nobody is asked and every order gets that colour. With two or more shown:
 
-- the hero shows the swatches (`data-color-picker`, `islands/home.ts`);
-- the pick rides along to checkout as `?color=`, where the buyer can change it;
+- the hero and the 3D section show the swatches (`shop/color_picker.html`, `islands/home.ts`), moving
+  together, and the 3D bag turns that colour;
+- the pick rides along to checkout as `?color=`, where the buyer can change it and the summary shows
+  that colour's photo;
 - sold-out colours are visible but can't be picked.
 
 `orders.pick_color` checks the pick before the SMS code is used up. Orders keep the colour's name as it
 was (`color_name`), which the panel, the order page and the packing slip show. A colour with orders is
-hidden rather than deleted. New colours start hidden: add the photos first, then show them. The 3D model
-and the photos are still the black bag; switching them per colour is the next step once photos exist.
+hidden rather than deleted. New colours start hidden: add the photo first, then show them. The hero's
+lifestyle photos are of the black bag only.
 
 ## Load and caching
 
 See [LOADTEST.md](LOADTEST.md) (2026-10-18). The home and policy pages are cached for 60 s in the
 `pages` database cache (`shop/pagecache.py`), which is off in development. Any save of the product, a
 colour, the settings, a card, an FAQ or a page empties it. Each page then costs about 2 ms of CPU
-instead of about 26 ms.
+instead of about 26 ms. A migration's data changes don't send those signals, so after a deploy that
+changes content, empty it by hand: `manage.py shell -c "from django.core.cache import caches;
+caches['pages'].clear()"`.
+
+Images and 3D models are cached for a week (nginx `expires 7d`, ArvanCloud for images). In production
+their addresses carry a hash of the file's content (`{% asset %}` adds `?v=`, `templatetags/vite.py`), so a
+file replaced under the same name is fetched again.
 
 ## Pages and SEO
 

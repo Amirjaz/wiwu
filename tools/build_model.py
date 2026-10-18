@@ -222,6 +222,15 @@ def build(name, faces, texture, d):
     s = WIDTH_M / (BODY_X[1] - BODY_X[0])
     press_under_details(mesh, d, 1 / s, far_end)
     weight = diffuse(mesh, front, 3)
+    # Taut, as on the maker's photos (2026-10-19): the front's points are pulled onto a smooth surface
+    # fitted to them (depth as a cubic in x and y, the panel's gentle bulge), fully inside the panel and
+    # fading out towards its edges, so its outline stays where the photos put it. Then smoothed as before.
+    vx, vy, vz = mesh.vertices.T
+    basis = lambda a, b: np.column_stack([np.ones_like(a), a, b, a * a, a * b, b * b, a ** 3, a * a * b, a * b * b, b ** 3])
+    coef, *_ = np.linalg.lstsq(basis(vx[front], vy[front]), vz[front], rcond=None)
+    fitted = basis(vx, vy) @ coef
+    pull = np.clip(weight * 1.6 - 0.3, 0, 1) * front
+    mesh.vertices[:, 2] = vz * (1 - pull) + fitted * pull
     smooth = mesh.copy()
     trimesh.smoothing.filter_taubin(smooth, lamb=0.5, nu=-0.53, iterations=30)
     mesh.vertices = mesh.vertices * (1 - weight[:, None]) + smooth.vertices * weight[:, None]

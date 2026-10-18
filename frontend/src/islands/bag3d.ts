@@ -70,6 +70,8 @@ function setup(section: HTMLElement, stage: HTMLElement) {
     view = (event as CustomEvent<string>).detail;
     scene?.show(view, pinsOf(view));
   });
+  // The colour picked on the page (home.ts), now or before the model loaded.
+  document.addEventListener('bag:color', (event) => scene?.setColor((event as CustomEvent<string>).detail));
   section.addEventListener('parts:focus', (event) => {
     const detail = (event as CustomEvent<{ view: string; part: number }>).detail;
     const pin = pinSets.get(detail.view)?.[detail.part - 1]?.pin;
@@ -98,11 +100,15 @@ function setup(section: HTMLElement, stage: HTMLElement) {
     try {
       const { BagScene } = await import('../bag3d/scene');
       const instance = new BagScene(stage, { reducedMotion, small, onPins: placePins });
+      const picked = document.documentElement.dataset.bagColor;
+      if (picked) instance.setColor(picked);
       const visibility = new IntersectionObserver(([entry]) => instance.setVisible(entry.isIntersecting));
       visibility.observe(section);
       document.addEventListener('visibilitychange', () => instance.setVisible(!document.hidden));
       await instance.load((small ? stage.dataset.modelSmall : stage.dataset.model) ?? '', onProgress);
       scene = instance;
+      const latest = document.documentElement.dataset.bagColor; // picked while it loaded
+      if (latest) instance.setColor(latest);
       window.clearTimeout(slow);
       instance.show(view, pinsOf(view), true);
       stage.removeAttribute('data-pending');

@@ -118,25 +118,38 @@ function headerOverHero() {
   }).observe(hero);
 }
 
-// Colour picker, shown once more than one colour is on show: the pick is named beside the dots and
-// rides along to checkout on every buy link (?color=).
+// Colour pickers, shown once more than one colour is on show (in the hero and beside the 3D bag), all
+// moving together: the pick is named beside the dots, rides along to checkout on every buy link
+// (?color=), and turns the 3D bag that colour (bag3d.ts reads it from <html data-bag-color> and hears
+// 'bag:color', since the model may load after the pick).
 function colorPicker() {
-  const picker = document.querySelector<HTMLElement>('[data-color-picker]');
-  if (!picker) return;
-  const dots = [...picker.querySelectorAll<HTMLButtonElement>('[data-color]')];
-  const label = picker.querySelector<HTMLElement>('[data-color-label]');
-  const pick = (dot: HTMLButtonElement) => {
-    dots.forEach((other) => other.setAttribute('aria-checked', String(other === dot)));
-    if (label) label.textContent = dot.dataset.colorName ?? '';
+  const pickers = [...document.querySelectorAll<HTMLElement>('[data-color-picker]')];
+  if (!pickers.length) return;
+  const dots = pickers.flatMap((picker) => [...picker.querySelectorAll<HTMLButtonElement>('[data-color]')]);
+  const pick = (id: string) => {
+    let chosen: HTMLButtonElement | undefined;
+    dots.forEach((dot) => {
+      const on = dot.dataset.color === id;
+      dot.setAttribute('aria-checked', String(on));
+      if (on) chosen = dot;
+    });
+    if (!chosen) return;
+    pickers.forEach((picker) => {
+      const label = picker.querySelector<HTMLElement>('[data-color-label]');
+      if (label) label.textContent = chosen?.dataset.colorName ?? '';
+    });
     document.querySelectorAll<HTMLAnchorElement>('a[href*="/checkout/"]').forEach((link) => {
       const url = new URL(link.href);
-      url.searchParams.set('color', dot.dataset.color ?? '');
+      url.searchParams.set('color', id);
       link.href = url.pathname + url.search;
     });
+    const swatch = chosen.dataset.swatch ?? '';
+    document.documentElement.dataset.bagColor = swatch;
+    document.dispatchEvent(new CustomEvent('bag:color', { detail: swatch }));
   };
   const usable = dots.filter((dot) => dot.getAttribute('aria-disabled') !== 'true');
-  usable.forEach((dot) => dot.addEventListener('click', () => pick(dot)));
-  if (usable[0]) pick(usable[0]);
+  usable.forEach((dot) => dot.addEventListener('click', () => pick(dot.dataset.color ?? '')));
+  if (usable[0]) pick(usable[0].dataset.color ?? '');
 }
 
 // Lock demo: hold the sensor for half a second (the real lock's speed) and the light turns green.

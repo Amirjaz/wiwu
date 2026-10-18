@@ -87,6 +87,8 @@ class Color(models.Model):
     swatch = models.CharField('کد رنگ', max_length=7, default='#17181b', help_text='مثل #17181b، برای دایره‌ی رنگ در سایت')
     shown = models.BooleanField('نمایش در سایت', default=True)
     available = models.BooleanField('موجود', default=True)
+    photo = models.CharField('عکس', max_length=120, blank=True,
+                             help_text='عکس کیف در این رنگ، از پوشه‌ی تصاویر سایت، مثل images/colors/brown.webp')
     position = models.PositiveSmallIntegerField(default=0)
 
     class Meta:

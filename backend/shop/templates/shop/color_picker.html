@@ -1,0 +1,16 @@
+{% load shop_tags %}{% if colors|length > 1 %}
+{% comment %}
+The colour dots, shown once a second colour is on show in the panel: in the hero (on_photo, light on the
+dark photo) and beside the 3D bag. Every picker on the page moves together; the pick turns the 3D bag that
+colour and rides along to checkout (?color=, islands/home.ts).
+{% endcomment %}
+<div class="{{ classes }} flex items-center gap-3" role="radiogroup" aria-label="رنگ" data-color-picker>
+  {% for color in colors %}
+  <button type="button" role="radio" aria-checked="false" data-color="{{ color.id }}" data-color-name="{{ color.name }}" data-swatch="{{ color.swatch }}"{% if not color.available %} aria-disabled="true"{% endif %}
+          class="size-8 rounded-full ring-1 ring-offset-2 aria-checked:ring-2 aria-disabled:opacity-35 aria-disabled:cursor-not-allowed {% if on_photo %}ring-raised/40 ring-offset-transparent aria-checked:ring-raised{% else %}ring-ink/25 ring-offset-raised aria-checked:ring-ink{% endif %}" style="background: {{ color.swatch }}">
+    <span class="sr-only">{{ color.name }}{% if not color.available %}، ناموجود{% endif %}</span>
+  </button>
+  {% endfor %}
+  <span class="text-sm {% if on_photo %}text-raised/80{% else %}text-ink-soft{% endif %}" data-color-label aria-hidden="true"></span>
+</div>
+{% endif %}

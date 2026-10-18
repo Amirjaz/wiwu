@@ -103,6 +103,13 @@ function Checkout({ data }: { data: Data }) {
   const total = data.product.price_rial + shipping.price_rial;
 
   useEffect(() => saveDraft(form), [form]);
+  // The summary beside the form shows the bag in the picked colour (checkout.html, one photo per colour;
+  // the first until one is picked).
+  useEffect(() => {
+    const photos = [...document.querySelectorAll<HTMLElement>('[data-color-photo]')];
+    const shown = photos.find((photo) => Number(photo.dataset.colorPhoto) === form.color) ?? photos[0];
+    photos.forEach((photo) => (photo.hidden = photo !== shown));
+  }, [form.color]);
   useEffect(() => {
     if (resendIn <= 0) return;
     const id = window.setTimeout(() => setResendIn((s) => s - 1), 1000);

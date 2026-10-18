@@ -49,6 +49,31 @@ export const VIEWS: Record<string, Stop> = {
 
 const copy = (stop: Stop): Stop => ({ ...stop, target: [...stop.target] });
 
+const BLACK_LEATHER = new Color('#2b2c2f');
+const GUNMETAL = new Color('#4a4d52');
+// The zipper and far-end hardware on the coloured bags, where the photo's own metal doesn't show through.
+const SILVER = new Color('#8d9095');
+
+/** The texture's typical brightness (linear light): the median of a small copy, the empty atlas left out. */
+function medianLuminance(texture: Texture) {
+  const image = texture.image as CanvasImageSource | undefined;
+  if (!image) return 0.01;
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 64;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return 0.01;
+  ctx.drawImage(image, 0, 0, 64, 64);
+  const data = ctx.getImageData(0, 0, 64, 64).data;
+  const linear = (v: number) => ((v /= 255) <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+  const lums: number[] = [];
+  for (let i = 0; i < data.length; i += 4) {
+    const l = 0.2126 * linear(data[i]) + 0.7152 * linear(data[i + 1]) + 0.0722 * linear(data[i + 2]);
+    if (data[i + 3] > 0 && l > 0.0004) lums.push(l);
+  }
+  lums.sort((a, b) => a - b);
+  return lums.length ? Math.max(lums[lums.length >> 1], 0.002) : 0.01;
+}
+
 export class BagScene {
   private renderer: WebGLRenderer;
   private key!: DirectionalLight;
@@ -68,6 +93,13 @@ export class BagScene {
   private frame = 0;
   private onPins: (positions: (Vector2 | null)[]) => void;
   private resizeObserver: ResizeObserver;
+  // The colour: the model's own textured parts, and the shader's switch from the photo's colours to a tint
+  // (with the photo's typical brightness, so a tint keeps the photo's light and dark around it).
+  private parts: Record<string, MeshStandardMaterial> = {};
+  private tint = { value: 0 };
+  private photoLum = { value: 0.01 };
+  private swatch = '#17181b';
+  private zipperTape: MeshStandardMaterial | null = null;
 
   constructor(
     private container: HTMLElement,
@@ -127,34 +159,40 @@ export class BagScene {
     this.place(this.current);
   }
 
-  /** url: the .glb; its .json sidecar sits next to it. */
+  /** url: the .glb (its address may carry a ?v= version); its .json sidecar sits next to it. */
   async load(url: string, onProgress?: (fraction: number | null) => void): Promise<void> {
     const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
     const [gltf, info] = await Promise.all([
       loader.loadAsync(url, (event) => onProgress?.(event.lengthComputable ? event.loaded / event.total : null)),
-      fetch(url.replace(/[.]glb$/, '.json'))
+      fetch(url.replace(/[.]glb(?=$|[?])/, '.json'))
         .then((r) => (r.ok ? (r.json() as Promise<ModelInfo>) : null))
         .catch(() => null),
     ]);
-    // The colour is the photos', baked into one texture all parts share. The parts only differ in how
-    // they take the studio light; a faint grain makes highlights break up like on real pebbled PU.
+    // The colour is the photos' (of the black bag), baked into one texture all parts share. The parts only
+    // differ in how they take the studio light; a faint grain makes highlights break up like on real
+    // pebbled PU. Another colour tints the texture (setColor).
     let photo: Texture | null = null;
     gltf.scene.traverse((node) => {
       if (!photo && node instanceof Mesh) photo = (node.material as MeshStandardMaterial).map;
     });
+    if (photo) this.photoLum.value = medianLuminance(photo);
     const grain = pebbleNormalMap(this.options.small ? 256 : 512);
     const repeat = info?.grainRepeat ?? 10;
     grain.repeat.set(repeat, repeat);
-    const materials: Record<string, Material> = {
-      leather: new MeshPhysicalMaterial({
-        map: photo, roughness: 0.62, normalMap: grain, normalScale: new Vector2(0.16, 0.16),
-        clearcoat: 0.12, clearcoatRoughness: 0.6,
-      }),
-      front: new MeshStandardMaterial({ map: photo, roughness: 0.82 }), // smooth matte panel
-      tape: new MeshStandardMaterial({ map: photo, roughness: 0.85 }),
-      teeth: new MeshStandardMaterial({ map: photo, metalness: 0.2, roughness: 0.45 }),
-      metal: new MeshStandardMaterial({ map: photo, metalness: 0.2, roughness: 0.36 }),
+    const leather = this.tinted(new MeshPhysicalMaterial({
+      map: photo, roughness: 0.62, normalMap: grain, normalScale: new Vector2(0.16, 0.16),
+      clearcoat: 0.12, clearcoatRoughness: 0.6,
+    }));
+    const materials: Record<string, MeshStandardMaterial> = {
+      leather,
+      // The front is the same pebbled PU as the rest (the maker's photos; the client's front photo was
+      // too soft to show the grain, so it used to be a smooth panel).
+      front: leather,
+      tape: this.tinted(new MeshStandardMaterial({ map: photo, roughness: 0.85 })),
+      teeth: this.tinted(new MeshStandardMaterial({ map: photo, metalness: 0.2, roughness: 0.45 })),
+      metal: this.tinted(new MeshStandardMaterial({ map: photo, metalness: 0.2, roughness: 0.36 })),
     };
+    this.parts = materials;
     gltf.scene.traverse((node) => {
       if (node instanceof Mesh) {
         const part = materials[node.name] ? node.name : node.parent?.name ?? '';
@@ -165,6 +203,7 @@ export class BagScene {
     });
     this.scene.add(gltf.scene);
     if (info?.details) this.addDetails(info.details);
+    this.setColor(this.swatch);
     this.renderer.render(this.scene, this.camera);
     this.renderer.domElement.classList.remove('opacity-0');
     this.start();
@@ -202,9 +241,58 @@ export class BagScene {
     lock.group.add(glow);
     this.scene.add(lock.group);
 
-    const tape = new MeshStandardMaterial({ color: '#141518', roughness: 0.95 });
+    const tape = (this.zipperTape = new MeshStandardMaterial({ color: '#141518', roughness: 0.95 }));
     this.scene.add(buildZipper(details.zipper, tape));
     this.scene.add(buildFarEnd(details.farEnd));
+  }
+
+  /** The bag in a colour (its swatch from the panel, #rrggbb). The photos are of the black bag: black
+   *  keeps them as they are. Any other colour tints the leather by the photo's own light and dark (its
+   *  grain, seams and shading stay), the zipper tape a darker shade of it, and the hardware silver, as on
+   *  the maker's photos of the brown and silver-white bags. */
+  setColor(swatch: string) {
+    this.swatch = swatch;
+    const color = new Color(swatch);
+    const black = color.r * 0.2126 + color.g * 0.7152 + color.b * 0.0722 < 0.03; // linear light
+    this.tint.value = 1;
+    const { leather, tape, teeth, metal } = this.parts;
+    if (!leather) return; // set again once the model is in (load)
+    leather.color.copy(black ? BLACK_LEATHER : color);
+    tape.color.copy(black ? new Color('#16171a') : color.clone().multiplyScalar(0.18));
+    teeth.color.copy(black ? GUNMETAL : SILVER);
+    metal.color.copy(black ? GUNMETAL : SILVER);
+    // The modelled parts (lock, zipper, far end) carry their two looks (details.ts).
+    this.scene.traverse((node) => {
+      if (!(node instanceof Mesh)) return;
+      const finish = (node.material as Material).userData.finish as { black: string; light: string } | undefined;
+      if (finish) (node.material as MeshStandardMaterial).color.set(black ? finish.black : finish.light);
+    });
+    if (this.zipperTape) this.zipperTape.color.copy(black ? new Color('#141518') : color.clone().multiplyScalar(0.18));
+  }
+
+  /** A material whose texture can be swapped for a tint of it: the photo's brightness relative to its
+   *  usual, times the material's colour (setColor). With the tint off it's the material as three.js has it. */
+  private tinted<T extends MeshStandardMaterial>(material: T): T {
+    material.onBeforeCompile = (shader) => {
+      shader.uniforms.uTint = this.tint;
+      shader.uniforms.uPhotoLum = this.photoLum;
+      shader.fragmentShader = shader.fragmentShader
+        .replace('#include <common>', '#include <common>\nuniform float uTint;\nuniform float uPhotoLum;')
+        .replace('#include <map_fragment>', `#ifdef USE_MAP
+  vec4 sampledDiffuseColor = texture2D( map, vMapUv );
+  float ratio = dot( sampledDiffuseColor.rgb, vec3( 0.2126, 0.7152, 0.0722 ) ) / uPhotoLum;
+  // Softened: the photo's lighting reads much stronger on a light leather than on the black it was taken on.
+  vec3 tinted = diffuseColor.rgb * clamp( pow( ratio, 0.55 ), 0.72, 1.2 );
+  // Far brighter than the leather in the photo: the metal (the brand plate, the zipper), which keeps
+  // the photo's own colour on every bag.
+  vec3 metal = sampledDiffuseColor.rgb * 1.3;
+  vec3 recoloured = mix( tinted, metal, smoothstep( 3.0, 6.0, ratio ) );
+  diffuseColor.rgb = mix( diffuseColor.rgb * sampledDiffuseColor.rgb, recoloured, uTint );
+  diffuseColor.a *= sampledDiffuseColor.a;
+#endif`);
+    };
+    material.customProgramCacheKey = () => 'bag-tinted';
+    return material;
   }
 
   /** Turn to a side (a key of VIEWS) and show its pins. `instant`: be there at once (the first view). */

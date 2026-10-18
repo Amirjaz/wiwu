@@ -11,10 +11,10 @@ from shop.models import Card, Faq, Page, Product, StoreSettings
 
 PRODUCT = {
     'slug': 'alpha',
-    'name': 'کیف دستی آلفا با قفل اثر انگشت',
+    'name': 'کیف دستی ویوو آلفا با قفل اثر انگشت',
     'subtitle': 'کیف دستی WiWU Alpha؛ فقط با اثر انگشت شما باز می‌شود.',
     'description': (
-        'آلفا کیف دستی جمع‌وجوری است برای چیزهایی که نباید دست کسی بیفتد: کارت‌ها، مدارک، گوشی و پاوربانک. '
+        'ویوو آلفا کیف دستی جمع‌وجوری است برای چیزهایی که نباید دست کسی بیفتد: کارت‌ها، مدارک، گوشی و پاوربانک. '
         'زیپ اصلی با قفل اثر انگشت بسته می‌ماند و با لمس انگشت شما در کسری از ثانیه باز می‌شود.\n\n'
         'بدنه از چرم مصنوعی PU است که در برابر آب و خط و خش مقاوم است و آستر داخلی میکروفایبر دارد. '
         'پشت کیف یک جیب زیپ‌دار برای دم‌دستی‌ها و یک بند مچی با دکمه فلزی دارد.'
@@ -27,12 +27,17 @@ PRODUCT = {
         ['جنس بدنه', 'چرم مصنوعی PU، مقاوم در برابر آب و خط و خش'],
         ['آستر', 'میکروفایبر'],
         ['ابعاد', 'حدود ۲۵ × ۱۵٫۵ × ۶٫۵ سانتی‌متر'],
-        ['رنگ', 'مشکی'],
+        ['رنگ', 'مشکی، قهوه‌ای، سفید'],
         ['جیب‌ها', 'جیب زیپ‌دار پشت، جای کارت و مدارک در داخل'],
         ['بند', 'بند مچی با دکمه فلزی'],
-        ['برند', 'WiWU (وارداتی)'],
+        ['برند', 'ویوو (WiWU)، وارداتی'],
     ],
 }
+
+# Black, brown and silver-white; the swatches are the leather's colour on the maker's photos (the 3D bag
+# takes its tint from them), with each colour's photo (tools/studio_images.py).
+COLORS = [('مشکی', '#17181b', 'images/colors/black.webp'), ('قهوه‌ای', '#b9683f', 'images/colors/brown.webp'),
+          ('سفید', '#b6babf', 'images/colors/white.webp')]
 
 FAQS = [
     ('پرداخت چطور انجام می‌شود؟',
@@ -62,7 +67,7 @@ FAQS = [
 
 PAGES = [
     ('about', 'درباره ما',
-     '[نام فروشگاه] فروشگاه اینترنتی کیف دستی آلفا با قفل اثر انگشت است. ما همین یک کالا را می‌فروشیم و همه '
+     '[نام فروشگاه] فروشگاه اینترنتی کیف دستی ویوو آلفا با قفل اثر انگشت است. ما همین یک کالا را می‌فروشیم و همه '
      'توجه‌مان روی همین است: کالای سالم، ارسال سریع و پاسخ‌گویی روشن.\n\n'
      '## تماس با ما\n'
      'نشانی، تلفن و ایمیل فروشگاه در پایین همه صفحه‌ها آمده است. [ساعات پاسخ‌گویی را کارفرما تعیین کند.]'),
@@ -125,8 +130,9 @@ class Command(BaseCommand):
         product, created = Product.objects.get_or_create(slug=PRODUCT['slug'], defaults=PRODUCT)
         self.stdout.write(f'Product: {"added" if created else "kept"} {product.name}')
         if not product.colors.exists():
-            product.colors.create(name='مشکی', swatch='#17181b')
-            self.stdout.write('Color: added black')
+            for position, (name, swatch, photo) in enumerate(COLORS):
+                product.colors.create(name=name, swatch=swatch, photo=photo, position=position)
+            self.stdout.write(f'Color: added {len(COLORS)}')
         if not Faq.objects.exists():
             for i, (question, answer) in enumerate(FAQS):
                 Faq.objects.create(question=question, answer=answer, position=i)

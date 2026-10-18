@@ -28,6 +28,11 @@ written down anywhere else.
     in use, one at a time over the whole first screen as a campaign page (text at the bottom, the photos
     as thumbnails); the parts section shows the 3D bag with a tab per side and numbered pins.
     Supersedes the 3D-only hero.
+  - **WiWU, three colours, a better 3D bag** (2026-10-19, not deployed): the bag is named «کیف دستی ویوو
+    آلفا» (brand WiWU in the specs and search data); brown and silver-white («سفید», Amir's word for the
+    silver-grey one) are on sale next to black (migration 0003); the 3D bag turns the picked colour; its
+    front is taut and pebbled; WiWU's own studio photos (found on resellers' pages) replace the client's
+    phone photos on the site, with a photo per colour at checkout.
 - **Checks:** `manage.py test shop` runs 43 tests and they pass; `npx tsc --noEmit` and `npm run build`
   pass. Desktop and phone were checked in headless Edge (`tools/dev/`).
 - **Repo:** one branch, `main`, and **no remote**. The repo exists only in `E:\Work\Nisatech\PurseShop`
@@ -45,9 +50,9 @@ written down anywhere else.
 1. **Tripling the new Plane times.** NISA-70 to 73 are at measured times. He had every earlier
    PurseShop "Spent" tripled (on 2026-10-16, and NISA-75, 76 and the 2026-10-18 redeploy on
    2026-10-18). Ask whether these get the same.
-2. **Colours:** which colours, and their photos. Until then only black is shown.
-   - All colours are assumed to cost the same; he hasn't confirmed that.
-   - With photos, the 3D and the hero photos should switch per colour (not built).
+2. **Colours:** black, brown and silver-white are all on sale (his call, 2026-10-19), at one price
+   (assumed; not confirmed). Stock per colour is the owner's to set in the panel. The hero's lifestyle
+   photos show only the black bag.
 3. **ArvanCloud cache rule for `/models/*`** (his Arvan panel): cache everything, 7 days. Today the 3D
    model bypasses Arvan's cache, so every visitor downloads it from our server (LOADTEST.md).
 4. **Staff panel account:**
@@ -174,12 +179,14 @@ extension, or `npm i patchright` and change the two lines that load it.
 
 What would make the model exact:
 
-- photos of the **bottom** and the **far end**: no photo shows them, so they are plain leather now;
-- a sharp **close-up of the lock**: today it is traced from about 125 px;
-- a sharper **front**.
+- photos of the **bottom** and the **far end**: no photo shows them, so they are plain leather now
+  (WiWU's studio set in `media/source-photos/wiwu/` doesn't either);
+- the lock traced from WiWU's sharp lock-end shot (`black-lock-end.webp`, about 500 px tall) instead of
+  the client's (about 125 px): a camera for it (`KEYPOINTS`/`START`) and `MODULE` traced again;
+- the studio front and back as cameras too, for a sharper texture. Today the texture is still from the
+  client's photos; the colours are tints of it (README, *The hero and the 3D bag*).
 
-Ask for daylight, the phone at the bag's height, and the whole side in frame. Photos of the other
-colours are a separate need (*Waiting on Amir*).
+Ask for daylight, the phone at the bag's height, and the whole side in frame.
 
 **Setup**
 
