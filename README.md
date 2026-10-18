@@ -87,13 +87,27 @@ add them to a group. Sign-in lasts two weeks, 10 attempts per 15 minutes per add
 ## The 3D hero (`frontend/src/hero/`, `frontend/src/islands/hero.ts`, `tools/build_model.py`)
 
 The home page opens with a tour: the bag stays pinned (beside the text on desktop, on top on phones),
-with a switcher for its five views under it, while five stops scroll past: the hero, the lock, the back pocket, the wrist strap, the leather. Each
-stop has a photo, so it all works without 3D. After the page has loaded, devices with WebGL2 (and
-no data saver, 2 GB+ memory) get the 3D bag instead: plain three.js, loaded as a separate chunk
-(170 KB gzipped) plus the model (`public/models/alpha.glb` 720 KB, `alpha-mobile.glb` 300 KB).
-At the hero people can drag it (sideways on phones; vertical swipes still scroll) and open three
+with a switcher for its five views under it, while five stops scroll past: the hero, the lock, the
+back pocket, the wrist strap, the leather.
+
+Devices with WebGL2 (and no data saver, 2 GB+ memory) show only the 3D bag: plain three.js, loaded as
+a separate chunk (170 KB gzipped), plus the model (`public/models/alpha.glb` 720 KB,
+`alpha-mobile.glb` 300 KB).
+
+- **While it loads:** a script in the page head marks those devices (`html.three-d`), so the stop
+  photos stay hidden from the first paint, and a thin line shows the download.
+- **The photos are the backup.** They show on devices without the 3D, and when it fails or takes over
+  6 s. If the script never runs at all, CSS brings them back after 8 s.
+
+At the hero people can drag the bag (sideways on phones; vertical swipes still scroll) and open three
 hotspots (text in `views.HOTSPOTS`); further down the camera moves to each stop. The fingerprint
-sensor's light turns green at the lock stop. Reduced motion: no turning by itself, no camera glides.
+sensor's light turns green at the lock stop.
+
+- **No zoom:** the mouse wheel scrolls the page.
+- **No fade at the canvas edge:** it read as a white ring.
+- **Framing:** each stop's `frame` keeps the bag and its shadow inside the stage.
+- **Photos:** the hero photos have no drop shadow.
+- **Reduced motion:** no turning by itself, no camera glides.
 
 The model is built from the client's three photos, checked against them view by view:
 

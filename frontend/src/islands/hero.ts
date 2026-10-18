@@ -1,9 +1,12 @@
-// The product tour on the home page. Each text stop ([data-stop]) has a photo ([data-poster]) that
-// fades in when the stop reaches the middle of the screen, so the tour works everywhere. On devices
-// that can take it, the 3D bag (hero/scene.ts) replaces the photos once the page has loaded: it
-// turns to each stop, and at the first one people can drag it and open the hotspots.
+// The product tour on the home page. On devices that can take it the stage shows only the 3D bag
+// (hero/scene.ts): it turns to each text stop ([data-stop]) as it comes into view, and at the first
+// one people can drag it and open the hotspots. Each stop also has a photo ([data-poster]), the backup:
+// shown where the 3D can't run, and where it fails or takes longer than PHOTO_DELAY. Until then a thin
+// line shows the model loading. html.three-d (set in home.html's head, by the same test as
+// canRender3d) keeps the photos hidden from the first paint (site.css).
 import type { HeroScene } from '../hero/scene';
 
+const PHOTO_DELAY = 6000;
 const stage = document.querySelector<HTMLElement>('[data-hero-stage]');
 const stops = [...document.querySelectorAll<HTMLElement>('[data-stop]')];
 
@@ -94,7 +97,23 @@ function setup(stage: HTMLElement) {
   // The hint has done its job once someone touches the bag.
   stage.addEventListener('pointerdown', () => hint?.remove(), { once: true });
 
-  if (!canRender3d()) return;
+  const loading = stage.querySelector<HTMLElement>('[data-hero-loading]');
+  const progress = loading?.querySelector<HTMLElement>('[data-hero-progress]');
+  const showPhotos = () => {
+    stage.setAttribute('data-photos', '');
+    loading?.remove();
+  };
+
+  if (!canRender3d()) {
+    showPhotos();
+    return;
+  }
+  const slow = window.setTimeout(showPhotos, PHOTO_DELAY);
+  const onProgress = (fraction: number | null) => {
+    if (!loading || !progress || fraction === null) return;
+    loading.setAttribute('data-known', '');
+    progress.style.transform = `scaleX(${fraction})`;
+  };
 
   const load3d = async () => {
     try {
@@ -103,24 +122,27 @@ function setup(stage: HTMLElement) {
       const visibility = new IntersectionObserver(([entry]) => instance.setVisible(entry.isIntersecting));
       visibility.observe(stage.closest('section') ?? stage);
       document.addEventListener('visibilitychange', () => instance.setVisible(!document.hidden));
-      await instance.load((small ? stage.dataset.modelSmall : stage.dataset.model) ?? '');
+      await instance.load((small ? stage.dataset.modelSmall : stage.dataset.model) ?? '', onProgress);
       scene = instance;
+      window.clearTimeout(slow);
+      stage.setAttribute('data-3d', '');
+      loading?.remove();
       if (import.meta.env.DEV) (window as unknown as { __hero: HeroScene }).__hero = instance;
       instance.goTo(active);
       showPoster(active);
       hotspotLayer?.classList.remove('hidden');
       hint?.classList.remove('hidden');
     } catch (error) {
-      // The photos stay; the page works the same without the 3D.
+      // The photos take over; the page works the same without the 3D.
+      window.clearTimeout(slow);
+      showPhotos();
       console.warn('3D hero unavailable', error);
     }
   };
 
-  // After everything the page needs: the model is a nice-to-have, never in the way of buying.
-  const whenIdle = () =>
-    'requestIdleCallback' in window ? requestIdleCallback(() => load3d(), { timeout: 2500 }) : setTimeout(load3d, 600);
-  if (document.readyState === 'complete') whenIdle();
-  else window.addEventListener('load', whenIdle, { once: true });
+  // Right away: on these devices the 3D is what the first screen shows. (The buy button and the text
+  // don't wait for it.)
+  load3d();
 }
 
 if (stage && stops.length) setup(stage);

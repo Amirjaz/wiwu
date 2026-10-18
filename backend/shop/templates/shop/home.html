@@ -8,6 +8,20 @@
 {% block og_type %}product{% endblock %}
 {% block vite %}{% vite 'src/site.ts' 'src/islands/hero.ts' 'src/islands/home.ts' %}{% endblock %}
 {% block head %}
+{# Devices that will show the 3D bag (the same test as islands/hero.ts) keep the hero photos hidden while it loads. #}
+<script>
+(function () {
+  try {
+    var nav = navigator, connection = nav.connection;
+    if ((connection && connection.saveData) || (nav.deviceMemory !== undefined && nav.deviceMemory < 2)) return;
+    var gl = document.createElement('canvas').getContext('webgl2');
+    if (!gl) return;
+    document.documentElement.classList.add('three-d');
+    var lose = gl.getExtension('WEBGL_lose_context');
+    if (lose) lose.loseContext();
+  } catch (error) {}
+})();
+</script>
 <link rel="preload" as="image" href="{% asset 'images/front.webp' %}" fetchpriority="high">
 {% for item in jsonld %}<script type="application/ld+json">{{ item|jsonld }}</script>{% endfor %}
 {% endblock %}
@@ -23,11 +37,15 @@ in view turns the 3D bag (islands/hero.ts) and lights its tab; each stop has a p
   <div class="md:order-last md:sticky md:top-16 z-10 h-[min(50svh,440px)] md:h-[calc(100dvh-4rem)] md:self-start bg-page flex flex-col overflow-x-clip">
     <div data-hero-stage data-model="{% asset 'models/alpha.glb' %}" data-model-small="{% asset 'models/alpha-mobile.glb' %}" class="relative flex-1 min-h-0 rise" style="--i:1">
       <img data-poster="0" src="{% asset 'images/front.webp' %}" alt="کیف دستی آلفا از روبه‌رو، مشکی با زیپ فلزی و پلاک کوچک برند" width="844" height="540" fetchpriority="high"
-           class="absolute inset-0 m-auto max-h-full max-w-full object-contain p-3 md:p-6 transition-opacity duration-500 drop-shadow-[0_26px_30px_rgba(36,40,48,0.28)]">
+           class="absolute inset-0 m-auto max-h-full max-w-full object-contain p-3 md:p-6 transition-opacity duration-500">
       <img data-poster="1" src="{% asset 'images/side.webp' %}" alt="کنار کیف با ماژول قفل اثر انگشت" width="422" height="757" loading="lazy"
-           class="absolute inset-0 m-auto max-h-full max-w-full object-contain p-6 md:p-16 opacity-0 transition-opacity duration-500 drop-shadow-[0_22px_26px_rgba(36,40,48,0.26)]">
+           class="absolute inset-0 m-auto max-h-full max-w-full object-contain p-6 md:p-16 opacity-0 transition-opacity duration-500">
       <img data-poster="2 3 4" src="{% asset 'images/back.webp' %}" alt="پشت کیف با جیب زیپ‌دار و بند مچی" width="897" height="642" loading="lazy"
-           class="absolute inset-0 m-auto max-h-full max-w-full object-contain p-6 md:p-10 opacity-0 transition-opacity duration-500 drop-shadow-[0_22px_26px_rgba(36,40,48,0.26)]">
+           class="absolute inset-0 m-auto max-h-full max-w-full object-contain p-6 md:p-10 opacity-0 transition-opacity duration-500">
+      <div data-hero-loading class="absolute inset-0 flex-col items-center justify-center gap-3 pointer-events-none" aria-hidden="true">
+        <span class="relative block h-0.5 w-28 overflow-hidden rounded-full bg-line-strong/50"><span data-hero-progress class="hero-progress absolute inset-y-0 start-0 w-full bg-ink"></span></span>
+        <span class="font-mono text-xs text-muted">در حال آماده شدن سه‌بعدی</span>
+      </div>
       <div data-hotspots class="hidden absolute inset-0 z-10 pointer-events-none transition-opacity duration-300">
         {% for id, label, note in hotspots %}
         <button type="button" data-hotspot="{{ id }}" aria-expanded="false" hidden

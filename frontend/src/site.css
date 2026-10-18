@@ -385,6 +385,31 @@
       0 0 30px 6px color-mix(in srgb, var(--color-signal) 45%, transparent);
   }
 
+  /* The hero stage where the 3D is coming (html.three-d): the photos wait hidden behind a loading line,
+     and come out only if hero.ts gives up on the 3D ([data-photos]), or, if the script never runs at all,
+     after 8 s. [data-3d]: the bag has loaded. */
+  .three-d [data-hero-stage]:not([data-photos], [data-3d]) [data-poster] {
+    visibility: hidden;
+    animation: hero-backup 0s 8s forwards;
+  }
+  [data-hero-loading] {
+    display: none;
+  }
+  .three-d [data-hero-stage]:not([data-photos], [data-3d]) [data-hero-loading] {
+    display: flex;
+    animation: hero-loading-out 0s 8s forwards;
+  }
+  .hero-progress {
+    transform-origin: right;
+    transform: scaleX(0);
+    transition: transform 0.2s linear;
+  }
+  [data-hero-loading]:not([data-known]) .hero-progress {
+    width: 35%;
+    transform: none;
+    animation: hero-indeterminate 1.1s ease-in-out infinite;
+  }
+
   /* Phones: the tour's stops as cards in a row under the bag, swiped sideways, the next one peeking in.
      (Desktop lays them out one under the other beside the pinned bag.) */
   @media (width < 48rem) {
@@ -519,6 +544,33 @@
   }
   to {
     clip-path: inset(-60px);
+  }
+}
+
+@keyframes hero-backup {
+  to {
+    visibility: visible;
+  }
+}
+
+@keyframes hero-loading-out {
+  to {
+    visibility: hidden;
+  }
+}
+
+@keyframes hero-indeterminate {
+  from {
+    translate: 100% 0;
+  }
+  to {
+    translate: -300% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-hero-loading]:not([data-known]) .hero-progress {
+    animation: none;
   }
 }
 

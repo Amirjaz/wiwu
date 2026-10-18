@@ -41,10 +41,11 @@ const DEG = Math.PI / 180;
 export const STOPS: Stop[] = [
   { az: -50, el: 14, dist: 0.3, frame: 0.27, target: [0, 0.072, 0] }, // the hero: front and the lock end
   { az: -80, el: 8, dist: 0.3, frame: 0.15, target: [-0.1, 0.06, 0] }, // the lock
-  { az: 194, el: 12, dist: 0.3, frame: 0.28, target: [0, 0.08, 0] }, // the back pocket
+  { az: 194, el: 12, dist: 0.3, frame: 0.36, target: [0.012, 0.075, 0] }, // the back pocket, with room for its shadow
   { az: 160, el: 22, dist: 0.3, frame: 0.26, target: [-0.01, 0.05, -0.02] }, // the wrist strap
-  // The leather close-up is on the back: its photo shows the pebbled grain sharply (the front's is soft).
-  { az: 208, el: 26, dist: 0.24, frame: 0.17, target: [0.03, 0.095, -0.02] }, // the leather, in raking light
+  // The leather is shown on the back: its photo has the pebbled grain sharply (the front's is soft). The
+  // whole back stays in frame: closer, the bag ran past the stage's edges (no edge fade since 2026-10-18).
+  { az: 208, el: 24, dist: 0.36, frame: 0.34, target: [-0.008, 0.08, -0.01] }, // the leather, in raking light
 ];
 
 export const HOTSPOTS: Hotspot[] = [
@@ -88,10 +89,7 @@ export class HeroScene {
     const canvas = this.renderer.domElement;
     canvas.className = 'absolute inset-0 size-full opacity-0 transition-opacity duration-700';
     canvas.setAttribute('aria-hidden', 'true');
-    // Fade the canvas out at its edges: a close-up or a long shadow never ends in a hard line.
-    const fade = 'radial-gradient(ellipse 50% 50% at 50% 50%, #000 80%, transparent 100%)';
-    canvas.style.maskImage = fade;
-    canvas.style.webkitMaskImage = fade;
+    // No mask at the edges: an elliptical fade read as a white ring around the bag (removed 2026-10-18).
     container.appendChild(canvas);
 
     const pmrem = new PMREMGenerator(this.renderer);
@@ -121,9 +119,11 @@ export class HeroScene {
       minDistance: 0.28, maxDistance: 0.85, minPolarAngle: 20 * DEG, maxPolarAngle: 88 * DEG,
       autoRotate: !options.reducedMotion, autoRotateSpeed: -0.6,
     });
-    // Vertical swipes keep scrolling the page; sideways ones turn the bag. No pinch-zoom on phones.
+    // Vertical swipes keep scrolling the page; sideways ones turn the bag. No zoom anywhere: the mouse
+    // wheel over the bag scrolls the page like everywhere else (zooming in had pushed the bag past the
+    // stage's edges).
     canvas.style.touchAction = 'pan-y';
-    this.controls.enableZoom = !options.small;
+    this.controls.enableZoom = false;
     this.controls.enabled = false;
     this.controls.addEventListener('start', () => (this.controls.autoRotate = false));
 
@@ -134,10 +134,10 @@ export class HeroScene {
   }
 
   /** url: the .glb; its .json sidecar sits next to it. */
-  async load(url: string): Promise<void> {
+  async load(url: string, onProgress?: (fraction: number | null) => void): Promise<void> {
     const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
     const [gltf, info] = await Promise.all([
-      loader.loadAsync(url),
+      loader.loadAsync(url, (event) => onProgress?.(event.lengthComputable ? event.loaded / event.total : null)),
       fetch(url.replace(/[.]glb$/, '.json'))
         .then((r) => (r.ok ? (r.json() as Promise<ModelInfo>) : null))
         .catch(() => null),
