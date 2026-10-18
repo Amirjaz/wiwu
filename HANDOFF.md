@@ -39,6 +39,9 @@ written down anywhere else.
     2026-10-16 review round; the server runs 2f9ceb7).
   - These are Amir's figures: on 2026-10-16 he had every PurseShop Spent tripled (23h15m in all). Ask
     him whether new PurseShop items get the same.
+  - NISA-70: load test of the live server, page cache (30m, measured).
+  - NISA-71: colours (30m, measured).
+  - NISA-72: phone layout (15m, measured).
 
 ## Next, in order
 
