@@ -39,7 +39,7 @@ still sets the order of work (see *Phases*).
 | Lock video | **None from the client** | Maker media may fill the gap (next row). |
 | Maker info | **Find WiWU's listing; use specs and their media** | Using their media is a gray area for an unofficial reseller. The client accepts that. |
 | Material copy | **Say what it is**: PU (artificial) leather, water- and scratch-resistant | Never «چرم طبیعی». |
-| Logo plate on the model | **Keep it** (it's the real product) | Repaint it from the photo if the AI smears it. |
+| Logo plate on the model | **Keep it** (it's the real product) | Modelled since 2026-10-19 with WiWU's emblem and name, so the 3D bag reads as WiWU (README, step 5 of the 3D bag). |
 
 ## 2. The product (from retailer listings; confirm with the client)
 

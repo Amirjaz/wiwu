@@ -1,13 +1,15 @@
 // The bag's detailed parts, modelled here from measurements of the photos (tools/details.py, stored in
-// the model's .json): the fingerprint lock module, the zipper (tape and teeth) and the far end's ring and
-// pull tab. The AI shape blurs these and the photos have too few pixels for them up close, so they are
-// built as real geometry with real materials. All positions are in metres, in the model's frame.
+// the model's .json): the fingerprint lock module, the zipper (tape and teeth), the far end's ring and
+// pull tab, and the brand plate. The AI shape blurs these and the photos have too few pixels for them up
+// close, so they are built as real geometry with real materials. All positions are in metres, in the
+// model's frame.
 import {
   BufferAttribute, BufferGeometry, CatmullRomCurve3, Color, DoubleSide, ExtrudeGeometry, Group, InstancedMesh, Matrix4, Mesh,
   MeshPhysicalMaterial, MeshStandardMaterial, Path, Quaternion, Shape, TorusGeometry, Vector2, Vector3,
   type Material,
 } from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
+import { plateFace } from './logo';
 
 type V3 = [number, number, number];
 type Rect = [number, number, number, number]; // u0, v0, u1, v1 in the module's plane
@@ -19,6 +21,8 @@ export interface Details {
   };
   zipper: { points: V3[]; normals: V3[] };
   farEnd: { ring: V3; tab_root: V3; tab_tip: V3 };
+  /** The brand plate: its face's centre and plane (u along the bag, v up), width and height. */
+  plate?: { origin: V3; u: V3; v: V3; n: V3; size: [number, number]; thickness: number };
 }
 
 /** A part's two looks (scene.ts setColor): satin gunmetal on the black bag, as on the maker's side photo
@@ -139,6 +143,36 @@ export function buildLock(d: Details['module']) {
     }
   });
   return { group, light };
+}
+
+/** The brand plate on the front: a square of dark satin metal with WiWU's emblem and name raised on its
+ *  face (logo.ts), and a bright chamfer round it. Dark on every colour, as on the maker's photos of all
+ *  three. `resolution`: the face's texture size in pixels. */
+export function buildPlate(d: NonNullable<Details['plate']>, resolution: number, anisotropy: number) {
+  const group = new Group();
+  const basis = new Matrix4().makeBasis(new Vector3(...d.u), new Vector3(...d.v), new Vector3(...d.n));
+  group.quaternion.setFromRotationMatrix(basis);
+  group.position.set(...d.origin);
+
+  const [w, h] = d.size;
+  const bevel = Math.min(0.0003, d.thickness / 3);
+  const outline = roundedRect(new Shape(), -w / 2 + bevel, -h / 2 + bevel, w / 2 - bevel, h / 2 - bevel, 0.0004) as Shape;
+  const { map, normalMap, roughnessMap } = plateFace(resolution, anisotropy);
+  // The face's UVs are the outline's own coordinates (metres): the textures span the plate's whole square.
+  for (const texture of [map, normalMap, roughnessMap]) {
+    texture.repeat.set(1 / w, 1 / h);
+    texture.offset.set(0.5, 0.5);
+  }
+  // Satin, half metallic: a mirror-like face goes black where it reflects the studio's dark side, and the
+  // plate reads mid-grey from every side on the maker's photos.
+  const face = new MeshPhysicalMaterial({ color: '#84878c', metalness: 0.5, roughness: 1, map, normalMap, roughnessMap });
+  const edge = new MeshPhysicalMaterial({ color: '#979a9f', metalness: 0.7, roughness: 0.3 });
+  const plate = new Mesh(slab(outline, d.thickness - bevel, bevel), [face, edge]); // the faces, the sides
+  plate.position.z = -d.thickness;
+  plate.castShadow = true;
+  plate.receiveShadow = true;
+  group.add(plate);
+  return group;
 }
 
 /** Arc-length lookup along the zipper's centre line. */

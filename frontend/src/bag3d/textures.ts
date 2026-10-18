@@ -9,7 +9,7 @@ function hash(x: number, y: number, seed: number): number {
 }
 
 /** Height field → tangent-space normal map (wrapping at the edges, so it tiles). */
-function toNormalMap(height: Float32Array, size: number, strength: number): Texture {
+export function toNormalMap(height: Float32Array, size: number, strength: number): Texture {
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = size;
   const ctx = canvas.getContext('2d')!;

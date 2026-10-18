@@ -10,6 +10,9 @@ instead of relying on the AI shape (which blurs them) and the photos' pixels (to
 - The zipper: its centre line along the shape's seam, from the lock module's cap, over the top, down
   the far end to the pull tab; resampled every millimetre with the surface normal.
 - The far end's ring and pull tab (front and back photos both show them): triangulated.
+- The brand plate (front photo): its corners projected through the fitted camera onto the leather
+  around it, moved out by the plate's thickness. build_model.py measures it on the finished front
+  (logo_plate), since pulling the front taut moves the leather under it.
 All results are in the shape's coordinates (fitted proportions); build_model.py converts them.
 """
 import json
@@ -45,6 +48,9 @@ FAR_END = {
     'tab_tip': ((953, 634), (12, 580)),
 }
 FAR_FACE_X = 0.925  # where the tab enters the far end (shape units)
+# The brand plate's corners in the front photo, clockwise from the top left, traced at 6x zoom.
+PLATE = [(762.5, 827.5), (818.5, 819.5), (826, 873), (770, 882.5)]
+PLATE_THICKNESS = 0.007  # shape units (~0.9 mm)
 
 
 def cameras():
@@ -125,6 +131,44 @@ def lock_module(mesh, cam):
         'capSides': [plane((MODULE['cap_sides'][0], 740))[0], plane((MODULE['cap_sides'][1], 740))[0]],
         'slot': rect(MODULE['slot']), 'latch': rect(MODULE['latch']), 'led': rect(MODULE['led']),
         'frame': rect(MODULE['frame']), 'glass': rect(MODULE['glass']),
+    }
+
+
+def logo_plate(mesh, cam):
+    """The brand plate's face: its centre, plane (u along the bag, v up, n out) and size. The plane is
+    fitted to the leather under and just around the plate; the plate is taken square to the bag (the
+    photo's slight tilt is the camera fit's, not the plate's)."""
+    corners = np.array(PLATE, np.float32)
+    o, d = ray(cam, corners.mean(0))
+    on_plate = fc.raycast(mesh, o, d)
+    v = mesh.vertices
+    close = np.nonzero((np.linalg.norm(v - on_plate, axis=1) < 0.2) & ((v - on_plate) @ (cam['eye'] - on_plate) > -0.05))[0]
+    cam_v = v[close] @ cam['R'].T + cam['t']
+    px = (cam_v @ cam['K'].T)[:, :2] / cam_v[:, 2:3]
+    dist = np.array([cv2.pointPolygonTest(corners, (float(x), float(y)), True) for x, y in px])
+    ring = v[close[dist > -12]]  # the footprint and about 3 mm around it
+    centroid = ring.mean(0)
+    _, _, vt = np.linalg.svd(ring - centroid)
+    normal = vt[2] if vt[2] @ (cam['eye'] - centroid) > 0 else -vt[2]
+    face_point = centroid + normal * PLATE_THICKNESS
+    across = np.array([1.0, 0, 0]) - normal * normal[0]
+    across /= np.linalg.norm(across)
+    up = np.cross(normal, across)
+
+    def to_plane(p):
+        o, d = ray(cam, p)
+        q = hit_plane(o, d, face_point, normal)
+        return np.array([(q - face_point) @ across, (q - face_point) @ up])
+
+    tl, tr, br, bl = (to_plane(p) for p in PLATE)
+    centre = (tl + tr + br + bl) / 4
+    width = (np.linalg.norm(tr - tl) + np.linalg.norm(br - bl)) / 2
+    height = (np.linalg.norm(bl - tl) + np.linalg.norm(br - tr)) / 2
+    tilt = np.degrees(np.arctan2(*(tr - tl)[::-1]))
+    return {
+        'origin': (face_point + across * centre[0] + up * centre[1]).tolist(),
+        'u': across.tolist(), 'v': up.tolist(), 'n': normal.tolist(),
+        'size': [float(width), float(height)], 'thickness': PLATE_THICKNESS, 'tilt': float(tilt),
     }
 
 

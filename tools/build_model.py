@@ -8,8 +8,10 @@
    decimated for the web (desktop and phone versions), lightly smoothed, and given the proportions the
    photos agree with best (tools/fit_proportions.py).
 2. The detailed parts are measured from the photos (tools/details.py) and modelled by the page: the lock
-   module, the zipper, the far end's ring and pull tab. Under them the AI's blurry versions are pressed
-   flat, so the modelled parts sit cleanly (and the AI's invented far-end bracket is smoothed away).
+   module, the zipper, the far end's ring and pull tab, the brand plate. Under them the AI's blurry
+   versions are pressed flat, so the modelled parts sit cleanly (and the AI's invented far-end bracket is
+   smoothed away). The plate is painted out of the front photo before baking, so none of its blurry
+   pixels show round the modelled one.
 3. The surface is unwrapped into a texture atlas (xatlas) and the three photos are projected onto it
    (tools/bake.py): the front, back, top and lock end look like the photos. The bottom and the far end,
    which no photo shows, get the leather's colour.
@@ -65,16 +67,6 @@ def decimate(mesh, faces):
     return out
 
 
-def in_quad(p, quad):
-    """Points (n, 2) inside a convex quad given clockwise or counter-clockwise."""
-    crosses = []
-    for i in range(4):
-        a, b = np.array(quad[i]), np.array(quad[(i + 1) % 4])
-        crosses.append((b[0] - a[0]) * (p[:, 1] - a[1]) - (b[1] - a[1]) * (p[:, 0] - a[0]))
-    crosses = np.array(crosses)
-    return (crosses >= 0).all(0) | (crosses <= 0).all(0)
-
-
 def parts(centres, normals):
     """Material name per face, from face centres and normals (unscaled shape units)."""
     c, n = centres, normals
@@ -92,9 +84,7 @@ def parts(centres, normals):
     zc = (c[:, 2].min() + c[:, 2].max()) / 2
     part[(part == 'leather') & (n[:, 2] > 0.45) & (z > zc + 0.1) & (np.abs(x) < 0.9)] = 'front'
 
-    metal = np.zeros(len(c), bool)
-    plate = [(0.446, -0.252), (0.596, -0.234), (0.635, -0.381), (0.476, -0.399)]  # the logo plate
-    metal |= (z > 0.12) & (n[:, 2] > 0.3) & in_quad(c[:, :2], plate)
+    metal = np.zeros(len(c), bool)  # the brand plate is modelled by the page (details.ts)
     metal |= (x < -0.88) & (z < -0.14) & (y > 0.07) & (y < 0.24)  # main zipper's pull on the lock end
     metal |= (z < -0.2) & (x > -0.775) & (x < -0.675) & (y > 0.06) & (y < 0.29)  # back pocket's pull
     metal |= (z < -0.25) & (np.hypot(x + 0.641, y + 0.331) < 0.035)  # the strap's snap
@@ -170,6 +160,25 @@ def press_under_details(mesh, d, units_per_m, far_end_region):
     mesh.vertices = v * (1 - weight[:, None]) + smooth.vertices * weight[:, None]
 
 
+def flatten_under_plate(mesh, plate, units_per_m):
+    """The leather under the brand plate flat against its back, as the rigid plate holds it (the taut
+    front still curves a little under 18 mm of plate), fading back to the leather's own shape within
+    2 mm round it. Returns how far the leather moved, in metres (most out, most in)."""
+    v = mesh.vertices
+    o, u, vv, n = (np.array(plate[k]) for k in ('origin', 'u', 'v', 'n'))
+    rel = v - o
+    a, b, h = rel @ u, rel @ vv, rel @ n
+    w, ht = plate['size']
+    margin = 0.001 * units_per_m
+    inside = np.minimum(w / 2 - np.abs(a), ht / 2 - np.abs(b))  # positive inside the footprint
+    weight = np.clip((inside + margin) / margin + 1, 0, 1)  # 1 inside and 1 mm round, fading to 0 by 2 mm
+    target = -plate['thickness']
+    near = (np.abs(h - target) < 0.03) & (weight > 0)  # the front's surface, not the back's
+    move = np.where(near, weight * (target - h), 0)
+    v += n * move[:, None]
+    return float(move.max() / units_per_m), float(move.min() / units_per_m)
+
+
 def unwrap(mesh, size):
     atlas = xatlas.Atlas()
     atlas.add_mesh(mesh.vertices.astype(np.float32), mesh.faces.astype(np.uint32))
@@ -199,8 +208,13 @@ def to_real(d, centre, s):
     }
     for key in ('slot', 'latch', 'led', 'frame', 'glass'):
         module[key] = (np.array(m[key]) * s).round(5).tolist()
+    p = d['plate']
+    plate = {'origin': pt(p['origin']), 'u': np.round(p['u'], 5).tolist(), 'v': np.round(p['v'], 5).tolist(),
+             'n': np.round(p['n'], 5).tolist(), 'size': (np.array(p['size']) * s).round(5).tolist(),
+             'thickness': round(p['thickness'] * s, 5)}
     return {
         'module': module,
+        'plate': plate,
         'zipper': {'points': [pt(p) for p in d['zipper']['points']],
                    'normals': np.array(d['zipper']['normals']).round(4).tolist()},
         'farEnd': {k: pt(p) for k, p in d['farEnd'].items()},
@@ -214,10 +228,9 @@ def build(name, faces, texture, d):
     x, y, z = mesh.vertices.T
     zc = (mesh.bounds[0][2] + mesh.bounds[1][2]) / 2
     far_end = ((x > 0.86) & (np.abs(z - zc) < 0.15) & (y > 0.0)) | (x > 0.95)
-    # The front panel is smooth in the photo; the AI shape has dents in it (not around the logo plate).
-    plate = [(0.40, -0.21), (0.64, -0.19), (0.68, -0.42), (0.43, -0.44)]
-    front = (mesh.vertex_normals[:, 2] > 0.55) & (z > zc + 0.12) & (np.abs(x) < 0.86) & \
-        ~in_quad(mesh.vertices[:, :2], plate)
+    # The front panel is smooth in the photo; the AI shape has dents in it, and a blurry bump for the
+    # brand plate (the page models the plate; the leather under it is flattened below).
+    front = (mesh.vertex_normals[:, 2] > 0.55) & (z > zc + 0.12) & (np.abs(x) < 0.86)
     fc.apply_shape_transform(mesh)  # the photos' proportions (the cameras' frame)
     s = WIDTH_M / (BODY_X[1] - BODY_X[0])
     press_under_details(mesh, d, 1 / s, far_end)
@@ -234,6 +247,11 @@ def build(name, faces, texture, d):
     smooth = mesh.copy()
     trimesh.smoothing.filter_taubin(smooth, lamb=0.5, nu=-0.53, iterations=30)
     mesh.vertices = mesh.vertices * (1 - weight[:, None]) + smooth.vertices * weight[:, None]
+    # The brand plate sits on the finished front.
+    d = {**d, 'plate': details.logo_plate(mesh, details.cameras()['front'])}
+    up, down = flatten_under_plate(mesh, d['plate'], 1 / s)
+    print(f"  plate {np.round(np.array(d['plate']['size']) * s * 1000, 1)} mm, tilt in the photo "
+          f"{d['plate']['tilt']:.1f} deg; the leather under it moved {up * 1000:.2f} mm out, {down * 1000:.2f} mm in")
 
     normals = mesh.vertex_normals.copy()
     vmapping, ufaces, uvs = unwrap(mesh, texture)
@@ -243,7 +261,7 @@ def build(name, faces, texture, d):
     assert len(ufaces) == len(mesh.faces) and np.allclose(verts[ufaces].mean(1), mesh.triangles_center, atol=1e-5)
 
     print('  baking the photos')
-    rgb, coverage = bake.bake(verts, vnorm, ufaces, uvs, texture)
+    rgb, coverage = bake.bake(verts, vnorm, ufaces, uvs, texture, paint_out={'front': details.PLATE})
     tex_path = OUT / f'{name}-texture.jpg'
     Image.fromarray(rgb).save(tex_path, quality=90, optimize=True, progressive=False)
     texture_image = Image.open(tex_path)  # trimesh keeps a JPEG a JPEG when embedding it

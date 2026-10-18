@@ -111,14 +111,15 @@ The bag takes the colour picked on the page (the dots in the hero and beside the
 `BagScene.setColor` with the colour's swatch from the panel. The baked texture comes from photos of the
 black bag, so every colour, black included, is drawn as a tint of it: the leather's colour times the
 photo's light and dark relative to its median (softened, so the grain, seams and pocket lines stay but
-the photo's lighting doesn't blotch), while pixels far brighter than the leather (the brand plate, the
-metal) keep the photo's own colour. The zipper tape is a dark shade of the leather; the modelled lock,
+the photo's lighting doesn't blotch), while pixels far brighter than the leather (the pulls, the snap)
+keep the photo's own colour. The zipper tape is a dark shade of the leather; the modelled lock,
 teeth and far-end hardware carry two looks each (`finish` in `details.ts`): gunmetal on black, as on
-WiWU's side photo, and silver on the lighter colours, as on their brown and silver-white bags. A colour
+WiWU's side photo, and silver on the lighter colours, as on their brown and silver-white bags. The brand
+plate stays the same grey satin metal on every colour, as on all three of WiWU's photos. A colour
 added in the panel tints the bag the same way, from its swatch.
 
 Devices with WebGL2 (and no data saver, 2 GB+ memory) get the 3D: plain three.js, loaded as a separate
-chunk (170 KB gzipped), plus the model (`public/models/alpha.glb` 720 KB, `alpha-mobile.glb` 300 KB). It
+chunk (170 KB gzipped), plus the model (`public/models/alpha.glb` 732 KB, `alpha-mobile.glb` 324 KB). It
 loads once the page has (the hero's photos come first) and the section is about a screen away.
 
 - **While it loads:** the stage is `[data-pending]`: a thin line shows the download.
@@ -151,14 +152,21 @@ The model is built from the client's three photos, checked against them view by 
      light window, sensor glass and frame) and projected through the fitted camera onto its face;
    - the zipper: tape and interlocked teeth (2.4 mm apart) along the seam, up the lock end, over the
      top, down the far end to the pull tab;
-   - the far end's ring and pull tab, triangulated from the front and back photos.
+   - the far end's ring and pull tab, triangulated from the front and back photos;
+   - the brand plate: its corners in the front photo projected onto the finished front
+     (`details.logo_plate`, which `build_model.py` runs once the front is pulled taut), square to the
+     bag, 17.9 x 19 mm. Its face (`frontend/src/bag3d/logo.ts`) is drawn in the browser: WiWU's emblem
+     (the tall hexagon round an i) and name, traced from the logo on wiwu.com and placed as on the plate
+     in WiWU's front photo, raised (a normal map), with the raised parts a little brighter so they still
+     read where the plate is a few pixels across. The front photo's own plate is painted out before
+     baking (`bake.painted_out`), so none of its blurry pixels show round the modelled one.
 6. **Model** (`tools/build_model.py` + `tools/bake.py`): cleans and decimates the shape, gives it the
    photos' proportions, presses the AI's blurry versions of the details flat (and smooths away the
    bracket it invented at the far end), pulls the front onto a smooth fitted surface (taut, as on
    WiWU's studio photos; the AI shape rippled there), unwraps it (xatlas), projects the
    photos onto it (each texel from the photos that see it head-on and unblocked, colour-matched),
    sorts faces into leather / front panel / zipper / metal and compresses it (meshopt, JPEG texture):
-   `alpha.glb` 720 KB, `alpha-mobile.glb` 300 KB. The `.json` beside each holds the details' measurements,
+   `alpha.glb` 732 KB, `alpha-mobile.glb` 324 KB. The `.json` beside each holds the details' measurements,
    hotspot anchors (unused since the pins moved to `views.PARTS`) and the leather grain's repeat.
 7. **Check** (`node tools/compare.mjs`, dev servers running): renders the site's 3D bag from each photo's
    camera, the same size as the photo, to lay over it; `python tools/dev/compose.py` puts them in a

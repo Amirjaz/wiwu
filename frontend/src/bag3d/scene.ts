@@ -12,7 +12,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { pebbleNormalMap } from './textures';
-import { buildFarEnd, buildLock, buildZipper, type Details } from './details';
+import { buildFarEnd, buildLock, buildPlate, buildZipper, type Details } from './details';
 
 /** What tools/build_model.py writes next to each model. */
 interface ModelInfo {
@@ -209,7 +209,8 @@ export class BagScene {
     this.start();
   }
 
-  /** The lock module, the zipper and the far end's hardware, modelled from the photos' measurements. */
+  /** The lock module, the zipper, the far end's hardware and the brand plate, modelled from the photos'
+   *  measurements. */
   private addDetails(details: Details) {
     // The side view looks squarely at the module, a little from the front, from just above its middle
     // (so the zipper running up from it stays in the picture).
@@ -244,6 +245,10 @@ export class BagScene {
     const tape = (this.zipperTape = new MeshStandardMaterial({ color: '#141518', roughness: 0.95 }));
     this.scene.add(buildZipper(details.zipper, tape));
     this.scene.add(buildFarEnd(details.farEnd));
+    if (details.plate) {
+      const anisotropy = Math.min(8, this.renderer.capabilities.getMaxAnisotropy());
+      this.scene.add(buildPlate(details.plate, this.options.small ? 256 : 512, anisotropy));
+    }
   }
 
   /** The bag in a colour (its swatch from the panel, #rrggbb). The photos are of the black bag: black
@@ -264,8 +269,10 @@ export class BagScene {
     // The modelled parts (lock, zipper, far end) carry their two looks (details.ts).
     this.scene.traverse((node) => {
       if (!(node instanceof Mesh)) return;
-      const finish = (node.material as Material).userData.finish as { black: string; light: string } | undefined;
-      if (finish) (node.material as MeshStandardMaterial).color.set(black ? finish.black : finish.light);
+      for (const material of [node.material as Material | Material[]].flat()) {
+        const finish = material.userData.finish as { black: string; light: string } | undefined;
+        if (finish) (material as MeshStandardMaterial).color.set(black ? finish.black : finish.light);
+      }
     });
     if (this.zipperTape) this.zipperTape.color.copy(black ? new Color('#141518') : color.clone().multiplyScalar(0.18));
   }
@@ -283,8 +290,8 @@ export class BagScene {
   float ratio = dot( sampledDiffuseColor.rgb, vec3( 0.2126, 0.7152, 0.0722 ) ) / uPhotoLum;
   // Softened: the photo's lighting reads much stronger on a light leather than on the black it was taken on.
   vec3 tinted = diffuseColor.rgb * clamp( pow( ratio, 0.55 ), 0.72, 1.2 );
-  // Far brighter than the leather in the photo: the metal (the brand plate, the zipper), which keeps
-  // the photo's own colour on every bag.
+  // Far brighter than the leather in the photo: the metal (the pulls, the snap), which keeps the
+  // photo's own colour on every bag.
   vec3 metal = sampledDiffuseColor.rgb * 1.3;
   vec3 recoloured = mix( tinted, metal, smoothstep( 3.0, 6.0, ratio ) );
   diffuseColor.rgb = mix( diffuseColor.rgb * sampledDiffuseColor.rgb, recoloured, uTint );

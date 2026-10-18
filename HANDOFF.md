@@ -33,7 +33,10 @@ This page is the short version, plus what isn't written down anywhere else.
 - **Checks:** `manage.py test shop` runs 45 tests and they pass; `npx tsc --noEmit` and `npm run build`
   pass; desktop and phone checked in headless Edge on the live site after the deploy.
 - **Repo:** branch `main`, **no remote**. It exists only in `E:\Work\Nisatech\PurseShop` and in the
-  deploy bare repo on the server. Two worktrees under `.claude/worktrees/`:
+  deploy bare repo on the server. Three worktrees under `.claude/worktrees/`:
+  - `3d-logo-wiwu-model-5ec558` (2026-10-19): **WiWU's logo on the 3D bag's plate**, committed on its
+    branch, **not merged into `main` and not deployed** (see *The 3D model*). Its dev servers run on
+    8032/5182 (`logo-backend`, `logo-frontend` in its `.claude/launch.json`).
   - `hero-slider-3d-model-a5edb7` (this work), merged into `main`; it has the 3D tools' venv
     (`.venv-3d`), which the main checkout lacks.
   - `admin-panel-purchases-transactions-c63290`, another chat's, still at aa852c2 with an uncommitted
@@ -99,7 +102,9 @@ business address), the `.ir` domain under their national ID.
    registered first. Until then `PAYMENT_PROVIDER=manual`.
 7. **Kavenegar:** the client's account and API key, with the 11 templates in README → *SMS*.
 8. **Go live, then Enamad:** PLAN.md §8 and phase 2 in §9. One real 10M payment end to end, then refund it.
-9. **3D, if wanted:** see *The 3D model* below.
+9. **3D logo plate:** on Amir's word, fast-forward `main` to the `3d-logo-wiwu-model-5ec558` branch and
+   redeploy (the models are new, so check the `?v=` addresses change); add a Plane item for it.
+10. **3D, if wanted:** see *The 3D model* below.
 
 ## What Amir asks for, and how he reacts
 
@@ -164,6 +169,16 @@ far end modelled from measurements, the front pulled taut. Colours are tints of 
 (`setColor` in `bag3d/scene.ts`, `finish` in `details.ts`); a colour added in the panel tints it from its
 swatch.
 
+- **The brand plate** (2026-10-19) is modelled, not baked: `details.logo_plate` puts it on the finished
+  front from its corners in the front photo (17.9 x 19 mm), `bake.painted_out` removes the photo's blurry
+  plate first, and `bag3d/logo.ts` draws its face in the browser: WiWU's emblem (the tall hexagon round
+  an i) and WIWU, traced from the logo on wiwu.com (`logo.png` on their Shopify CDN) and placed as on the
+  plate in `black-front.jpg`. The small mipmaps are hand-drawn with a bolder, brighter logo so it still
+  reads on phones, where the plate is about 25 pixels across. Pin 1 points at the plate from the side
+  (a lead, as on the lock), so the number doesn't cover the logo.
+- **xatlas is touchy:** it cuts this mesh into very small charts (1.6 to 2.2 vertices per triangle), and a
+  small change to the geometry can add or save 100 KB on the desktop model. Rebuilding unchanged code
+  gives the same bytes. Check the sizes after a rebuild.
 - **Rebuild:** `.venv-3d/Scripts/python tools/build_model.py` (both models, about 2 minutes each;
   `desktop` for only `alpha.glb`). The venv: `py -3.12 -m venv .venv-3d && .venv-3d/Scripts/pip install
   -r tools/requirements.txt` (rembg's venv, `tools/requirements-rembg.txt`, only for new photo masks).
@@ -211,6 +226,11 @@ node tools/compare.mjs && .venv-3d/Scripts/python tools/dev/compose.py
   address). In production `{% asset %}` adds `?v=<content hash>`, so replacing a file under the same
   name is safe. Anything linked without `{% asset %}` (the link preview, the search data) isn't
   versioned: give a changed file a new name there.
+- **A copied database** from the main checkout predates migration 0003 (`no such column:
+  shop_color.photo`): run `manage.py migrate` on the copy.
+- **Headless Edge hides page warnings:** patchright doesn't report `console.warn`, so a 3D bag that
+  silently falls back to the photos shows nothing. Wrap `console.warn` through CDP
+  (`Page.addScriptToEvaluateOnNewDocument`) to see why.
 - **Tests and colours.** `seed_store` creates black, brown and white; the tests' `Base.setUp` deletes all
   but black, because they assume a store that asks no colour.
 - **CSS layers.** A rule in `@layer components` loses to any Tailwind utility on the same element. The

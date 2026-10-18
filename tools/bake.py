@@ -118,8 +118,20 @@ def balanced_photo(name):
     return np.clip(rgb * gain, 0, 1), alpha
 
 
-def bake(vertices, normals, faces, uv, size):
-    """vertices/normals/faces/uv of the unwrapped mesh (AI shape coordinates). Returns (rgb uint8, coverage)."""
+def painted_out(rgb, polygon, grow=4):
+    """The photo with a polygon (and `grow` pixels round it) filled in from the pixels around it."""
+    mask = np.zeros(rgb.shape[:2], np.uint8)
+    cv2.fillPoly(mask, [np.round(np.array(polygon)).astype(np.int32)], 255)
+    mask = cv2.dilate(mask, np.ones((2 * grow + 1, 2 * grow + 1), np.uint8))
+    filled = cv2.inpaint((np.clip(rgb, 0, 1) * 255).astype(np.uint8), mask, 9, cv2.INPAINT_TELEA)
+    out = rgb.copy()
+    out[mask > 0] = filled[mask > 0].astype(np.float32) / 255
+    return out
+
+
+def bake(vertices, normals, faces, uv, size, paint_out=None):
+    """vertices/normals/faces/uv of the unwrapped mesh (AI shape coordinates). Returns (rgb uint8, coverage).
+    paint_out: {photo name: polygon in its pixels} to fill in from around it first (a part the page models)."""
     cameras, width, height = load_cameras()
     uv_px = np.stack([uv[:, 0] * size, (1 - uv[:, 1]) * size], 1)  # image rows go down
     tri_of, bary = raster_uv(uv_px, faces, size)
@@ -153,6 +165,8 @@ def bake(vertices, normals, faces, uv, size):
         visible = inside & (cam_p[:, 2] <= zbuf[iy, ix] * 1.004 + 0.002)
 
         rgb, alpha = balanced_photo(name)
+        if paint_out and name in paint_out:
+            rgb = painted_out(rgb, paint_out[name])
         mask = (alpha > 0.5).astype(np.uint8)
         edge = cv2.distanceTransform(mask, cv2.DIST_L2, 5)
         edge_w = np.clip((edge[iy, ix] - 3) / 14, 0, 1)
