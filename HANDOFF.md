@@ -102,8 +102,7 @@ business address), the `.ir` domain under their national ID.
    registered first. Until then `PAYMENT_PROVIDER=manual`.
 7. **Kavenegar:** the client's account and API key, with the 11 templates in README → *SMS*.
 8. **Go live, then Enamad:** PLAN.md §8 and phase 2 in §9. One real 10M payment end to end, then refund it.
-9. **Plane for the 3D logo plate:** a new item for the work and the redeploy on NISA-69 (not yet done).
-10. **3D, if wanted:** see *The 3D model* below.
+9. **3D, if wanted:** see *The 3D model* below.
 
 ## What Amir asks for, and how he reacts
 
@@ -276,7 +275,7 @@ node tools/compare.mjs && .venv-3d/Scripts/python tools/dev/compose.py
 | NISA-66 | Store core | 3h* |
 | NISA-67 | 3D hero and scroll tour | 9h* (1h30m + 3h + 3h + 1h30m) |
 | NISA-68 | Site design around the 3D bag, instrument look | 6h* (3h + 1h30m + 1h30m) |
-| NISA-69 | Staging online at shop.nisatech.org, redeploys | 3h45m* (1h30m + 45m + 45m + 45m) |
+| NISA-69 | Staging online at shop.nisatech.org, redeploys | 4h30m* (1h30m + 45m + 45m + 45m + 45m) |
 | NISA-70 | Load test of the live server, page cache | 30m |
 | NISA-71 | Colours (panel, product page, checkout, orders) | 30m |
 | NISA-72 | Phone layout (one-screen tour, roomier sections) | 15m |
@@ -284,6 +283,7 @@ node tools/compare.mjs && .venv-3d/Scripts/python tools/dev/compose.py
 | NISA-75 | Hero as a photo campaign page, the 3D bag in the parts section | 6h* |
 | NISA-76 | Questions for the client, server and SMS costs | 1h30m* |
 | NISA-77 | WiWU name, brown and white colours, the 3D bag recoloured, studio photos | 3h* |
+| NISA-78 | WiWU logo on the 3D bag's brand plate | 3h* |
 
 \* Three times the measured time, at Amir's request (2026-10-16, 18 and 19). NISA-70 to 73 are measured;
 ask him about tripling them. NISA-74 is another project's (Finance).
