@@ -8,8 +8,8 @@ This page is the short version, plus what isn't written down anywhere else.
 
 ## Where it stands
 
-- **Staging is online at https://shop.nisatech.org** and runs **ebc1158**, deployed on 2026-10-19 (`main`
-  is the same; the handoff commits after it change only this file).
+- **Staging is online at https://shop.nisatech.org** and runs **f04fddb** (WiWU's logo on the 3D bag's
+  plate), deployed on 2026-10-19 (`main` is the same; the handoff commits after it change only this file).
   - Open to everyone (no password, Amir's choice), but kept out of search engines (noindex).
   - SMS codes only go to the server log and payments are manual, so people can browse but can't finish
     an order. No orders yet.
@@ -34,9 +34,9 @@ This page is the short version, plus what isn't written down anywhere else.
   pass; desktop and phone checked in headless Edge on the live site after the deploy.
 - **Repo:** branch `main`, **no remote**. It exists only in `E:\Work\Nisatech\PurseShop` and in the
   deploy bare repo on the server. Three worktrees under `.claude/worktrees/`:
-  - `3d-logo-wiwu-model-5ec558` (2026-10-19): **WiWU's logo on the 3D bag's plate**, committed on its
-    branch, **not merged into `main` and not deployed** (see *The 3D model*). Its dev servers run on
-    8032/5182 (`logo-backend`, `logo-frontend` in its `.claude/launch.json`).
+  - `3d-logo-wiwu-model-5ec558` (2026-10-19): **WiWU's logo on the 3D bag's plate** (see *The 3D
+    model*), merged into `main` and deployed. Its dev servers run on 8032/5182 (`logo-backend`,
+    `logo-frontend` in its `.claude/launch.json`).
   - `hero-slider-3d-model-a5edb7` (this work), merged into `main`; it has the 3D tools' venv
     (`.venv-3d`), which the main checkout lacks.
   - `admin-panel-purchases-transactions-c63290`, another chat's, still at aa852c2 with an uncommitted
@@ -102,8 +102,7 @@ business address), the `.ir` domain under their national ID.
    registered first. Until then `PAYMENT_PROVIDER=manual`.
 7. **Kavenegar:** the client's account and API key, with the 11 templates in README → *SMS*.
 8. **Go live, then Enamad:** PLAN.md §8 and phase 2 in §9. One real 10M payment end to end, then refund it.
-9. **3D logo plate:** on Amir's word, fast-forward `main` to the `3d-logo-wiwu-model-5ec558` branch and
-   redeploy (the models are new, so check the `?v=` addresses change); add a Plane item for it.
+9. **Plane for the 3D logo plate:** a new item for the work and the redeploy on NISA-69 (not yet done).
 10. **3D, if wanted:** see *The 3D model* below.
 
 ## What Amir asks for, and how he reacts
@@ -293,6 +292,7 @@ ask him about tripling them. NISA-74 is another project's (Finance).
 
 | Date | Commit | What |
 | --- | --- | --- |
+| 2026-10-19 | f04fddb | WiWU's logo on the 3D bag's plate (emblem and name), pin 1 beside it, new models `?v=bccdb021` / `?v=9b666061` (no migration; backup `db-20261019-094240.sqlite3`, server time) |
 | 2026-10-19 | ebc1158 | WiWU name, three colours, recoloured and taut 3D bag, studio photos, `?v=` addresses (migration 0003; backup `db-20261018-205907.sqlite3`, server time) |
 | 2026-10-18 | 0911b3a | Campaign hero, 3D bag in جزء به جزء, colours, page cache (migration 0002; backup `db-20261018-164322.sqlite3`) |
 | 2026-10-16 | 2f9ceb7 | Design review round: Vazirmatn, section grounds, phone menu, footer |
