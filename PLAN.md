@@ -239,11 +239,11 @@ poor, phase 3 grows toward the top of its range.
 
 | # | Risk | Mitigation |
 | --- | --- | --- |
-| R1 | **The total crosses 10M toman.** 10,000,000 + shipping + an upward offset ≈ 10.1–10.3M. Bank apps allow ~15M/day per card (1405), but some channels (certain ATMs, some apps per transfer) stop at 10M. | **Recommend to the client:** set the price so that price + shipping + 999 ≤ 10,000,000 (e.g. 9,800,000 with shipping included). Otherwise the pay page says "use your bank's app, not an ATM". |
+| R1 | **The total crosses 10M toman.** Since 2026-10-20 the price is 14,100,000 (post free), so a total is 14,100,001–14,100,999. Bank apps allow ~15M/day per card (1405), but some channels (certain ATMs, some apps per transfer) stop at 10M. | The pay page tells buyers over 10M to pay from their bank's app, which allows it. (The earlier advice, a price under 10M, no longer applies: the client set 14.1M.) |
 | R2 | **The forwarder phone is offline** (battery, SIM, internet shutdown) → no auto-confirmations. | Dedicated phone, the review queue, the "seems silent" SMS, the "last matched" line on the panel. |
 | R3 | **Tax authority** flags personal cards that receive many payments as business accounts. | The client's accountant registers the cards/accounts as business accounts (حساب تجاری). Not our call, but tell them. |
 | R4 | **The AI 3D looks cheap** on black PU. | Light scene, Blender texture re-projection, the blockout fallback; the poster/stills fallback is always there. |
-| R5 | **Unofficial import + using WiWU media.** Possible takedown, Torob disputes over the brand name. | The store name never implies WiWU. Media use is the client's accepted risk. Prefer our own renders and photos where possible. |
+| R5 | **Unofficial import + using WiWU media.** Possible takedown, Torob disputes over the brand name. | Since 2026-10-20 the client wants the shop called WiWU (ویوو) with WiWU's logo, which raises this risk (the `.ir` domain, Enamad and Torob may object to a brand name the client doesn't own). Media and name are the client's accepted risk. |
 | R6 | **The store name is the bottleneck** for the domain, Enamad and the payment smoke test. | Send the shortlist this week. Build on staging meanwhile. |
 | R7 | **cartbecart is a small third party** (API behind login, unknown webhook semantics). | Adapter isolated in one module. The manual review path works even if cartbecart is down. |
 | R8 | **Shared server** with nisatak.com, nisatech.org and contech; this one holds addresses and phones. | Own system user and directory (like contech), daily SQLite backup kept off the web root and copied off the server. |

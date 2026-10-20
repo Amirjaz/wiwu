@@ -2,7 +2,7 @@
 {% load vite shop_tags %}
 
 {% block title %}{{ product.name }} | {{ store.store_name }}{% endblock %}
-{% block description %}{{ product.subtitle }} {{ price }} تومان، ارسال با پست و تیپاکس.{% endblock %}
+{% block description %}{{ product.subtitle }} {{ price }} تومان، {% if store.shipping_post_rial %}ارسال با پست و تیپاکس{% else %}ارسال رایگان با پست{% endif %}، ۷۲ ساعت گارانتی تعویض.{% endblock %}
 {% block og_title %}{{ product.name }}{% endblock %}
 {% block og_description %}{{ product.subtitle }}{% endblock %}
 {% block og_type %}product{% endblock %}
@@ -153,8 +153,9 @@ can be dragged round. Where the 3D can't run, the same numbers sit on a photo pe
       <dl class="grid grid-cols-[1fr_1.3fr_1fr] rounded-[var(--radius-surface)] border border-raised/20 [&>div+div]:border-s [&>div+div]:border-raised/15">
         <div class="flex flex-col gap-2 md:gap-3 p-3 sm:p-5"><dt class="readout-label text-raised/55">اثر انگشت، تا</dt><dd class="text-2xl sm:text-5xl font-medium">۱۰</dd></div>
         <div class="flex flex-col gap-2 md:gap-3 p-3 sm:p-5"><dt class="readout-label text-raised/55">باز شدن، حدود</dt><dd class="text-2xl sm:text-5xl font-medium">۰٫۵ <span class="text-sm sm:text-xl text-raised/65">ثانیه</span></dd></div>
-        <div class="flex flex-col gap-2 md:gap-3 p-3 sm:p-5"><dt class="readout-label text-raised/55">شارژ قفل</dt><dd class="text-xl sm:text-3xl lg:text-4xl font-medium ltr text-end whitespace-nowrap">USB-C</dd></div>
+        <div class="flex flex-col gap-2 md:gap-3 p-3 sm:p-5"><dt class="readout-label text-raised/55">هر شارژ، حدود</dt><dd class="text-2xl sm:text-5xl font-medium">۱ <span class="text-sm sm:text-xl text-raised/65">ماه</span></dd></div>
       </dl>
+      <p class="flex items-start gap-2 font-mono text-[0.84rem] text-raised/65 leading-relaxed">{% icon 'battery-charging' 'size-5 shrink-0' %}شارژ کامل در ۵ تا ۱۰ دقیقه با کابل USB-C؛ با پاوربانک هم شارژ می‌شود.</p>
     </div>
     <div class="reveal flex flex-col items-center gap-6">
       <p class="text-2xl font-bold">امتحانش کنید.</p>
@@ -238,9 +239,9 @@ can be dragged round. Where the 3D can't run, the same numbers sit on a photo pe
         </li>
         <li class="relative">
           <span class="led absolute -start-7 top-[0.55rem]"></span>
-          <p class="font-mono text-[0.78rem] text-raised/50">{% for option in shipping %}{{ option.name }} {{ option.days }}{% if not forloop.last %}، {% endif %}{% endfor %}</p>
+          <p class="font-mono text-[0.78rem] text-raised/50">{% if shipping.0.days == shipping.1.days %}{{ shipping.0.days }}{% else %}{% for option in shipping %}{{ option.name }} {{ option.days }}{% if not forloop.last %}، {% endif %}{% endfor %}{% endif %}</p>
           <p class="mt-1 text-xl font-bold">ارسال</p>
-          <p class="mt-1 text-raised/70 leading-relaxed">کیف با کد رهگیری فرستاده می‌شود و کد را پیامک می‌کنیم.</p>
+          <p class="mt-1 text-raised/70 leading-relaxed">کیف با کد رهگیری فرستاده می‌شود و کد را پیامک می‌کنیم.{% for option in shipping %}{% if option.on_delivery %} {{ option.name }} پس‌کرایه است.{% elif not option.price_rial %} {{ option.name }} رایگان است.{% endif %}{% endfor %}</p>
         </li>
       </ol>
       <a href="{% url 'page' 'returns' %}" class="inline-flex items-center gap-2 text-raised/80 hover:text-raised">
@@ -254,7 +255,7 @@ can be dragged round. Where the 3D can't run, the same numbers sit on a photo pe
         <dl class="mt-6 space-y-2.5">
           <div class="flex justify-between gap-4"><dt>کیف دستی ویوو آلفا</dt><dd class="whitespace-nowrap">{{ price }}</dd></div>
           {% for option in shipping %}
-          <div class="flex justify-between gap-4 text-ink-soft"><dt>ارسال، {{ option.name }}</dt><dd class="whitespace-nowrap">{% if option.price_rial %}{{ option.price_rial|toman }}{% else %}رایگان{% endif %}</dd></div>
+          <div class="flex justify-between gap-4 text-ink-soft"><dt>ارسال، {{ option.name }}</dt><dd class="whitespace-nowrap">{% if option.on_delivery %}پس‌کرایه{% elif option.price_rial %}{{ option.price_rial|toman }}{% else %}رایگان{% endif %}</dd></div>
           {% endfor %}
           <div class="flex justify-between gap-4 text-ink-soft"><dt>چند تومان برای شناختن واریز</dt><dd class="whitespace-nowrap">۱ تا ۹۹۹</dd></div>
         </dl>
@@ -307,8 +308,8 @@ can be dragged round. Where the 3D can't run, the same numbers sit on a photo pe
   </div>
   <div class="border-t border-ink/15">
     <ul class="mx-auto max-w-7xl px-4 sm:px-6 grid sm:grid-cols-3 text-[0.92rem] [&>li+li]:border-t sm:[&>li+li]:border-t-0 sm:[&>li+li]:border-s [&>li+li]:border-ink/15">
-      <li class="flex items-center gap-3 py-5 sm:px-5 sm:first:ps-0">{% icon 'credit-card' 'size-5 text-ink/70' %} کارت‌به‌کارت، بدون درگاه</li>
-      <li class="flex items-center gap-3 py-5 sm:px-5">{% icon 'truck' 'size-5 text-ink/70' %} پست پیشتاز یا تیپاکس، با کد رهگیری</li>
+      <li class="flex items-center gap-3 py-5 sm:px-5 sm:first:ps-0">{% icon 'truck' 'size-5 text-ink/70' %} {% if store.shipping_post_rial %}پست پیشتاز یا تیپاکس، با کد رهگیری{% else %}ارسال رایگان با پست پیشتاز{% endif %}</li>
+      <li class="flex items-center gap-3 py-5 sm:px-5"><a href="{% url 'page' 'warranty' %}" class="flex items-center gap-3 hover:underline">{% icon 'shield-check' 'size-5 text-ink/70' %} ۷۲ ساعت گارانتی تعویض</a></li>
       <li class="flex items-center gap-3 py-5 sm:px-5">{% icon 'arrow-u-up-left' 'size-5 text-ink/70' %} {{ store.return_days|fa }} روز کاری فرصت بازگشت</li>
     </ul>
   </div>

@@ -14,11 +14,15 @@ This page is the short version, plus what isn't written down anywhere else.
   - SMS codes only go to the server log and payments are manual, so people can browse but can't finish
     an order. No orders yet.
   - Plain http redirects to https.
+- **Not deployed yet (2026-10-20):** the client's answers (below), on the `3d-logo-wiwu-model-5ec558`
+  branch: the shop is **ویوو** with WiWU's logo, the price, free post and Tipax on delivery, 4 to 6
+  working days, the battery, the 72-hour warranty. Migration 0004 changes content, so empty the page cache
+  after deploying it (*Gotchas*). The new hero photos wait for Amir to pick them (`media/hero-candidates/`).
   - **Panel accounts:** `amir` and `salar`, both superusers (Amir set the passwords himself on
     2026-10-19). Log in at `/panel/` (the store) or `/admin/` (Django, for the Owners/Staff groups).
 - **The bag:** the WiWU Alpha fingerprint-lock clutch, sold as **«کیف دستی ویوو آلفا»** (WiWU as the
   brand in the specs and the search data), in **black, brown and silver-white («سفید»)**, all on sale at
-  one price (10,000,000 toman, a placeholder until the client answers).
+  one price: **14,100,000 toman**, shipping from Dubai included (the client, 2026-10-20).
 - **The home page, top to bottom** (README, *Look* and *The hero and the 3D bag*):
   1. **Hero:** a campaign page. Six photos of the bag in use (Amir's, black bag only) over the whole
      first screen, one at a time, with a large line, the price and the buy button at the bottom and the
@@ -30,7 +34,7 @@ This page is the short version, plus what isn't written down anywhere else.
 - **Store features:** checkout with an SMS code, card-to-card payment with a unique amount per order,
   "I've paid" review, the payment timer, shipping, returns, staff panel, SMS templates, SEO, colours
   (each with a photo shown at checkout), a page cache.
-- **Checks:** `manage.py test shop` runs 45 tests and they pass; `npx tsc --noEmit` and `npm run build`
+- **Checks:** `manage.py test shop` runs 47 tests and they pass; `npx tsc --noEmit` and `npm run build`
   pass; desktop and phone checked in headless Edge on the live site after the deploy.
 - **Repo:** branch `main`, **no remote**. It exists only in `E:\Work\Nisatech\PurseShop` and in the
   deploy bare repo on the server. Three worktrees under `.claude/worktrees/`:
@@ -63,13 +67,36 @@ box; 5. warranty and returns; 6. shipping prices, from which city, how fast; 7. 
 end and a lock close-up for the 3D model; 9. launch date, advertising, expected visitors at peak; 10. the
 price, with a launch campaign.
 
-It ends with a **cost estimate** for a campaign of about 10 days: server 2 to 3 million toman, SMS
-(Kavenegar) 1 to 1.5 million, about 3 to 4.5 million in all. Amir set those figures; the actual costs we
-found on 2026-10-18 are lower:
+**Answered on 2026-10-20** (through Amir; on the site via migration 0004):
+- **1. Name:** the shop is WiWU, «ویوو», with WiWU's own logo (PLAN.md risk R5: the client's call).
+- **3. Battery:** a full charge takes 5 to 10 minutes and lasts about a month; a power bank will do.
+- **5. Warranty:** 72 hours, replacement if the fingerprint lock fails or the zipper sticks, the shop
+  paying the shipping. Returns stay 7 working days (the law), postage on the buyer.
+- **6. Shipping:** the post (Pishtaz) is free; Tipax is paid by the buyer on delivery (پس‌کرایه);
+  4 to 6 working days. Shipping from Dubai is in the price.
+- **10. Price:** 14,100,000 toman (Amir wrote «۱۴.۱۰۰»). No launch campaign named yet.
+Still open: 2, 4, 7, 8, 9.
 
-- **Server:** ArvanCloud's cloud server bills by the hour. 2 cores / 4 GB is 1,966,200 toman a month,
-  about 655,000 for 10 days; 2 cores / 2 GB 1,167,900; 4 cores / 12 GB 4,122,000. ParsPack sells
-  monthly only (2 cores / 4 GB, 1,550,000).
+It ends with a **cost estimate** for a campaign of about 10 days: server 2 to 3 million toman, SMS
+(Kavenegar) 1 to 1.5 million, about 3 to 4.5 million in all. Amir set those figures. On 2026-10-20 he
+asked for quotes to give the client, with a server that won't fall over at scale and works for visitors on
+a VPN. Screenshots in `media/quotes/` (not in git): Arvan's calculator per size (Tehran, standard cores,
+25 GB SSD, one IPv4), their server price list and CDN plans, Kavenegar's plans and their OTP FAQ.
+
+| Arvan, Tehran | Per day | 10 days | 15 days | Peak (est.) | A campaign day |
+| --- | --- | --- | --- | --- | --- |
+| 2 cores / 4 GB | 65,540 | 655,400 | 983,100 | ~40 visits/s | ~300,000 visits |
+| **4 cores / 8 GB** (recommended) | 112,080 | 1,120,800 | 1,681,200 | ~80 visits/s | ~600,000 visits |
+| 8 cores / 16 GB | 205,160 | 2,051,600 | 3,077,400 | ~160 visits/s | ~1,200,000 visits |
+
+- Toman; billed by the hour, resizable in minutes (start on 4, go to 8 if the campaign takes off).
+  Capacity is a conservative estimate from LOADTEST.md (one old shared core: ~18 visits/s with nothing
+  cached), assuming the page cache and Arvan caching the images and 3D model.
+- **CDN:** Arvan's free plan is enough (unlimited traffic in and outside Iran, static caching, DDoS
+  protection with a JS challenge). The "رشد" plan (3,000,000 a month) adds rate limits and a captcha.
+- **VPN:** an Iranian server behind Arvan works on a VPN: Arvan serves visitors abroad too. Checked on
+  2026-10-20: this PC's VPN exits in the US, and the staging site, 3D included, loads through it. If Iran's
+  international link is cut, VPN users can't reach it, while visitors with the VPN off still can.
 - **Kavenegar:** the Advanced plan is 600,000 toman a year (their FAQ says the OTP service needs it).
   The per-message price only shows in their panel; a Persian SMS costs about 12 to 20 toman (the
   regulator's ceiling is 116 rial on a postpaid SIM). About 5 SMS per order.
@@ -85,23 +112,23 @@ business address), the `.ir` domain under their national ID.
    second request. The server admin re-runs the root setup so nginx stops gzipping the models (send a
    fresh `scp -r deploy amir@185.231.180.92:purseshop-deploy` first; `amir` can't sudo). Then re-run the
    load test (LOADTEST.md, *Running it again*).
-2. **For the launch server**, recommended to Amir (not built): its own VPS in an Iranian datacentre
-   behind ArvanCloud, 2 cores, 4 GB, NVMe, 2 GB swap; gunicorn as 5 workers × 4 threads
-   (`--worker-class gthread`, in `deploy/systemd/purseshop.service`), so SMS and payment calls don't hold
-   up pages. Today's shared server (1 core, 1 GB, three other sites) tops out around 18 visits a second
+2. **For the launch server**, recommended to Amir (not built): an Arvan cloud server in Tehran behind
+   Arvan's CDN, **4 cores / 8 GB** for the campaign (2026-10-20 quotes above; resize to 8 cores if needed),
+   2 GB swap; gunicorn with about 2 workers per core × 4 threads (`--worker-class gthread`, in
+   `deploy/systemd/purseshop.service`), so SMS and payment calls don't hold up pages. Today's shared server (1 core, 1 GB, three other sites) tops out around 18 visits a second
    without the Arvan rule (LOADTEST.md).
 3. **On staging:** a test order end to end (the SMS code is in `journalctl -u purseshop`), then cancel it
-   in the panel. Replace the sample card and the placeholder shipping prices once the client sends them.
-4. **Client answers:** the store name blocks the `.ir` domain, and the domain blocks Enamad (it must
-   belong to whoever applies). Fill the policy pages' [bracketed] text (warranty, flat battery, card
-   holder) before applying for Enamad.
-5. **Price (risk R1):** price + shipping + the offset lands just above 10M toman, and some transfer
-   channels stop at 10M. Recommend price + shipping + 999 ≤ 10,000,000; the client decides.
+   in the panel. Replace the sample card once the client sends theirs.
+4. **Client answers:** the domain must belong to whoever applies for Enamad; with the shop named WiWU, the
+   client needs a domain they can register (risk R5). Fill the card holder's name and the contact details
+   before applying for Enamad.
+5. **Hero photos:** Amir picks from `media/hero-candidates/` (a man with the bag, the bag in hand, the
+   brown and the silver bag); then they replace `media/source-photos/look/` and `views.LOOK`.
 6. **cartbecart:** once the client's Max account opens their API docs, finish `backend/shop/payments.py`
    (`TODO(cartbecart docs)`): field names and unit, checking each deposit, whether orders must be
    registered first. Until then `PAYMENT_PROVIDER=manual`.
 7. **Kavenegar:** the client's account and API key, with the 11 templates in README → *SMS*.
-8. **Go live, then Enamad:** PLAN.md §8 and phase 2 in §9. One real 10M payment end to end, then refund it.
+8. **Go live, then Enamad:** PLAN.md §8 and phase 2 in §9. One real 14.1M payment end to end, then refund it.
 9. **3D, if wanted:** see *The 3D model* below.
 
 ## What Amir asks for, and how he reacts
@@ -229,6 +256,8 @@ node tools/compare.mjs && .venv-3d/Scripts/python tools/dev/compose.py
 - **Headless Edge hides page warnings:** patchright doesn't report `console.warn`, so a 3D bag that
   silently falls back to the photos shows nothing. Wrap `console.warn` through CDP
   (`Page.addScriptToEvaluateOnNewDocument`) to see why.
+- **`seed_store` runs on every deploy**: it only adds what's missing. It used to set placeholder shipping
+  fees whenever both were 0, which would have undone free post; that's gone (2026-10-20).
 - **Tests and colours.** `seed_store` creates black, brown and white; the tests' `Base.setUp` deletes all
   but black, because they assume a store that asks no colour.
 - **CSS layers.** A rule in `@layer components` loses to any Tailwind utility on the same element. The

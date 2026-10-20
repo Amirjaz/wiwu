@@ -101,13 +101,29 @@ class PlaceOrderTests(Base):
 
     def test_price_and_card_are_copied(self):
         order = self.place(shipping='tipax', is_gift=True)
-        self.assertEqual(order.shipping_rial, self.store.shipping_tipax_rial)
+        self.assertEqual(order.shipping_rial, 0)
+        self.assertTrue(order.shipping_on_delivery)  # the buyer pays Tipax on delivery
         self.product.price_rial = 1
         self.product.save()
         order.refresh_from_db()
-        self.assertEqual(order.unit_price_rial, 100_000_000)
+        self.assertEqual(order.unit_price_rial, 141_000_000)
         self.assertEqual(order.card_number, Card.objects.first().number)
         self.assertTrue(order.is_gift)
+
+    def test_shipping_free_by_post_and_tipax_on_delivery(self):
+        post = self.place()
+        self.assertEqual((post.shipping_rial, post.shipping_on_delivery), (0, False))
+        self.assertEqual(post.amount_rial, self.product.price_rial + post.offset_rial)
+        # A Tipax fee the store charges itself, once it stops being paid on delivery.
+        self.store.tipax_on_delivery, self.store.shipping_tipax_rial = False, 900_000
+        self.store.save()
+        tipax = self.place(shipping='tipax')
+        self.assertEqual((tipax.shipping_rial, tipax.shipping_on_delivery), (900_000, False))
+
+    def test_seeding_again_keeps_free_shipping(self):
+        call_command('seed_store', stdout=io.StringIO())  # runs on every deploy
+        store = StoreSettings.load()
+        self.assertEqual((store.shipping_post_rial, store.shipping_tipax_rial, store.tipax_on_delivery), (0, 0, True))
 
     def test_cards_rotate(self):
         Card.objects.create(bank='ملت', number='6104337000000006', holder='صاحب فروشگاه')

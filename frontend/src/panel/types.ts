@@ -46,6 +46,7 @@ export interface OrderDetail extends OrderRow {
   product: string;
   price_rial: number;
   shipping_rial: number;
+  shipping_on_delivery: boolean;
   offset_rial: number;
   card: { bank: string; number: string; holder: string };
   expires: string;

@@ -9,7 +9,7 @@ import { Skeleton, Title } from '../parts';
 
 interface Store {
   store_name: string; tagline: string; phone: string; email: string; address: string; postal_code: string; hours: string;
-  instagram: string; owner_mobile: string; shipping_post_rial: number; shipping_tipax_rial: number; post_days: string;
+  instagram: string; owner_mobile: string; shipping_post_rial: number; shipping_tipax_rial: number; tipax_on_delivery: boolean; post_days: string;
   tipax_days: string; payment_minutes: number; reminder_minutes: number; return_days: number; enamad_html: string;
 }
 interface Product { name: string; subtitle: string; description: string; price_rial: number; is_available: boolean; specs: [string, string][] }
@@ -94,7 +94,13 @@ function StoreForm() {
         <div className="grid gap-5 sm:grid-cols-2">
           <Field label="هزینه پست پیشتاز (تومان)" error={err('shipping_post_rial')}>{(id) => <TomanInput id={id} rial={store.shipping_post_rial} onChange={(v) => s('shipping_post_rial', v)} />}</Field>
           <Field label="زمان رسیدن با پست">{(id) => <input id={id} className="input" value={store.post_days} onChange={(e) => s('post_days', e.target.value)} />}</Field>
-          <Field label="هزینه تیپاکس (تومان)" error={err('shipping_tipax_rial')}>{(id) => <TomanInput id={id} rial={store.shipping_tipax_rial} onChange={(v) => s('shipping_tipax_rial', v)} />}</Field>
+          <div className="grid gap-2">
+            {!store.tipax_on_delivery && <Field label="هزینه تیپاکس (تومان)" error={err('shipping_tipax_rial')}>{(id) => <TomanInput id={id} rial={store.shipping_tipax_rial} onChange={(v) => s('shipping_tipax_rial', v)} />}</Field>}
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" className="size-4 accent-[var(--color-ink)]" checked={store.tipax_on_delivery} onChange={(e) => s('tipax_on_delivery', e.target.checked)} />
+              هزینه تیپاکس با خریدار، هنگام تحویل (پس‌کرایه)
+            </label>
+          </div>
           <Field label="زمان رسیدن با تیپاکس">{(id) => <input id={id} className="input" value={store.tipax_days} onChange={(e) => s('tipax_days', e.target.value)} />}</Field>
           <Field label="مهلت پرداخت (دقیقه)" error={err('payment_minutes')}>{(id) => <input id={id} className="input ltr text-right" inputMode="numeric" value={fa(store.payment_minutes)} onChange={(e) => s('payment_minutes', Number(latin(e.target.value).replace(/\D/g, '') || 0))} />}</Field>
           <Field label="یادآوری پرداخت پس از (دقیقه)" error={err('reminder_minutes')}>{(id) => <input id={id} className="input ltr text-right" inputMode="numeric" value={fa(store.reminder_minutes)} onChange={(e) => s('reminder_minutes', Number(latin(e.target.value).replace(/\D/g, '') || 0))} />}</Field>

@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import clsx from 'clsx';
 import { CheckCircle, Clock, Fingerprint, Package, Truck, HouseLine, ArrowUUpLeft } from '@phosphor-icons/react';
 import { get, islandData, isApiError, post, postForm } from '../lib/api';
-import { clock, fa, groupCard, latin, toman, tomanPlain, when } from '../lib/format';
+import { clock, fa, groupCard, latin, shippingFee, toman, tomanPlain, when } from '../lib/format';
 import { message } from '../lib/messages';
 import { CopyButton, Field, Notice, useCountdown } from '../lib/ui';
 
@@ -19,6 +19,7 @@ interface Order {
   amount_rial: number;
   price_rial: number;
   shipping_rial: number;
+  shipping_on_delivery: boolean;
   offset_rial: number;
   product: string;
   color: string;
@@ -91,7 +92,7 @@ function Amount({ order }: { order: Order }) {
         <summary className="cursor-pointer w-fit">ریز مبلغ</summary>
         <dl className="mt-2 grid grid-cols-[1fr_auto] gap-x-6 gap-y-1">
           <dt>{order.product}{order.color && `، ${order.color}`}</dt><dd>{toman(order.price_rial)}</dd>
-          <dt>ارسال ({order.shipping})</dt><dd>{toman(order.shipping_rial)}</dd>
+          <dt>ارسال ({order.shipping})</dt><dd>{shippingFee(order.shipping_rial, order.shipping_on_delivery)}</dd>
           <dt>شناسه واریز</dt><dd>{toman(order.offset_rial)}</dd>
         </dl>
       </details>

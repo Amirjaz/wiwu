@@ -186,6 +186,7 @@ def _detail(order):
         'token': order.token, 'province': order.province, 'address': order.address,
         'postal_code': order.postal_code, 'product': order.product_name,
         'price_rial': order.unit_price_rial, 'shipping_rial': order.shipping_rial, 'offset_rial': order.offset_rial,
+        'shipping_on_delivery': order.shipping_on_delivery,
         'card': {'bank': order.card_bank, 'number': order.card_number, 'holder': order.card_holder},
         'expires': order.expires_at.isoformat(), 'paid_via': order.paid_via,
         'confirmed_by': order.confirmed_by.get_full_name() or order.confirmed_by.username if order.confirmed_by else None,
@@ -271,7 +272,9 @@ def slip(request, pk):
     """Packing slip + address label, printed from the browser. A gift's slip has no prices."""
     order = get_object_or_404(Order, pk=pk)
     return render(request, 'shop/slip.html', {
-        'order': order, 'price': persian.toman(order.unit_price_rial), 'shipping': persian.toman(order.shipping_rial),
+        'order': order, 'price': persian.toman(order.unit_price_rial),
+        'shipping': 'پس‌کرایه' if order.shipping_on_delivery else persian.toman(order.shipping_rial) + ' تومان'
+        if order.shipping_rial else 'رایگان',
         'total': persian.toman(order.amount_rial),
     })
 
@@ -345,7 +348,7 @@ def sms_log(request):
 # ── Store settings (owners) ─────────────────────────────────────────────────────────────────────
 
 STORE_FIELDS = ('store_name', 'tagline', 'phone', 'email', 'address', 'postal_code', 'hours', 'instagram',
-                'owner_mobile', 'shipping_post_rial', 'shipping_tipax_rial', 'post_days', 'tipax_days',
+                'owner_mobile', 'shipping_post_rial', 'shipping_tipax_rial', 'tipax_on_delivery', 'post_days', 'tipax_days',
                 'payment_minutes', 'reminder_minutes', 'return_days', 'enamad_html')
 PRODUCT_FIELDS = ('name', 'subtitle', 'description', 'price_rial', 'is_available', 'specs')
 
@@ -380,6 +383,8 @@ def store_settings(request):
             except (TypeError, ValueError):
                 errors[field] = 'number'
                 continue
+        elif model_field.get_internal_type() == 'BooleanField':
+            value = bool(value)
         elif field == 'owner_mobile':
             if value and not persian.phone(value):
                 errors[field] = 'phone'

@@ -17,7 +17,7 @@ CODE_ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ'  # no 0/O, 1/I/L: read out ove
 class StoreSettings(models.Model):
     """One row (pk=1): the store's details, fees and timings, edited in the panel."""
 
-    store_name = models.CharField('نام فروشگاه', max_length=80, default='نام فروشگاه')
+    store_name = models.CharField('نام فروشگاه', max_length=80, default='ویوو')
     tagline = models.CharField('شعار', max_length=160, blank=True)
     phone = models.CharField('تلفن تماس', max_length=40, blank=True)
     email = models.EmailField('ایمیل', blank=True)
@@ -28,8 +28,10 @@ class StoreSettings(models.Model):
     owner_mobile = models.CharField('موبایل مدیر (پیامک سفارش‌ها)', max_length=11, blank=True)
     shipping_post_rial = models.PositiveBigIntegerField('هزینه پست پیشتاز (ریال)', default=0)
     shipping_tipax_rial = models.PositiveBigIntegerField('هزینه تیپاکس (ریال)', default=0)
-    post_days = models.CharField('زمان رسیدن با پست', max_length=60, default='۲ تا ۴ روز کاری')
-    tipax_days = models.CharField('زمان رسیدن با تیپاکس', max_length=60, default='۱ تا ۳ روز کاری')
+    # The buyer pays Tipax themselves when it arrives (پس‌کرایه): the site charges nothing for it and says so.
+    tipax_on_delivery = models.BooleanField('هزینه تیپاکس با خریدار، هنگام تحویل (پس‌کرایه)', default=True)
+    post_days = models.CharField('زمان رسیدن با پست', max_length=60, default='۴ تا ۶ روز کاری')
+    tipax_days = models.CharField('زمان رسیدن با تیپاکس', max_length=60, default='۴ تا ۶ روز کاری')
     payment_minutes = models.PositiveSmallIntegerField('مهلت پرداخت (دقیقه)', default=30)
     reminder_minutes = models.PositiveSmallIntegerField('یادآوری پرداخت پس از (دقیقه)', default=15)
     return_days = models.PositiveSmallIntegerField('مهلت بازگشت کالا (روز کاری)', default=7)
@@ -48,10 +50,17 @@ class StoreSettings(models.Model):
         return obj
 
     def shipping_options(self):
+        """Each way to send: its fee (0 is free, unless the buyer pays on delivery) and how long it takes."""
+        tipax_rial = 0 if self.tipax_on_delivery else self.shipping_tipax_rial
         return [
-            {'id': 'post', 'name': 'پست پیشتاز', 'price_rial': self.shipping_post_rial, 'days': self.post_days},
-            {'id': 'tipax', 'name': 'تیپاکس', 'price_rial': self.shipping_tipax_rial, 'days': self.tipax_days},
+            {'id': 'post', 'name': 'پست پیشتاز', 'price_rial': self.shipping_post_rial, 'days': self.post_days,
+             'on_delivery': False},
+            {'id': 'tipax', 'name': 'تیپاکس', 'price_rial': tipax_rial, 'days': self.tipax_days,
+             'on_delivery': self.tipax_on_delivery},
         ]
+
+    def shipping_on_delivery(self, method):
+        return {o['id']: o['on_delivery'] for o in self.shipping_options()}[method]
 
     def shipping_fee(self, method):
         return {o['id']: o['price_rial'] for o in self.shipping_options()}[method]
@@ -161,6 +170,7 @@ class Order(models.Model):
     color_name = models.CharField('رنگ', max_length=40, blank=True)  # as it was when ordered
     unit_price_rial = models.PositiveBigIntegerField()
     shipping_rial = models.PositiveBigIntegerField()
+    shipping_on_delivery = models.BooleanField('هزینه ارسال هنگام تحویل (پس‌کرایه)', default=False)
     offset_rial = models.PositiveBigIntegerField()  # makes the amount unique, see orders.choose_amount
     amount_rial = models.PositiveBigIntegerField('مبلغ پرداخت (ریال)', db_index=True)
 

@@ -31,7 +31,8 @@ too) and logged in the panel. Panel users for local testing are in `backend/dev-
 
 ## How an order works (`backend/shop/orders.py`)
 
-1. **Checkout** (`/checkout/`): name, mobile, province/city, address, postal code, Pishtaz or Tipax,
+1. **Checkout** (`/checkout/`): name, mobile, province/city, address, postal code, Pishtaz (free) or
+   Tipax (paid by the buyer on delivery, پس‌کرایه: `StoreSettings.tipax_on_delivery`, copied onto the order),
    "gift: no price in the box". The mobile is confirmed with a 5-digit SMS code (5 minutes, 5 tries;
    one code a minute and 5 an hour per phone, 15 an hour per address, so the SMS credit can't be drained).
 2. **The amount**: price + shipping + a random **1–999 toman** that no open order (or one expired in the
@@ -249,8 +250,9 @@ file replaced under the same name is fetched again.
 Django renders every page, so search engines, Torob and Telegram/WhatsApp previews see the product,
 price and FAQ (with `Product` and `FAQPage` JSON-LD). `SITE_NOINDEX=True` (staging) adds noindex
 everywhere and a blocking robots.txt. Policy pages (`/p/<slug>/`) are edited in the panel; text in
-[brackets] waits for the client (warranty, what happens when the lock's battery is empty, the card
-holder's name) and must be filled before applying for Enamad.
+[brackets] waits for the client (the card holder's name, contact details) and must be filled before
+applying for Enamad. The warranty, the battery and shipping came from the client on 2026-10-20 (migration
+0004).
 
 ## Deploying (Nisatech server, next to nisatech.org, nisatak.com and contech)
 

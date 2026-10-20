@@ -13,6 +13,12 @@ export function toman(rial: number): string {
   return fa(Math.floor(rial / 10).toLocaleString('en-US')).replace(/,/g, '٬');
 }
 
+/** A shipping fee as the buyer reads it: the amount, free, or paid to the courier on delivery. */
+export function shippingFee(rial: number, onDelivery = false): string {
+  if (onDelivery) return 'پس‌کرایه';
+  return rial ? `${toman(rial)} تومان` : 'رایگان';
+}
+
 /** The plain toman number for pasting into a bank app: '10000360'. */
 export function tomanPlain(rial: number): string {
   return String(Math.floor(rial / 10));

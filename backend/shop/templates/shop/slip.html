@@ -35,7 +35,7 @@
   <table>
     <tr><td>{{ order.product_name }}{% if order.color_name %}، رنگ {{ order.color_name }}{% endif %}</td><td>{% if order.is_gift %}۱ عدد{% else %}{{ price }} تومان{% endif %}</td></tr>
     {% if not order.is_gift %}
-    <tr><td>ارسال ({{ order.get_shipping_display }})</td><td>{{ shipping }} تومان</td></tr>
+    <tr><td>ارسال ({{ order.get_shipping_display }})</td><td>{{ shipping }}</td></tr>
     <tr><td><strong>پرداخت‌شده</strong></td><td><strong>{{ total }} تومان</strong></td></tr>
     {% endif %}
   </table>

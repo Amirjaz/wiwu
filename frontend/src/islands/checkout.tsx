@@ -2,7 +2,7 @@ import { StrictMode, useEffect, useMemo, useRef, useState, type FormEvent } from
 import { createRoot } from 'react-dom/client';
 import clsx from 'clsx';
 import { post, islandData, isApiError } from '../lib/api';
-import { cleanPhone, fa, latin, toman } from '../lib/format';
+import { cleanPhone, fa, latin, shippingFee, toman } from '../lib/format';
 import { message } from '../lib/messages';
 import { Field, Notice } from '../lib/ui';
 
@@ -11,6 +11,7 @@ interface Shipping {
   name: string;
   price_rial: number;
   days: string;
+  on_delivery: boolean; // paid to the courier when it arrives (پس‌کرایه)
 }
 
 interface Color {
@@ -298,7 +299,8 @@ function Checkout({ data }: { data: Data }) {
               <span className="grid gap-0.5">
                 <span className="font-semibold">{option.name}</span>
                 <span className="text-sm text-muted">{option.days}</span>
-                <span className="font-bold mt-1">{option.price_rial ? `${toman(option.price_rial)} تومان` : 'رایگان'}</span>
+                <span className="font-bold mt-1">{shippingFee(option.price_rial, option.on_delivery)}</span>
+                {option.on_delivery && <span className="text-sm text-muted">هزینه را هنگام تحویل به {option.name} می‌پردازید.</span>}
               </span>
             </label>
           ))}
@@ -315,7 +317,7 @@ function Checkout({ data }: { data: Data }) {
 
       <div className="grid gap-3 rounded-[var(--radius-surface)] bg-surface border border-line p-5">
         <div className="flex justify-between gap-4"><span className="text-ink-soft">{data.product.name}{asksColor && color ? `، ${color.name}` : ''}</span><span>{toman(data.product.price_rial)} تومان</span></div>
-        <div className="flex justify-between gap-4"><span className="text-ink-soft">ارسال با {shipping.name}</span><span>{shipping.price_rial ? `${toman(shipping.price_rial)} تومان` : 'رایگان'}</span></div>
+        <div className="flex justify-between gap-4"><span className="text-ink-soft">ارسال با {shipping.name}</span><span>{shippingFee(shipping.price_rial, shipping.on_delivery)}</span></div>
         <div className="flex justify-between gap-4 border-t border-line pt-3 text-lg font-bold"><span>جمع</span><span>{toman(total)} تومان</span></div>
         <p className="text-sm text-muted leading-relaxed">برای اینکه واریز شما بی‌اشتباه شناخته شود، چند تومان (کمتر از هزار تومان) به مبلغ پرداخت اضافه می‌شود.</p>
       </div>

@@ -298,6 +298,7 @@ def order_json(order):
         'amount_rial': order.amount_rial,
         'price_rial': order.unit_price_rial,
         'shipping_rial': order.shipping_rial,
+        'shipping_on_delivery': order.shipping_on_delivery,
         'offset_rial': order.offset_rial,
         'product': order.product_name,
         'color': order.color_name,
