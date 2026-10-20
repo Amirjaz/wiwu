@@ -17,19 +17,35 @@
 
 {% comment %}
 The hero, a campaign page: one picture at a time over the whole first screen, the bag alone in each
-colour and in use (views.LOOK, islands/home.ts), the header laid over it. A large line at the bottom over a
+colour (a tall poster on phones, a wide one on laptops) and in use (views.LOOK, islands/home.ts); the
+hero's colour dots jump to that colour's poster. The header laid over it. A large line at the bottom over a
 dark fade, the price and the button under it; nothing else, so the picture has the room (Amir, 2026-10-20:
 no thumbnails). Without JavaScript the first picture stays.
 {% endcomment %}
 <section id="hero" class="hero relative isolate -mt-16 overflow-hidden bg-ink text-raised">
   <div data-slider class="h-full touch-pan-y" style="--slide-time: 6s" aria-roledescription="carousel" aria-label="عکس‌های کیف">
     <div data-slides class="absolute inset-0 -z-10">
-      {% for name, alt, focus, wide in look %}
-      <img data-slide{% if forloop.first %} data-on{% else %} hidden aria-hidden="true"{% endif %}
-           src="{% asset 'images/look/'|add:name|add:'-1200.webp' %}" srcset="{% asset 'images/look/'|add:name|add:'-600.webp' %} 600w, {% asset 'images/look/'|add:name|add:'-1200.webp' %} 1200w"
-           sizes="100vw" alt="{{ alt }}" width="1200" height="1800" draggable="false"
-           {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %} class="absolute inset-0 size-full object-cover" style="--focus: {{ focus }}; --focus-wide: {{ wide }}">
-      {% endfor %}
+      {% for slide in look %}{% with name=slide.name %}
+      <div data-slide{% if forloop.first %} data-on{% else %} hidden aria-hidden="true"{% endif %}{% if slide.color %} data-color-name="{{ slide.color }}"{% endif %} class="absolute inset-0{% if slide.photo %} slide-photo{% endif %}" style="--focus: {{ slide.focus }}; --focus-wide: {{ slide.wide }}">
+        {% if slide.photo %}
+        {# Laptops: the photo at its own shape on the left, over a blurred, darkened copy of itself (site.css). #}
+        <img class="slide-blur absolute inset-0 size-full object-cover" src="{% asset 'images/look/'|add:name|add:'-600.webp' %}" alt="" width="600" height="900" draggable="false" loading="lazy">
+        <img class="slide-main absolute inset-0 size-full object-cover"
+             src="{% asset 'images/look/'|add:name|add:'-1200.webp' %}" srcset="{% asset 'images/look/'|add:name|add:'-600.webp' %} 600w, {% asset 'images/look/'|add:name|add:'-1200.webp' %} 1200w"
+             sizes="(min-aspect-ratio: 1/1) 67svh, 100vw" alt="{{ slide.alt }}" width="1200" height="1800" draggable="false"
+             {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %}>
+        {% else %}
+        <picture>
+          <source media="(min-aspect-ratio: 1/1)" sizes="100vw"
+                  srcset="{% asset 'images/look/'|add:name|add:'-wide-1600.webp' %} 1600w, {% asset 'images/look/'|add:name|add:'-wide-2560.webp' %} 2560w">
+          <img class="absolute inset-0 size-full object-cover"
+               src="{% asset 'images/look/'|add:name|add:'-1200.webp' %}" srcset="{% asset 'images/look/'|add:name|add:'-600.webp' %} 600w, {% asset 'images/look/'|add:name|add:'-1200.webp' %} 1200w"
+               sizes="100vw" alt="{{ slide.alt }}" width="1200" height="1800" draggable="false"
+               {% if forloop.first %}fetchpriority="high"{% else %}loading="lazy"{% endif %}>
+        </picture>
+        {% endif %}
+      </div>
+      {% endwith %}{% endfor %}
     </div>
     <div class="hero-scrim pointer-events-none absolute inset-0 -z-10" aria-hidden="true"></div>
 
@@ -76,21 +92,18 @@ can be dragged round. Where the 3D can't run, the same numbers sit on a photo pe
     </div>
     <div class="reveal grid gap-4 lg:grid-cols-[1.4fr_1fr] lg:gap-16 items-center">
       <div data-bag-stage data-model="{% asset 'models/alpha.glb' %}" data-model-small="{% asset 'models/alpha-mobile.glb' %}" class="relative -mx-4 sm:mx-0 h-[23rem] sm:h-[28rem] lg:h-[34rem]">
-        {% for key, label, image, w, h, items in parts %}
-        <figure data-parts-photo data-parts-group="{{ key }}"{% if not forloop.first %} hidden{% endif %} class="absolute inset-0 flex items-center justify-center p-4">
-          <div class="relative">
-            <img src="{% asset image %}" alt="کیف از {{ label }}" width="{{ w }}" height="{{ h }}" loading="lazy"
-                 class="block w-auto h-auto max-w-full {% if key == 'side' %}max-h-[20rem] sm:max-h-[25rem] lg:max-h-[30rem]{% else %}max-h-[20rem] sm:max-h-[24rem] lg:max-h-[28rem]{% endif %} drop-shadow-[0_22px_26px_rgba(36,40,48,0.24)]">
-            {% for x, y, name, note, bx, at, n in items %}
-            {% if bx %}{# The number beside the bag, a line to a pin on the part. #}
-            <span class="absolute h-px bg-ink/55" style="top: {{ y }}%; left: {{ bx }}%; right: calc(100% - {{ x }}%)" aria-hidden="true"></span>
-            <span class="absolute size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-raised ring-2 ring-ink/70" style="left: {{ x }}%; top: {{ y }}%" aria-hidden="true"></span>
-            {% endif %}
-            <span class="marker absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer" style="left: {% if bx %}{{ bx }}{% else %}{{ x }}{% endif %}%; top: {{ y }}%" data-part="{{ forloop.counter }}" aria-hidden="true">{{ forloop.counter|fa }}</span>
-            {% endfor %}
-          </div>
+        {% comment %}Where the 3D bag can't run, fails or draws nothing: the bag in the picked colour (islands/home.ts
+           swaps it as the dots are picked); the numbered list beside it still names the parts.{% endcomment %}
+        <figure data-parts-photo class="absolute inset-0 flex items-center justify-center p-6">
+          {% for color in colors %}{% if color.photo %}
+          <img data-color-photo="{{ color.id }}" src="{% asset color.photo %}" alt="{{ product.name }}، {{ color.name }}"{% if not forloop.first %} hidden{% endif %} loading="lazy"
+               class="block w-auto h-auto max-w-full max-h-[17rem] sm:max-h-[22rem] lg:max-h-[27rem]">
+          {% endif %}{% empty %}
+          <img src="{% asset 'images/front.webp' %}" alt="{{ product.name }}" width="960" height="588" loading="lazy" class="block w-auto h-auto max-w-full max-h-[20rem] sm:max-h-[24rem] lg:max-h-[28rem]">
+          {% endfor %}
         </figure>
-        {# The same numbers on the 3D bag: bag3d.ts moves them with it and hides the ones turned away. Where the photo puts a number beside the bag, it sits off to the side here too, joined by a line. #}
+        {% for key, label, image, w, h, items in parts %}
+        {# The numbers on the 3D bag: bag3d.ts moves them with it and hides the ones turned away. Where a number would cover its part (the lock's), it sits off to the side, joined by a line. #}
         <div data-pins data-parts-group="{{ key }}"{% if not forloop.first %} hidden{% endif %} class="absolute inset-0 z-10 pointer-events-none">
           {% for x, y, name, note, bx, at, n in items %}
           <span data-pin data-part="{{ forloop.counter }}" data-at="{{ at }}" data-normal="{{ n }}"{% if bx %} data-lead{% endif %} hidden aria-hidden="true" class="absolute top-0 left-0 size-0 pointer-events-auto cursor-pointer">
@@ -281,24 +294,40 @@ can be dragged round. Where the 3D can't run, the same numbers sit on a photo pe
 </section>
 {% endif %}
 
-{# Closing: a band in the sensor's green, the colour of "open": the bag, its price, the button, and what comes with buying here. #}
-<section class="bg-signal text-ink">
-  <div class="mx-auto max-w-7xl px-4 sm:px-6 py-16 md:py-24 grid gap-12 md:grid-cols-[1.1fr_0.9fr] items-center">
-    <div class="reveal space-y-6">
-      <p class="flex items-center gap-2 font-mono text-sm text-ink/70"><span class="size-2 rounded-full {% if product.is_available %}bg-ink{% else %}border border-ink{% endif %}"></span>{% if product.is_available %}موجود{% else %}فعلاً موجود نیست{% endif %}</p>
-      <h2 class="text-3xl sm:text-[2.8rem] font-bold leading-[1.4] max-w-[17ch]">{{ product.name }}</h2>
-      <div class="flex flex-wrap items-center gap-x-6 gap-y-4">
-        {% if product.is_available %}<a href="{% url 'checkout' %}" class="btn btn-primary min-h-14 px-12 text-lg">خرید</a>{% endif %}
-        <p class="leading-tight"><span class="block text-2xl font-bold">{{ price }}</span><span class="block font-mono text-xs text-ink/70">تومان</span></p>
+{% comment %}Closing (Amir, 2026-10-20: not the green band): pick a colour. The bag in each colour side by side on a light
+   table, each opening checkout in that colour; the price and the button above, what comes with buying here
+   below.{% endcomment %}
+<section id="colors" class="scroll-mt-16 bg-raised">
+  <div class="mx-auto max-w-7xl px-4 sm:px-6 pt-20 md:pt-28">
+    <div class="reveal flex flex-wrap items-end justify-between gap-x-12 gap-y-6">
+      <div class="space-y-4">
+        <p class="flex items-center gap-2 font-mono text-sm text-muted"><span class="led{% if product.is_available %} led-on{% endif %}"></span>{% if product.is_available %}موجود{% else %}فعلاً موجود نیست{% endif %}{% if colors|length > 1 %}، همه‌ی رنگ‌ها یک قیمت{% endif %}</p>
+        <h2 class="text-3xl sm:text-[2.8rem] font-bold leading-[1.4]">{% if colors|length > 1 %}رنگ خودتان را انتخاب کنید.{% else %}{{ product.name }}{% endif %}</h2>
+      </div>
+      <div class="flex items-center gap-6">
+        <p class="leading-tight"><span class="block text-2xl font-bold">{{ price }}</span><span class="block font-mono text-xs text-muted">تومان</span></p>
+        {% if product.is_available %}<a href="{% url 'checkout' %}" class="btn btn-primary group min-h-11 gap-2 ps-6 pe-5">خرید{% icon 'arrow-left' 'size-4 transition-transform group-hover:-translate-x-0.5' %}</a>{% endif %}
       </div>
     </div>
-    <img src="{% asset 'images/back.webp' %}" alt="" width="960" height="555" loading="lazy" class="reveal w-full max-w-md justify-self-center h-auto drop-shadow-[0_30px_28px_rgba(4,48,26,0.38)]">
-  </div>
-  <div class="border-t border-ink/15">
-    <ul class="mx-auto max-w-7xl px-4 sm:px-6 grid sm:grid-cols-3 text-[0.92rem] [&>li+li]:border-t sm:[&>li+li]:border-t-0 sm:[&>li+li]:border-s [&>li+li]:border-ink/15">
-      <li class="flex items-center gap-3 py-5 sm:px-5 sm:first:ps-0">{% icon 'truck' 'size-5 text-ink/70' %} {% if store.shipping_post_rial %}پست پیشتاز یا تیپاکس، با کد رهگیری{% else %}ارسال رایگان با پست پیشتاز{% endif %}</li>
-      <li class="flex items-center gap-3 py-5 sm:px-5"><a href="{% url 'page' 'warranty' %}" class="flex items-center gap-3 hover:underline">{% icon 'shield-check' 'size-5 text-ink/70' %} ۷۲ ساعت گارانتی تعویض</a></li>
-      <li class="flex items-center gap-3 py-5 sm:px-5">{% icon 'arrow-u-up-left' 'size-5 text-ink/70' %} {{ store.return_days|fa }} روز کاری فرصت بازگشت</li>
+    {% if colors %}
+    <ul class="reveal mt-10 md:mt-14 grid grid-cols-3 gap-2 sm:gap-5">
+      {% for color in colors %}
+      <li>
+        {% if color.available and product.is_available %}<a href="{% url 'checkout' %}?color={{ color.id }}" data-color-link class="group block h-full rounded-[var(--radius-surface)] bg-surface p-3 sm:p-6 lg:p-8 transition-colors hover:bg-page">{% else %}<div class="block h-full rounded-[var(--radius-surface)] bg-surface p-3 sm:p-6 lg:p-8 opacity-60">{% endif %}
+          {% if color.photo %}<img src="{% asset color.photo %}" alt="{{ product.name }}، {{ color.name }}" loading="lazy" class="mx-auto block w-full max-w-[22rem] h-auto transition-transform duration-300 group-hover:-translate-y-1">{% endif %}
+          <p class="mt-3 sm:mt-5 flex flex-wrap items-center justify-between gap-2 text-sm sm:text-base">
+            <span class="flex items-center gap-2 font-bold"><span class="size-3 rounded-full ring-1 ring-ink/20" style="background: {{ color.swatch }}"></span>{{ color.name }}</span>
+            <span class="hidden sm:flex items-center gap-1.5 text-muted group-hover:text-ink">{% if color.available %}خرید این رنگ{% icon 'arrow-left' 'size-4' %}{% else %}ناموجود{% endif %}</span>
+          </p>
+        {% if color.available and product.is_available %}</a>{% else %}</div>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    <ul class="reveal mt-10 md:mt-14 grid sm:grid-cols-3 border-t border-line text-[0.92rem] [&>li+li]:border-t sm:[&>li+li]:border-t-0 sm:[&>li+li]:border-s [&>li+li]:border-line">
+      <li class="flex items-center gap-3 py-6 sm:px-5 sm:first:ps-0">{% icon 'truck' 'size-5 text-muted' %} {% if store.shipping_post_rial %}پست پیشتاز یا تیپاکس، با کد رهگیری{% else %}ارسال رایگان با پست پیشتاز{% endif %}</li>
+      <li class="flex items-center gap-3 py-6 sm:px-5"><a href="{% url 'page' 'warranty' %}" class="flex items-center gap-3 hover:underline">{% icon 'shield-check' 'size-5 text-muted' %} ۷۲ ساعت گارانتی تعویض</a></li>
+      <li class="flex items-center gap-3 py-6 sm:px-5">{% icon 'arrow-u-up-left' 'size-5 text-muted' %} {{ store.return_days|fa }} روز کاری فرصت بازگشت</li>
     </ul>
   </div>
 </section>

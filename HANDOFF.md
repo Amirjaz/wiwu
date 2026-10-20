@@ -28,9 +28,10 @@ This page is the short version, plus what isn't written down anywhere else.
      button at the bottom; no thumbnails (2026-10-20). The header lies over it,
      see-through. Colour dots.
   2. **جزء به جزء:** the 3D bag with a tab per side, numbered pins, the parts listed beside it, colour dots
-     that recolour the bag. The backup where the 3D can't run: WiWU's studio photos with the same numbers.
+     that recolour the bag. The backup where the 3D can't run or draws nothing: the bag in the picked colour.
   3. **The lock** (dark), the hold-to-unlock demo; **specs** with the size drawn over a centimetre mat;
-     **buying** with the sample bill; **FAQ**; the green closing band; the footer.
+     **buying** with the sample bill; **FAQ**; **pick a colour** (the three bags side by side, each opening
+     checkout in its colour; it replaced the green band); the footer.
 - **Store features:** checkout with an SMS code, card-to-card payment with a unique amount per order,
   "I've paid" review, the payment timer, shipping, returns, staff panel, SMS templates, SEO, colours
   (each with a photo shown at checkout), a page cache.
@@ -240,9 +241,11 @@ node tools/compare.mjs && .venv-3d/Scripts/python tools/dev/compose.py
   screens). Amir's other four photos stay in `media/source-photos/look/`, off the site.
 - **Logo:** WiWU's marks, traced, in the site's colours (`shop/wiwu_logo.html`: the text's colour, the
   i-dots green; Amir didn't want WiWU's navy, 2026-10-20). The favicon is the emblem on ink.
-- **Product shots:** `front`, `back`, `side` and `colors/<black|brown|white>.webp`, cut out of WiWU's
-  studio photos by `tools/studio_images.py` (`media/source-photos/wiwu/`). The markers on them are in
-  `views.PARTS`; the size drawing's `--cm` follows the front's proportions (`home.html`).
+- **Product shots:** `front`, `back` and `side`, cut out of WiWU's studio photos by
+  `tools/studio_images.py` (`media/source-photos/wiwu/`); the size drawing's `--cm` follows the front's
+  proportions (`home.html`). `colors/<black|brown|white>.webp` (checkout, the 3D backup, pick a colour) are
+  from `tools/color_photos.py`: WiWU's renders, all turned the same way (the black is their brown made black
+  by `tools/black_render.py`; the silver is their small silver photo, its lock differs).
 - The client's own three phone photos and their cutouts (`media/cutouts`, `tools/web_images.py`) are
   what the 3D model was baked from; the site no longer shows them.
 

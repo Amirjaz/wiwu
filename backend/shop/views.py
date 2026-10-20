@@ -27,20 +27,28 @@ PROVINCES = [
     'سیستان و بلوچستان', 'فارس', 'قزوین', 'قم', 'کردستان', 'کرمان', 'کرمانشاه', 'کهگیلویه و بویراحمد',
     'گلستان', 'گیلان', 'لرستان', 'مازندران', 'مرکزی', 'هرمزگان', 'همدان', 'یزد',
 ]
-# The hero's pictures, in the slider's order (frontend/public/images/look/<name>-600/-1200.webp, the
-# originals in media/source-photos/look/): name, alt text, and the point kept in view when the picture
-# fills a frame of another shape (CSS object-position): on tall screens, and on wide ones, where only a
-# band of the tall picture shows, around the bag.
-#   Four posters of the bag alone (Amir, 2026-10-20: black first, then all three colours side by side,
-# all turned the same way) between Amir's two photos of it in use: WiWU's studio renders on a dark studio
-# sweep (tools/hero_slides.py), the bags left of centre so the headline stays clear.
+# The hero's pictures, in the slider's order (frontend/public/images/look/, the originals in
+# media/source-photos/look/). Four posters of the bag alone (Amir, 2026-10-20: black first, then all three
+# colours side by side, all turned the same way): WiWU's studio renders on a dark studio sweep
+# (tools/hero_slides.py), drawn twice, tall for phones (<name>-600/-1200.webp) and wide for laptops
+# (<name>-wide-1600/-2560.webp), the bags clear of the headline. Between them Amir's two photos of the bag
+# in use (2:3): filling the screen on phones, beside the headline at their own shape on laptops (a
+# stretched photo was blurry there). Each: name, alt text, the point kept in view when the picture fills a
+# frame of another shape (CSS object-position) on tall screens and on wide ones, whether it's a photo, and
+# the colour (as named in the panel) a hero colour dot jumps to.
 LOOK = [
-    ('bag-black', 'کیف ویوو آلفا مشکی، با قفل اثر انگشت و پلاک برند', '0% 50%', '50% 25%'),
-    ('in-the-car', 'کیف ویوو آلفا جلوی دوربین، داخل خودرو', '50% 62%', '50% 62%'),
-    ('bag-colors', 'کیف ویوو آلفا در سه رنگ مشکی، قهوه‌ای و سفید، کنار هم', '0% 50%', '50% 25%'),
-    ('plate', 'نمای نزدیک کیف ویوو آلفا در دست: چرم دانه‌دار و پلاک فلزی برند', '50% 45%', '50% 36%'),
-    ('bag-brown', 'کیف ویوو آلفا قهوه‌ای، با قفل اثر انگشت و پلاک برند', '0% 50%', '50% 25%'),
-    ('bag-silver', 'کیف ویوو آلفا سفید نقره‌ای، با قفل اثر انگشت', '0% 50%', '50% 25%'),
+    {'name': 'bag-black', 'alt': 'کیف ویوو آلفا مشکی، با قفل اثر انگشت و پلاک برند',
+     'focus': '0% 50%', 'wide': '0% 50%', 'color': 'مشکی'},
+    {'name': 'in-the-car', 'alt': 'کیف ویوو آلفا جلوی دوربین، داخل خودرو',
+     'focus': '50% 62%', 'wide': '50% 50%', 'photo': True},
+    {'name': 'bag-colors', 'alt': 'کیف ویوو آلفا در سه رنگ مشکی، قهوه‌ای و سفید، کنار هم',
+     'focus': '0% 50%', 'wide': '0% 50%'},
+    {'name': 'plate', 'alt': 'نمای نزدیک کیف ویوو آلفا در دست: چرم دانه‌دار و پلاک فلزی برند',
+     'focus': '50% 45%', 'wide': '50% 50%', 'photo': True},
+    {'name': 'bag-brown', 'alt': 'کیف ویوو آلفا قهوه‌ای، با قفل اثر انگشت و پلاک برند',
+     'focus': '0% 50%', 'wide': '0% 50%', 'color': 'قهوه‌ای'},
+    {'name': 'bag-silver', 'alt': 'کیف ویوو آلفا سفید نقره‌ای، با قفل اثر انگشت',
+     'focus': '0% 50%', 'wide': '0% 50%', 'color': 'سفید'},
 ]
 
 CLAIM_TYPES = {'image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'application/pdf'}

@@ -7,11 +7,12 @@ const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').match
 // The hero's pictures, one at a time behind its text, the next fading in every --slide-time. No controls
 // (Amir, 2026-10-20: the thumbnails crowded it): it waits while keyboard focus is in the hero, while it's
 // touched, off screen or in a background tab, and never moves on its own for people who turn motion off.
-// A sideways swipe anywhere on the hero moves it by hand. Right to left: the next picture is to the left.
+// A sideways swipe anywhere on the hero moves it by hand (right to left: the next picture is to the left),
+// and a colour dot picked in the hero brings up that colour's poster.
 function photoSlider() {
   const slider = document.querySelector<HTMLElement>('[data-slider]');
   if (!slider) return;
-  const slides = [...slider.querySelectorAll<HTMLImageElement>('[data-slide]')];
+  const slides = [...slider.querySelectorAll<HTMLElement>('[data-slide]')];
   if (slides.length < 2) return;
   const time = (parseFloat(getComputedStyle(slider).getPropertyValue('--slide-time')) || 6) * 1000;
 
@@ -54,6 +55,10 @@ function photoSlider() {
   });
   new IntersectionObserver(([entry]) => hold('away', !entry.isIntersecting)).observe(slider);
   document.addEventListener('visibilitychange', () => hold('hidden', document.hidden));
+  slider.addEventListener('color:picked', (event) => {
+    const poster = slides.findIndex((slide) => slide.dataset.colorName === (event as CustomEvent<string>).detail);
+    if (poster >= 0) show(poster);
+  });
 
   // A sideways swipe anywhere but on a link or button; up and down still scroll the page (touch-action:
   // pan-y on the hero).
@@ -109,17 +114,26 @@ function colorPicker() {
       const label = picker.querySelector<HTMLElement>('[data-color-label]');
       if (label) label.textContent = chosen?.dataset.colorName ?? '';
     });
-    document.querySelectorAll<HTMLAnchorElement>('a[href*="/checkout/"]').forEach((link) => {
+    // (Not the closing section's links, which each open checkout in their own colour.)
+    document.querySelectorAll<HTMLAnchorElement>('a[href*="/checkout/"]:not([data-color-link])').forEach((link) => {
       const url = new URL(link.href);
       url.searchParams.set('color', id);
       link.href = url.pathname + url.search;
     });
     const swatch = chosen.dataset.swatch ?? '';
+    // The bag in that colour where the 3D can't run (home.html, the parts section's stage).
+    document.querySelectorAll<HTMLElement>('[data-parts-photo] [data-color-photo]').forEach((img) => {
+      img.hidden = img.dataset.colorPhoto !== id;
+    });
     document.documentElement.dataset.bagColor = swatch;
     document.dispatchEvent(new CustomEvent('bag:color', { detail: swatch }));
   };
   const usable = dots.filter((dot) => dot.getAttribute('aria-disabled') !== 'true');
-  usable.forEach((dot) => dot.addEventListener('click', () => pick(dot.dataset.color ?? '')));
+  usable.forEach((dot) => dot.addEventListener('click', () => {
+    pick(dot.dataset.color ?? '');
+    // Told to the section it was picked in: the hero shows that colour's poster.
+    dot.dispatchEvent(new CustomEvent('color:picked', { bubbles: true, detail: dot.dataset.colorName }));
+  }));
   if (usable[0]) pick(usable[0].dataset.color ?? '');
 }
 

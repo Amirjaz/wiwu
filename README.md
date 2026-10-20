@@ -116,8 +116,8 @@ black bag, so every colour, black included, is drawn as a tint of it: the leathe
 photo's light and dark relative to its median (softened, so the grain, seams and pocket lines stay but
 the photo's lighting doesn't blotch), while pixels far brighter than the leather (the pulls, the snap)
 keep the photo's own colour. The zipper tape is a dark shade of the leather; the modelled lock,
-teeth and far-end hardware carry two looks each (`finish` in `details.ts`): gunmetal on black, as on
-WiWU's side photo, and silver on the lighter colours, as on their brown and silver-white bags. The brand
+teeth and far-end hardware carry two looks each (`finish` in `details.ts`): gunmetal on dark leather (black
+and WiWU's coffee brown, as on their renders) and silver on light (their silver-white bag). The brand
 plate stays the same grey satin metal on every colour, as on all three of WiWU's photos. A colour
 added in the panel tints the bag the same way, from its swatch.
 
@@ -126,8 +126,10 @@ chunk (170 KB gzipped), plus the model (`public/models/alpha.glb` 732 KB, `alpha
 loads once the page has (the hero's photos come first) and the section is about a screen away.
 
 - **While it loads:** the stage is `[data-pending]`: a thin line shows the download.
-- **The photos are the backup.** Each side's photo with the same numbers (the earlier parts diagram)
-  shows on devices without the 3D, and when it fails or takes over 6 s.
+- **The backup is a picture of the bag in the picked colour** (`images/colors/`, swapped by the colour
+  dots; Amir, 2026-10-20), the numbered list beside it as before. It shows on devices without the 3D, when
+  it fails or takes over 6 s, when a frame draws nothing (`BagScene.drawsTheBag` reads the middle of the
+  first frame back: some GPUs fail quietly and leave a blank stage) and when the browser drops the GPU.
 - **No zoom, no turning by itself:** the pins stay readable; the mouse wheel scrolls the page.
 - **No fade at the canvas edge:** it read as a white ring.
 - **Framing:** each side's view, and a tapped part's, keeps the whole bag and its shadow inside the
@@ -198,8 +200,9 @@ The panel and the other pages share these tokens.
 
 Each home section has its own ground, so moving down the page reads as moving between parts: the hero
 on aluminium grey (`page`), the parts on a light table (`raised`), the lock on ink, the specs on
-`steel`, buying on `graphite` with the bill in white, the questions on grey, a closing band in signal
-green, and an ink footer. No white glows behind the bag. On phones the menu is a solid ink panel under
+`steel`, buying on `graphite` with the bill in white, the questions on grey, the closing "pick a colour"
+section on a light table (the bag in each colour side by side, each opening checkout in that colour; it
+replaced a band in signal green, 2026-10-20), and an ink footer. No white glows behind the bag. On phones the menu is a solid ink panel under
 the header (outside it, since the header's blur would trap a fixed panel), with the buy button at the
 bottom; the page doesn't scroll under it, and Escape closes it.
 
@@ -219,8 +222,9 @@ Motion is CSS: scroll-driven where the browser has it, nothing otherwise, nothin
 
 The bag comes in black, brown (قهوه‌ای) and silver-white (سفید), all at the product's price, all on
 show since 2026-10-19 (migration 0003; Amir's call). Each colour has a name, a swatch (#rrggbb, the
-leather's colour on WiWU's photos, which the 3D bag is tinted to), a photo (`images/colors/*.webp`,
-`tools/studio_images.py`) and two switches: *shown on the site* and *in stock*. While only one colour is
+leather's colour on WiWU's renders, which the 3D bag is tinted to; the brown is their coffee brown since
+migration 0005), a picture (`images/colors/*.webp`, `tools/color_photos.py`: all three turned the same way,
+on a transparent background) and two switches: *shown on the site* and *in stock*. While only one colour is
 shown nobody is asked and every order gets that colour. With two or more shown:
 
 - the hero and the 3D section show the swatches (`shop/color_picker.html`, `islands/home.ts`), moving

@@ -1,10 +1,13 @@
 """The hero's bag-only posters (2026-10-20): WiWU's studio renders, cut out of their white and set on a dark
 studio sweep, with a floor reflection, contact shadows and a little film grain.
 
-    python tools/hero_slides.py <out.png> <palette> <render>[@x,y,width] ...
+    python tools/hero_slides.py [--wide] <out.png> <palette> <render>[@x,y,width] ...
 
-One render: it stands left of centre, high, a third of the frame wide. Several: each at x, y (its centre,
-as fractions of the frame) and width (of the frame), drawn in the order given, so the last is in front:
+Two of each poster: tall (1600 x 2400, for phones: the full height shows, the sides cropped, the text over
+the lower half, so the bags stand left of centre and high) and --wide (2560 x 1400, for laptops: the
+headline sits on the right, so the bags stand in the left half, a little above the middle). One render
+stands where its frame puts a lone bag. Several: each at x, y (its centre, as fractions of the frame) and
+width (of the frame), drawn in the order given, so the last is in front:
 
     W=media/source-photos/wiwu
     python tools/hero_slides.py bag-black.png steel $W/black-render-front.jpg   (from tools/black_render.py)
@@ -12,13 +15,15 @@ as fractions of the frame) and width (of the frame), drawn in the order given, s
     python tools/hero_slides.py bag-silver.png silver $W/white-three-quarter.png
     python tools/hero_slides.py bag-colors.png graphite $W/brown-render-front.jpg@0.16,0.29,0.22 \\
         $W/white-three-quarter.png@0.52,0.29,0.22 $W/black-render-front.jpg@0.34,0.31,0.25   (black in front)
+    python tools/hero_slides.py --wide bag-black-wide.png steel $W/black-render-front.jpg
+    python tools/hero_slides.py --wide bag-brown-wide.png brown $W/brown-render-front.jpg
+    python tools/hero_slides.py --wide bag-silver-wide.png silver $W/white-three-quarter.png@0.25,0.47,0.25
+    python tools/hero_slides.py --wide bag-colors-wide.png graphite $W/brown-render-front.jpg@0.10,0.45,0.16 \\
+        $W/white-three-quarter.png@0.34,0.45,0.16 $W/black-render-front.jpg@0.22,0.48,0.20
 
-Writes a 1600 x 2400 PNG; media/source-photos/look/bag-*.jpg are those, and the hero's 1200/600 px files
-come from them (frontend/public/images/look/).
-
-The hero shows 2:3 pictures with object-fit: cover. On wide screens only a band shows (views.LOOK puts it
-round the bags) and the headline sits on the right; on phones the full height shows, the sides cropped, the
-text over the lower half. So the bags stand left of centre (x 31%), high (y 30%).
+WiWU's silver photo is only 658 px across (and its lock differs, so it can't come from the brown render), so
+the silver bag is drawn no bigger than that. media/source-photos/look/bag-*.jpg are the tall posters and
+bag-*-wide.jpg the wide ones; the hero's files come from them (frontend/public/images/look/).
 """
 import sys
 
@@ -28,7 +33,9 @@ from PIL import Image
 from scipy import ndimage
 
 W, H = 1600, 2400
+SWEEP = 0.06  # how tall the curve from wall to floor is (the wide frame's is softer: its floor line spans more)
 SINGLE = (0.31, 0.30, 0.34)  # x, y, width of a lone bag
+WIDE = (2560, 1400), (0.25, 0.47, 0.30), 0.18
 
 PALETTES = {
     # top of the wall, the wall where it meets the floor, the floor near the camera, the light's colour
@@ -77,7 +84,7 @@ def backdrop(palette, horizon, light_at):
     x = np.linspace(0, 1, W)[None, :, None]
     wall_part = top + (wall - top) * np.clip(y / horizon, 0, 1) ** 1.4
     floor_part = wall + (floor - wall) * np.clip((y - horizon) / (1 - horizon), 0, 1) ** 0.55
-    t = np.clip((y - horizon + 0.03) / 0.06, 0, 1)
+    t = np.clip((y - horizon + SWEEP / 2) / SWEEP, 0, 1)
     t = t * t * (3 - 2 * t)  # the curve of the sweep
     img = (wall_part * (1 - t) + floor_part * t) * np.ones((1, W, 1), np.float32)
     lx, ly = light_at
@@ -92,8 +99,13 @@ def place(img, rgb, alpha, cx, cy, width):
     """One bag standing on the floor with its centre at (cx, cy): shadows and reflection, then the bag."""
     bw = int(W * width)
     bh = int(rgb.shape[0] * bw / rgb.shape[1])
-    bag = cv2.resize(rgb, (bw, bh), interpolation=cv2.INTER_AREA)
-    a = cv2.resize(alpha, (bw, bh), interpolation=cv2.INTER_AREA)[..., None]
+    if bw <= rgb.shape[1]:
+        bag = cv2.resize(rgb, (bw, bh), interpolation=cv2.INTER_AREA)
+        a = cv2.resize(alpha, (bw, bh), interpolation=cv2.INTER_AREA)[..., None]
+    else:  # a small source (the silver photo): Lanczos, and the softness that adds sharpened back a little
+        bag = cv2.resize(rgb, (bw, bh), interpolation=cv2.INTER_LANCZOS4)
+        bag = np.clip(bag + 0.6 * (bag - cv2.GaussianBlur(bag, (0, 0), 1.2)), 0, 255)
+        a = np.clip(cv2.resize(alpha, (bw, bh), interpolation=cv2.INTER_LINEAR), 0, 1)[..., None]
     # Settle it into the scene: a touch darker, with the light falling off to the lower right.
     yy, xx = np.mgrid[0:bh, 0:bw]
     bag = bag * 0.93 * (1.0 - 0.10 * (yy / bh) - 0.06 * (xx / bw))[..., None]
@@ -120,7 +132,12 @@ def grain(img, seed=7):
 
 
 def main():
-    out, palette, *specs = sys.argv[1:]
+    global W, H, SINGLE, SWEEP
+    args = sys.argv[1:]
+    if args[0] == '--wide':
+        (W, H), SINGLE, SWEEP = WIDE
+        args = args[1:]
+    out, palette, *specs = args
     bags = []
     for spec in specs:
         path, _, where = spec.partition('@')

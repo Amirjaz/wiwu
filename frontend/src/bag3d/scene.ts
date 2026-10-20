@@ -90,6 +90,7 @@ export class BagScene {
   private settled = false; // arrived, and handed over to the user's drag
   private running = false;
   private visible = true;
+  private disposed = false;
   private frame = 0;
   private onPins: (positions: (Vector2 | null)[]) => void;
   private resizeObserver: ResizeObserver;
@@ -253,25 +254,28 @@ export class BagScene {
 
   /** The bag in a colour (its swatch from the panel, #rrggbb). The photos are of the black bag: black
    *  keeps them as they are. Any other colour tints the leather by the photo's own light and dark (its
-   *  grain, seams and shading stay), the zipper tape a darker shade of it, and the hardware silver, as on
-   *  the maker's photos of the brown and silver-white bags. */
+   *  grain, seams and shading stay) and the zipper tape a darker shade of it. The hardware is gunmetal on
+   *  dark leather (black and WiWU's coffee brown, as on their renders) and silver on light (their
+   *  silver-white bag). */
   setColor(swatch: string) {
     this.swatch = swatch;
     const color = new Color(swatch);
-    const black = color.r * 0.2126 + color.g * 0.7152 + color.b * 0.0722 < 0.03; // linear light
+    const luma = color.r * 0.2126 + color.g * 0.7152 + color.b * 0.0722; // linear light
+    const black = luma < 0.03;
+    const dark = luma < 0.1;
     this.tint.value = 1;
     const { leather, tape, teeth, metal } = this.parts;
     if (!leather) return; // set again once the model is in (load)
     leather.color.copy(black ? BLACK_LEATHER : color);
     tape.color.copy(black ? new Color('#16171a') : color.clone().multiplyScalar(0.18));
-    teeth.color.copy(black ? GUNMETAL : SILVER);
-    metal.color.copy(black ? GUNMETAL : SILVER);
+    teeth.color.copy(dark ? GUNMETAL : SILVER);
+    metal.color.copy(dark ? GUNMETAL : SILVER);
     // The modelled parts (lock, zipper, far end) carry their two looks (details.ts).
     this.scene.traverse((node) => {
       if (!(node instanceof Mesh)) return;
       for (const material of [node.material as Material | Material[]].flat()) {
         const finish = material.userData.finish as { black: string; light: string } | undefined;
-        if (finish) (material as MeshStandardMaterial).color.set(black ? finish.black : finish.light);
+        if (finish) (material as MeshStandardMaterial).color.set(dark ? finish.black : finish.light);
       }
     });
     if (this.zipperTape) this.zipperTape.color.copy(black ? new Color('#141518') : color.clone().multiplyScalar(0.18));
@@ -335,6 +339,19 @@ export class BagScene {
     this.start();
   }
 
+  /** Whether a frame actually draws the bag: some GPUs fail quietly and leave the canvas empty (seen on a
+   *  laptop, 2026-10-20), so the middle of a fresh frame is read back; nothing there means no 3D here. */
+  drawsTheBag(): boolean {
+    this.renderer.render(this.scene, this.camera);
+    const gl = this.renderer.getContext();
+    const { width, height } = this.renderer.domElement;
+    const size = Math.min(48, width, height);
+    const pixels = new Uint8Array(size * size * 4);
+    gl.readPixels((width - size) >> 1, (height - size) >> 1, size, size, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+    for (let i = 3; i < pixels.length; i += 4) if (pixels[i] > 0) return true;
+    return false;
+  }
+
   /** Development only: the surface under a rough pin, found from outside along its normal, for
    *  views.PARTS. Returns the hit and the face's normal, or null if the ray misses. */
   debugSnap(at: [number, number, number], normal: [number, number, number]) {
@@ -388,11 +405,13 @@ export class BagScene {
   }
 
   setVisible(visible: boolean) {
-    this.visible = visible;
+    this.visible = visible && !this.disposed;
     if (visible) this.start();
   }
 
   dispose() {
+    this.disposed = true;
+    this.visible = false;
     this.running = false;
     cancelAnimationFrame(this.frame);
     this.resizeObserver.disconnect();

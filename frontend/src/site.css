@@ -393,11 +393,11 @@
     min-height: 34rem;
     max-height: 62rem;
   }
-  .hero [data-slide] {
+  .hero [data-slide] img {
     object-position: var(--focus, 50% 50%);
   }
   @media (min-aspect-ratio: 1/1) {
-    .hero [data-slide] {
+    .hero [data-slide] img {
       object-position: var(--focus-wide, 50% 50%);
     }
   }
@@ -611,4 +611,24 @@ header[data-header] {
 :root:not(.overflow-hidden) header[data-header="clear"]:not([data-solid]) .btn-ghost {
   border-color: color-mix(in srgb, var(--color-raised) 45%, transparent);
   color: var(--color-raised);
+}
+
+/* The hero's photos on laptops (views.LOOK): stretched over a wide screen a 2:3 photo was blown up and
+   blurry, so there it stands at its own shape on the left, full height, fading into a blurred, darkened copy
+   of itself. Outside the layers, to win over the utilities on the images. On phones it fills the screen. */
+.hero .slide-blur {
+  display: none;
+}
+@media (min-aspect-ratio: 1/1) {
+  .hero .slide-blur {
+    display: block;
+    filter: blur(44px) brightness(0.42) saturate(1.15);
+    transform: scale(1.15);
+  }
+  .hero .slide-photo .slide-main {
+    right: auto;
+    width: auto;
+    aspect-ratio: 2 / 3;
+    mask-image: linear-gradient(to left, transparent, #000 22%);
+  }
 }

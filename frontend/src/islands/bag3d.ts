@@ -97,15 +97,24 @@ function setup(section: HTMLElement, stage: HTMLElement) {
       loading.setAttribute('data-known', '');
       progress.style.transform = `scaleX(${fraction})`;
     };
+    let created: BagScene | null = null;
     try {
       const { BagScene } = await import('../bag3d/scene');
-      const instance = new BagScene(stage, { reducedMotion, small, onPins: placePins });
+      const instance = (created = new BagScene(stage, { reducedMotion, small, onPins: placePins }));
       const picked = document.documentElement.dataset.bagColor;
       if (picked) instance.setColor(picked);
       const visibility = new IntersectionObserver(([entry]) => instance.setVisible(entry.isIntersecting));
       visibility.observe(section);
       document.addEventListener('visibilitychange', () => instance.setVisible(!document.hidden));
       await instance.load((small ? stage.dataset.modelSmall : stage.dataset.model) ?? '', onProgress);
+      if (!instance.drawsTheBag()) throw new Error('the 3D bag drew nothing');
+      // If the browser drops the GPU later (it can, under memory pressure), the picture takes over.
+      stage.querySelector('canvas')?.addEventListener('webglcontextlost', () => {
+        instance.dispose();
+        scene = null;
+        stage.removeAttribute('data-3d');
+        showPhotos();
+      }, { once: true });
       scene = instance;
       const latest = document.documentElement.dataset.bagColor; // picked while it loaded
       if (latest) instance.setColor(latest);
@@ -117,8 +126,9 @@ function setup(section: HTMLElement, stage: HTMLElement) {
       if (hint) hint.hidden = false;
       if (import.meta.env.DEV) (window as unknown as { __bag: BagScene }).__bag = instance;
     } catch (error) {
-      // The photos take over; the section works the same without the 3D.
+      // The picture takes over (and the canvas goes, blank or half drawn); the section works the same.
       window.clearTimeout(slow);
+      (created as BagScene | null)?.dispose();
       showPhotos();
       console.warn('3D bag unavailable', error);
     }

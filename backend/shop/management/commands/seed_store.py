@@ -38,7 +38,7 @@ PRODUCT = {
 
 # Black, brown and silver-white; the swatches are the leather's colour on the maker's photos (the 3D bag
 # takes its tint from them), with each colour's photo (tools/studio_images.py).
-COLORS = [('مشکی', '#17181b', 'images/colors/black.webp'), ('قهوه‌ای', '#b9683f', 'images/colors/brown.webp'),
+COLORS = [('مشکی', '#17181b', 'images/colors/black.webp'), ('قهوه‌ای', '#463930', 'images/colors/brown.webp'),
           ('سفید', '#b6babf', 'images/colors/white.webp')]
 
 FAQS = [
