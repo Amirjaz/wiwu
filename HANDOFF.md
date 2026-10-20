@@ -101,6 +101,10 @@ a VPN. Screenshots in `media/quotes/` (not in git): Arvan's calculator per size 
 - **Kavenegar:** the Advanced plan is 600,000 toman a year (their FAQ says the OTP service needs it).
   The per-message price only shows in their panel; a Persian SMS costs about 12 to 20 toman (the
   regulator's ceiling is 116 rial on a postpaid SIM). About 5 SMS per order.
+- **cartbecart** (their site, 2026-10-20): Max (unlimited cards and payments) 490,000 toman a month,
+  440,000 a month paid 3 months at once, 420,000 for 6; Pro (3 cards, 500 payments a month) 390,000 /
+  350,000 / 330,000. No fee per sale. The page only offers 3- and 6-month payment; PLAN.md's "440k a
+  month" is the 3-month rate. Sent to Amir for the client the same day, with Kavenegar's.
 - **Arvan's panel prices more than its calculator.** Amir's panel (2026-10-20, Tehran بامداد) offered
   **G6-Small5**, 4 vCPU / 4 GB / 75 GB SSD, at 1,386,240 rial a day: 2,079,360 toman for 15 days (the
   calculator's 4 cores / 4 GB: 1,256,100). C5-Medium1, 2 / 4 / 25 GB, 870,240 rial a day; C5-Medium2,
