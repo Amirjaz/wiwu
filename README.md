@@ -264,14 +264,19 @@ applying for Enamad. The warranty, the battery and shipping came from the client
 
 ```bash
 scp -r deploy amir@185.231.180.92:purseshop-deploy
-ssh -t amir@185.231.180.92 'sudo DOMAIN=<host> STAGING=1 bash purseshop-deploy/server-setup.sh'
+ssh -t amir@185.231.180.92 'sudo DOMAIN=<host> STAGING=1 CERT=1 bash purseshop-deploy/server-setup.sh'
 DOMAIN=<host> bash deploy/deploy.sh
 ```
 
 Staging runs at **https://shop.nisatech.org** (2026-10-15): set up without `STAGING=1` (open, no
-password, Amir's choice), DNS on ArvanCloud (A record `shop` → 185.231.180.92, CDN on, origin over
-HTTP; nisatak.com's own HTTPS answers on this server's port 443). `amir` can't sudo, so the root setup is
-run by the server admin; deploys need no root. With an https `PUBLIC_URL`, Django sends http visitors to
+password, Amir's choice), DNS on ArvanCloud (A record `shop` → 185.231.180.92, meant to have the CDN on,
+origin over HTTP). **The site also answers HTTPS itself**, with its own Let's Encrypt certificate
+(`CERT=1`; certbot.timer renews it and reloads nginx): on 2026-10-20 Arvan's proxy was off for the whole
+nisatech.org zone, browsers came straight to the server, and nginx answered them with its only HTTPS
+site, nisatak.com. So it works with the proxy on or off and with either origin protocol. Every deploy
+then asks the server itself for `https://<host>/` and fails loudly if the certificate is missing, wrong or
+within 21 days of running out. The root setup needs sudo (`amir` has it since 2026-10-20; before, the
+server admin ran it); deploys need no root. With an https `PUBLIC_URL`, Django sends http visitors to
 https (`SECURE_SSL_REDIRECT`).
 
 gunicorn on 127.0.0.1:8030, `/srv/purseshop`, its own system user. The first deploy writes

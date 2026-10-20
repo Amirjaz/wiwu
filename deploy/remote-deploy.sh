@@ -56,3 +56,19 @@ sudo /usr/bin/systemctl restart purseshop
 sudo /usr/bin/systemctl start purseshop-tick.timer
 sleep 2
 sudo /usr/bin/systemctl is-active purseshop
+
+echo "==> HTTPS here, as a browser sees it with Arvan's proxy off"
+# With the proxy off, browsers come straight to this server, and nginx must answer with this site's own
+# certificate: without one it answered with the only other HTTPS site, nisatak.com (2026-10-20). Asked
+# of this machine itself, so DNS and Arvan don't matter. curl checks the certificate is for $DOMAIN.
+if ! curl -fsS --max-time 20 --resolve "$DOMAIN:443:127.0.0.1" -o /dev/null "https://$DOMAIN/"; then
+  echo "ERROR: the new code is live, but https://$DOMAIN/ fails on this server, so browsers that come" >&2
+  echo "straight here get another site or an error. Fix: sudo DOMAIN=$DOMAIN CERT=1 bash deploy/server-setup.sh" >&2
+  exit 1
+fi
+# certbot.timer renews 30 days ahead and Let's Encrypt no longer emails, so a stuck renewal shows here.
+if ! echo | openssl s_client -connect 127.0.0.1:443 -servername "$DOMAIN" 2>/dev/null \
+    | openssl x509 -noout -checkend $((21 * 86400)) >/dev/null; then
+  echo "WARNING: the certificate for $DOMAIN runs out within 21 days; renewal is failing." >&2
+  echo "Check: sudo certbot renew --cert-name $DOMAIN --dry-run" >&2
+fi

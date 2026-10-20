@@ -17,6 +17,12 @@ This page is the short version, plus what isn't written down anywhere else.
   - SMS codes only go to the server log and payments are manual, so people can browse but can't finish
     an order. No orders yet.
   - Plain http redirects to https.
+  - **HTTPS on the server itself** (2026-10-20): Arvan's proxy was off for every nisatech.org record, so
+    browsers came straight to the server, and nginx answered https://shop.nisatech.org with nisatak.com
+    (its only HTTPS site). The shop now has its own Let's Encrypt certificate (until 2027-01-18,
+    certbot.timer renews it and reloads nginx) and works with the proxy on or off. Each deploy checks it
+    (`remote-deploy.sh`). Without the proxy there is no CDN cache: images and the 3D model come from
+    this 1-core server.
   - **Panel accounts:** `amir` and `salar`, both superusers (Amir set the passwords himself on
     2026-10-19). Log in at `/panel/` (the store) or `/admin/` (Django, for the Owners/Staff groups).
 - **The bag:** the WiWU Alpha fingerprint-lock clutch, sold as **«کیف دستی ویوو آلفا»** (WiWU as the
@@ -55,6 +61,11 @@ This page is the short version, plus what isn't written down anywhere else.
    still reads `x-cache: BYPASS`, so every visitor downloads it (0.3 to 0.7 MB) from our server.
 2. **The questions for the client** (below): he sends them and brings back the answers.
 3. **Deploy go-ahead**, whenever there is new work (only on his word).
+4. **Arvan's proxy (the cloud icon) for nisatech.org**: off for every record on 2026-10-20 (his call, or
+   Arvan's). The shop works either way now; with it on, Arvan caches images and the 3D model again and
+   takes the traffic. Not this project's, but tell him: nisatech.org, contech, pd and ops have no HTTPS
+   of their own on the server, so with the proxy off their https addresses show nisatak.com's site
+   behind a certificate warning.
 
 ## Waiting on the client
 
@@ -288,8 +299,12 @@ node tools/compare.mjs && .venv-3d/Scripts/python tools/dev/compose.py
 - **`makemigrations --check`** reports an `Alter field claim_file on order` that predates this work.
 - **Server over SSH:** `pkill -f <name>` through `ssh` matches its own command line and ends the session.
   The server's DNS can lag hours behind Arvan.
-- **ArvanCloud:** the `shop` record needs the origin protocol **HTTP** (over HTTPS Arvan reaches
-  nisatak.com). HTML is never cached by Arvan.
+- **ArvanCloud:** with the shop's own certificate (2026-10-20) any origin protocol works; before it,
+  over HTTPS Arvan reached nisatak.com. HTML is never cached by Arvan. Check where a name points with
+  `nslookup <host> k.ns.arvancdn.ir`: the server's IP means the proxy is off, Arvan's means on.
+- **A new HTTPS host on this server** needs its own certificate: nginx answers any name it has no
+  HTTPS block for with nisatak.com, the first HTTPS site it loads and so its default
+  (`server-setup.sh CERT=1` for the shop).
 - **Plane:** create and edit items from a signed-in Plane tab in the browser pane with
   `fetch('https://api.plane.so/api/workspaces/nisatech/projects/c2c38e4a-3e34-4392-b506-19d3bc8d9724/issues/', {credentials: 'include', headers: {'X-CSRFToken': …}})`
   (the token from `https://api.plane.so/auth/get-csrf-token/`). PATCH `description_html` only while the
@@ -345,6 +360,7 @@ another project's (Finance).
 
 | Date | Commit | What |
 | --- | --- | --- |
+| 2026-10-20 | 4b38735 | Server only, no app deploy: the shop's own HTTPS (Let's Encrypt via `server-setup.sh CERT=1`) after https://shop.nisatech.org showed nisatak.com with Arvan's proxy off; the deploy-time HTTPS check is in `remote-deploy.sh` from the next deploy |
 | 2026-10-20 | 4563f06 | Hero on laptops: wide posters (up to 2560 px), Amir's photos at their own shape; hero colour dots jump to their poster; the 3D backup shows the picked colour and catches a 3D that draws nothing; pick-a-colour closing section; the brown is WiWU's coffee brown with gunmetal hardware (migration 0005, page cache emptied after it; backup `db-20261020-102414.sqlite3`, server time) |
 | 2026-10-20 | b9f23f3 | The client's answers: shop «ویوو» with WiWU's logo in the site's colours, 14,100,000 toman, free post and Tipax on delivery, 4 to 6 working days, battery, 72-hour warranty; hero of four bag-only posters (black first) and two of Amir's photos, no thumbnails, a compact buy button (migration 0004, page cache emptied after it; backup `db-20261020-092929.sqlite3`, server time) |
 | 2026-10-19 | f04fddb | WiWU's logo on the 3D bag's plate (emblem and name), pin 1 beside it, new models `?v=bccdb021` / `?v=9b666061` (no migration; backup `db-20261019-094240.sqlite3`, server time) |
