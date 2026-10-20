@@ -49,9 +49,9 @@ thumbnails stay hidden.
             <p class="leading-tight"><span class="block text-xl md:text-2xl font-bold">{{ price }}</span><span class="block font-mono text-xs text-raised/60">تومان</span></p>
           </div>
         </div>
-        <div data-slider-controls hidden class="rise flex items-end gap-2 md:gap-2.5" style="--i:3">
+        <div data-slider-controls hidden class="rise flex items-end gap-1.5 sm:gap-2 md:gap-2.5" style="--i:3">
           {% for name, alt, focus, wide in look %}
-          <button type="button" data-goto="{{ forloop.counter0 }}" aria-label="عکس {{ forloop.counter|fa }}" aria-current="{% if forloop.first %}true{% else %}false{% endif %}"{% if forloop.first %} data-state="on"{% endif %} class="group w-10 sm:w-12 lg:w-14">
+          <button type="button" data-goto="{{ forloop.counter0 }}" aria-label="عکس {{ forloop.counter|fa }}" aria-current="{% if forloop.first %}true{% else %}false{% endif %}"{% if forloop.first %} data-state="on"{% endif %} class="group min-w-0 flex-1 max-w-10 sm:flex-none sm:max-w-none sm:w-12 lg:w-14">
             <img src="{% asset 'images/look/'|add:name|add:'-160.webp' %}" alt="" width="160" height="240" loading="lazy" class="block aspect-[2/3] w-full rounded-[3px] object-cover opacity-50 ring-1 ring-raised/25 transition-opacity group-hover:opacity-80 group-aria-[current=true]:opacity-100 group-aria-[current=true]:ring-raised">
             <span class="relative mt-2 block h-0.5 overflow-hidden rounded-full bg-raised/25"><span class="slide-fill absolute inset-0 bg-raised"></span></span>
           </button>

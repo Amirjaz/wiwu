@@ -88,7 +88,9 @@ add them to a group. Sign-in lasts two weeks, 10 attempts per 15 minutes per add
 
 ## The hero and the 3D bag (`frontend/src/islands/home.ts`, `frontend/src/bag3d/`, `frontend/src/islands/bag3d.ts`, `tools/build_model.py`)
 
-The home page opens with the bag in use, as a campaign page: six photos (`views.LOOK`, the originals
+The home page opens with the bag in use, as a campaign page: nine pictures, Amir's six photos of the
+black bag in use and, between them, three of the bag alone in brown and silver (WiWU's studio renders on a
+dark studio sweep, `tools/hero_slides.py`, 2026-10-20) (`views.LOOK`, the originals
 in `media/source-photos/look/`, the site's copies 160, 600 and 1200 px wide in `public/images/look/`),
 one at a time over the whole first screen, a large line at the bottom over a dark fade with the price
 and the buy button, and the photos as thumbnails beside it (Amir's pick of three designs, 2026-10-18).
@@ -230,7 +232,7 @@ shown nobody is asked and every order gets that colour. With two or more shown:
 `orders.pick_color` checks the pick before the SMS code is used up. Orders keep the colour's name as it
 was (`color_name`), which the panel, the order page and the packing slip show. A colour with orders is
 hidden rather than deleted. New colours start hidden: add the photo first, then show them. The hero's
-lifestyle photos are of the black bag only.
+lifestyle photos are of the black bag only; its bag-only slides show brown and silver.
 
 ## Load and caching
 

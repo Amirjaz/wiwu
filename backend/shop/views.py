@@ -31,10 +31,15 @@ PROVINCES = [
 # originals in media/source-photos/look/): name, alt text, and the point kept in view when the photo
 # fills a frame of another shape (CSS object-position): on tall screens, and on wide ones, where only a
 # band of the tall photo shows, around the bag.
+#   The bag-only slides show the other colours: WiWU's studio renders on a dark studio backdrop
+# (media/source-photos/look/bag-*.jpg, 2026-10-20), the bag left of centre so the headline stays clear.
 LOOK = [
     ('by-the-car', 'کیف دستی ویوو آلفا در دست، کنار در باز خودرویی با صندلی‌های قرمز', '50% 40%', '50% 50%'),
+    ('bag-brown', 'کیف ویوو آلفا قهوه‌ای، با قفل اثر انگشت و پلاک برند', '0% 50%', '50% 25%'),
     ('plate', 'نمای نزدیک کیف ویوو آلفا در دست: چرم دانه‌دار و پلاک فلزی برند', '50% 45%', '50% 36%'),
+    ('bag-silver', 'کیف ویوو آلفا سفید نقره‌ای، با قفل اثر انگشت', '0% 50%', '50% 25%'),
     ('low-angle', 'کیف ویوو آلفا در دست، از زاویه‌ی پایین، با درختان پاییزی پشت سر', '50% 50%', '50% 50%'),
+    ('bag-brown-back', 'پشت کیف ویوو آلفا قهوه‌ای: جیب زیپ‌دار و بند مچی', '0% 50%', '50% 25%'),
     ('in-the-car', 'کیف ویوو آلفا جلوی دوربین، داخل خودرو', '50% 62%', '50% 62%'),
     ('seated', 'کیف ویوو آلفا در دست، نشسته کنار خودرو', '50% 58%', '50% 56%'),
     ('door', 'کیف ویوو آلفا در دست، با کت چرمی و شلوار جین کنار خودرو', '50% 38%', '50% 28%'),

@@ -17,14 +17,15 @@ This page is the short version, plus what isn't written down anywhere else.
 - **Not deployed yet (2026-10-20):** the client's answers (below), on the `3d-logo-wiwu-model-5ec558`
   branch: the shop is **ویوو** with WiWU's logo, the price, free post and Tipax on delivery, 4 to 6
   working days, the battery, the 72-hour warranty. Migration 0004 changes content, so empty the page cache
-  after deploying it (*Gotchas*). The new hero photos wait for Amir to pick them (`media/hero-candidates/`).
+  after deploying it (*Gotchas*). Also on the branch: three bag-only hero slides in brown and silver.
   - **Panel accounts:** `amir` and `salar`, both superusers (Amir set the passwords himself on
     2026-10-19). Log in at `/panel/` (the store) or `/admin/` (Django, for the Owners/Staff groups).
 - **The bag:** the WiWU Alpha fingerprint-lock clutch, sold as **«کیف دستی ویوو آلفا»** (WiWU as the
   brand in the specs and the search data), in **black, brown and silver-white («سفید»)**, all on sale at
   one price: **14,100,000 toman**, shipping from Dubai included (the client, 2026-10-20).
 - **The home page, top to bottom** (README, *Look* and *The hero and the 3D bag*):
-  1. **Hero:** a campaign page. Six photos of the bag in use (Amir's, black bag only) over the whole
+  1. **Hero:** a campaign page. Six photos of the bag in use (Amir's, black bag) and three of the bag
+     alone in brown and silver (not deployed yet) over the whole
      first screen, one at a time, with a large line, the price and the buy button at the bottom and the
      photos as thumbnails. The header lies over it, see-through. Colour dots.
   2. **جزء به جزء:** the 3D bag with a tab per side, numbered pins, the parts listed beside it, colour dots
@@ -122,8 +123,9 @@ business address), the `.ir` domain under their national ID.
 4. **Client answers:** the domain must belong to whoever applies for Enamad; with the shop named WiWU, the
    client needs a domain they can register (risk R5). Fill the card holder's name and the contact details
    before applying for Enamad.
-5. **Hero photos:** Amir picks from `media/hero-candidates/` (a man with the bag, the bag in hand, the
-   brown and the silver bag); then they replace `media/source-photos/look/` and `views.LOOK`.
+5. **Hero photos:** the three bag-only slides are made from WiWU's renders (no AI image tool here; the
+   search for others is in `media/hero-candidates/`, not in git). Photos of the client's own brown and
+   silver bags would be better: run them through `tools/hero_slides.py` or add them as they are.
 6. **cartbecart:** once the client's Max account opens their API docs, finish `backend/shop/payments.py`
    (`TODO(cartbecart docs)`): field names and unit, checking each deposit, whether orders must be
    registered first. Until then `PAYMENT_PROVIDER=manual`.
@@ -232,8 +234,10 @@ node tools/compare.mjs && .venv-3d/Scripts/python tools/dev/compose.py
 
 ## The site's photos
 
-- **Hero:** `frontend/public/images/look/` (160, 600, 1200 px), from Amir's six photos in
-  `media/source-photos/look/` (`views.LOOK`: alt text and crop points for tall and wide screens).
+- **Hero:** `frontend/public/images/look/` (160, 600, 1200 px), from Amir's six photos and the three
+  bag-only slides (`tools/hero_slides.py`, from `media/source-photos/wiwu/brown-render-*.jpg` and
+  `white-three-quarter.png`) in `media/source-photos/look/` (`views.LOOK`: alt text and crop points for tall
+  and wide screens).
 - **Product shots:** `front`, `back`, `side` and `colors/<black|brown|white>.webp`, cut out of WiWU's
   studio photos by `tools/studio_images.py` (`media/source-photos/wiwu/`). The markers on them are in
   `views.PARTS`; the size drawing's `--cm` follows the front's proportions (`home.html`).
