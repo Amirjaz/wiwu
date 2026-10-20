@@ -8,16 +8,14 @@ This page is the short version, plus what isn't written down anywhere else.
 
 ## Where it stands
 
-- **Staging is online at https://shop.nisatech.org** and runs **f04fddb** (WiWU's logo on the 3D bag's
-  plate), deployed on 2026-10-19 (`main` is the same; the handoff commits after it change only this file).
+- **Staging is online at https://shop.nisatech.org** and runs **b9f23f3**, deployed on 2026-10-20 (`main`
+  is the same; the handoff commits after it change only this file): the client's answers (the shop is
+  **ویوو** with WiWU's logo in the site's colours, the price, free post and Tipax on delivery, 4 to 6
+  working days, the battery, the 72-hour warranty) and the new hero.
   - Open to everyone (no password, Amir's choice), but kept out of search engines (noindex).
   - SMS codes only go to the server log and payments are manual, so people can browse but can't finish
     an order. No orders yet.
   - Plain http redirects to https.
-- **Not deployed yet (2026-10-20):** the client's answers (below), on the `3d-logo-wiwu-model-5ec558`
-  branch: the shop is **ویوو** with WiWU's logo, the price, free post and Tipax on delivery, 4 to 6
-  working days, the battery, the 72-hour warranty. Migration 0004 changes content, so empty the page cache
-  after deploying it (*Gotchas*). Also on the branch: three bag-only hero slides in brown and silver.
   - **Panel accounts:** `amir` and `salar`, both superusers (Amir set the passwords himself on
     2026-10-19). Log in at `/panel/` (the store) or `/admin/` (Django, for the Owners/Staff groups).
 - **The bag:** the WiWU Alpha fingerprint-lock clutch, sold as **«کیف دستی ویوو آلفا»** (WiWU as the
@@ -27,7 +25,7 @@ This page is the short version, plus what isn't written down anywhere else.
   1. **Hero:** a campaign page. Six pictures over the whole first screen, one at a time: four posters of
      the bag alone, all turned the same way (black first, all three colours with black in front, brown,
      silver) between two of Amir's photos of it in use, with a large line, the price and a compact buy
-     button at the bottom; no thumbnails (2026-10-20, not deployed yet). The header lies over it,
+     button at the bottom; no thumbnails (2026-10-20). The header lies over it,
      see-through. Colour dots.
   2. **جزء به جزء:** the 3D bag with a tab per side, numbered pins, the parts listed beside it, colour dots
      that recolour the bag. The backup where the 3D can't run: WiWU's studio photos with the same numbers.
@@ -40,8 +38,9 @@ This page is the short version, plus what isn't written down anywhere else.
   pass; desktop and phone checked in headless Edge on the live site after the deploy.
 - **Repo:** branch `main`, **no remote**. It exists only in `E:\Work\Nisatech\PurseShop` and in the
   deploy bare repo on the server. Three worktrees under `.claude/worktrees/`:
-  - `3d-logo-wiwu-model-5ec558` (2026-10-19): **WiWU's logo on the 3D bag's plate** (see *The 3D
-    model*), merged into `main` and deployed. Its dev servers run on 8032/5182 (`logo-backend`,
+  - `3d-logo-wiwu-model-5ec558` (2026-10-19 and 20): **WiWU's logo on the 3D bag's plate** (see *The 3D
+    model*), the client's answers, the hero's posters and the logo in the site's colours; merged into
+    `main` and deployed. Its dev servers run on 8032/5182 (`logo-backend`,
     `logo-frontend` in its `.claude/launch.json`).
   - `hero-slider-3d-model-a5edb7` (this work), merged into `main`; it has the 3D tools' venv
     (`.venv-3d`), which the main checkout lacks.
@@ -328,6 +327,7 @@ ask him about tripling them. NISA-74 is another project's (Finance).
 
 | Date | Commit | What |
 | --- | --- | --- |
+| 2026-10-20 | b9f23f3 | The client's answers: shop «ویوو» with WiWU's logo in the site's colours, 14,100,000 toman, free post and Tipax on delivery, 4 to 6 working days, battery, 72-hour warranty; hero of four bag-only posters (black first) and two of Amir's photos, no thumbnails, a compact buy button (migration 0004, page cache emptied after it; backup `db-20261020-092929.sqlite3`, server time) |
 | 2026-10-19 | f04fddb | WiWU's logo on the 3D bag's plate (emblem and name), pin 1 beside it, new models `?v=bccdb021` / `?v=9b666061` (no migration; backup `db-20261019-094240.sqlite3`, server time) |
 | 2026-10-19 | ebc1158 | WiWU name, three colours, recoloured and taut 3D bag, studio photos, `?v=` addresses (migration 0003; backup `db-20261018-205907.sqlite3`, server time) |
 | 2026-10-18 | 0911b3a | Campaign hero, 3D bag in جزء به جزء, colours, page cache (migration 0002; backup `db-20261018-164322.sqlite3`) |
