@@ -5,6 +5,8 @@
 #   ssh -t amir@185.231.180.92 'sudo DOMAIN=<host> STAGING=1 bash purseshop-deploy/server-setup.sh'
 # DOMAIN: the site's host name (staging: a nisatech.org subdomain; later the client's .ir).
 # STAGING=1 puts the whole site behind a password (asked for here) except the payment webhook.
+# CERT=1 gets the site a Let's Encrypt certificate (once; certbot.timer renews it) so it answers HTTPS
+# itself, for when Arvan's proxy is off or connects over HTTPS. Re-runs keep HTTPS on once it exists.
 # Safe to re-run (do, after changing anything under deploy/nginx or deploy/systemd).
 set -euo pipefail
 
@@ -46,6 +48,19 @@ else
 fi
 
 echo "==> nginx site for $DOMAIN"
+# HTTPS lines for the site's server block, once it has a certificate (empty until then).
+TLS=/etc/nginx/snippets/purseshop-tls.conf
+LIVE=/etc/letsencrypt/live/$DOMAIN
+write_tls() {
+  if [ -f "$LIVE/fullchain.pem" ]; then
+    printf '%s\n' 'listen 443 ssl;' 'listen [::]:443 ssl;' \
+      "ssl_certificate $LIVE/fullchain.pem;" "ssl_certificate_key $LIVE/privkey.pem;" \
+      'include /etc/letsencrypt/options-ssl-nginx.conf;' 'ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;' > "$TLS"
+  else
+    : > "$TLS"
+  fi
+}
+write_tls
 sed "s/__DOMAIN__/$DOMAIN/" "$HERE/nginx/purseshop.conf" > /etc/nginx/sites-available/purseshop
 ln -sf /etc/nginx/sites-available/purseshop /etc/nginx/sites-enabled/purseshop
 # A broken site would also block reloads for the other sites: take it out again.
@@ -55,6 +70,19 @@ if ! nginx -t; then
   exit 1
 fi
 systemctl reload nginx
+
+if [ "${CERT:-0}" = 1 ] && [ ! -f "$LIVE/fullchain.pem" ]; then
+  echo "==> Let's Encrypt certificate for $DOMAIN"
+  # Checked over plain HTTP on the site above; the reload hook puts each renewal in use.
+  certbot certonly --nginx -d "$DOMAIN" --non-interactive --agree-tos --deploy-hook 'systemctl reload nginx'
+  write_tls
+  if ! nginx -t; then
+    : > "$TLS"
+    echo "nginx rejected the HTTPS lines; the site stays on HTTP only." >&2
+    exit 1
+  fi
+  systemctl reload nginx
+fi
 
 echo "==> Let $DEPLOY_USER restart the service without a password (and nothing else)"
 SUDOERS=/etc/sudoers.d/purseshop-deploy
