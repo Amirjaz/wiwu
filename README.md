@@ -88,19 +88,18 @@ add them to a group. Sign-in lasts two weeks, 10 attempts per 15 minutes per add
 
 ## The hero and the 3D bag (`frontend/src/islands/home.ts`, `frontend/src/bag3d/`, `frontend/src/islands/bag3d.ts`, `tools/build_model.py`)
 
-The home page opens with the bag in use, as a campaign page: nine pictures, Amir's six photos of the
-black bag in use and, between them, three of the bag alone in brown and silver (WiWU's studio renders on a
-dark studio sweep, `tools/hero_slides.py`, 2026-10-20) (`views.LOOK`, the originals
-in `media/source-photos/look/`, the site's copies 160, 600 and 1200 px wide in `public/images/look/`),
-one at a time over the whole first screen, a large line at the bottom over a dark fade with the price
-and the buy button, and the photos as thumbnails beside it (Amir's pick of three designs, 2026-10-18).
-The header lies over the photo, see-through until the hero scrolls away (`data-header="clear"`). Each
-photo has a crop point for tall screens and one for wide ones, where only a band of the tall photo
-shows. A bar under each thumbnail fills over 6 s, then the next photo fades in while the last drifts
-slowly closer. It waits while the thumbnails are pointed at, keyboard focus is in the hero, it's touched
-or off screen; the pause button stops it, and with reduced motion it never moves by itself. A swipe
-anywhere on the hero, the thumbnails, or the arrow keys on them move it (right to left: the next photo
-is to the left). Without JavaScript the first photo stays.
+The home page opens as a campaign page (Amir's pick of three designs, 2026-10-18): seven pictures, one
+at a time over the whole first screen (`views.LOOK`, the originals in `media/source-photos/look/`, the
+site's copies 600 and 1200 px wide in `public/images/look/`). Five are posters of the bag alone, the black
+one first, then all three colours side by side, brown from the front and the back, silver (WiWU's studio
+renders on a dark studio sweep, `tools/hero_slides.py`, 2026-10-20); two are Amir's photos of the bag in
+use. A large line at the bottom over a dark fade, the price and a compact buy button; nothing else (Amir,
+2026-10-20: the thumbnails, pause button and counter crowded it). The header lies over the picture,
+see-through until the hero scrolls away (`data-header="clear"`). Each picture has a crop point for tall
+screens and one for wide ones, where only a band of the tall picture shows. Every 6 s the next fades in
+while the last drifts slowly closer. It waits while keyboard focus is in the hero, it's touched, off
+screen or in a background tab, and with reduced motion it never moves by itself. A sideways swipe moves
+it (right to left: the next picture is to the left). Without JavaScript the first picture stays.
 
 The 3D bag is the next section, **جزء به جزء** (`#parts`): a tab per side (روبه‌رو، کنار، پشت), the
 side's numbered parts listed beside the bag, the same numbers pinned on it (`views.PARTS`: each part's

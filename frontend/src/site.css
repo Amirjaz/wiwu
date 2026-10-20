@@ -421,26 +421,6 @@
     opacity: 1;
     transition: none;
   }
-  /* A bar per photo: the one on screen fills over its time, and when it's full the next photo comes
-     (islands/home.ts). It waits while the slider is [data-paused]; [data-still]: no moving on its own. */
-  .slide-fill {
-    transform: scaleX(0);
-    transform-origin: right;
-  }
-  [data-state="done"] > * > .slide-fill {
-    transform: none;
-  }
-  [data-state="on"] > * > .slide-fill {
-    animation: slide-fill var(--slide-time, 6s) linear forwards;
-  }
-  [data-slider][data-paused] .slide-fill {
-    animation-play-state: paused;
-  }
-  [data-slider][data-still] [data-state="on"] > * > .slide-fill {
-    animation: none;
-    transform: none;
-  }
-
   /* The 3D bag's loading line (the stage's states are at the end of this file). */
   [data-bag-loading] {
     display: none;
@@ -578,12 +558,6 @@
 @media (prefers-reduced-motion: reduce) {
   [data-bag-loading]:not([data-known]) .bag-progress {
     animation: none;
-  }
-}
-
-@keyframes slide-fill {
-  to {
-    transform: none;
   }
 }
 

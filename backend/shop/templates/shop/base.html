@@ -25,7 +25,7 @@
   {# A page can lay the header over its first photo: its header_mode block gives data-header="clear" (site.css). #}
   <header{% block header_mode %}{% endblock %} class="sticky top-0 z-40 bg-page/90 backdrop-blur-md border-b border-line">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 h-16 flex items-center gap-10">
-      <a href="{% url 'home' %}" class="shrink-0" aria-label="{{ store.store_name }}، صفحه اصلی">{% include 'shop/wiwu_logo.html' with cls='block size-11 rounded-[9px]' %}</a>
+      <a href="{% url 'home' %}" class="shrink-0" aria-label="{{ store.store_name }}، صفحه اصلی">{% include 'shop/wiwu_logo.html' with cls='block h-7 w-auto' %}</a>
       <nav class="hidden xl:flex items-center gap-7 text-[0.92rem]" aria-label="اصلی">
         <a href="{% url 'home' %}#parts" class="leading-tight hover:text-ink-soft"><span class="block font-medium">اجزا</span><span class="block font-mono text-[0.72rem] text-muted">از هر طرف</span></a>
         <a href="{% url 'home' %}#try" class="leading-tight hover:text-ink-soft"><span class="block font-medium">قفل</span><span class="block font-mono text-[0.72rem] text-muted">۱۰ اثر انگشت</span></a>
@@ -67,7 +67,7 @@
     <div class="relative mx-auto max-w-7xl px-4 sm:px-6 pt-16 pb-8">
       <div class="grid gap-12 lg:grid-cols-[1.2fr_2fr]">
         <div class="space-y-5">
-          <p class="flex items-center gap-4 text-2xl font-bold">{% include 'shop/wiwu_logo.html' with cls='size-14 rounded-xl' %}{{ store.store_name }}</p>
+          <p>{% include 'shop/wiwu_logo.html' with cls='h-10 w-auto' label=store.store_name %}</p>
           <p class="max-w-[38ch] leading-relaxed text-raised/65">{% if store.tagline %}{{ store.tagline }}{% else %}کیف دستی با قفل اثر انگشت؛ فقط با انگشت شما باز می‌شود.{% endif %}</p>
           {% block footer_cta %}<a href="{% url 'checkout' %}" class="btn min-h-12 px-8 bg-signal text-ink">خرید</a>{% endblock %}
         </div>

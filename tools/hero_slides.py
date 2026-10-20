@@ -1,16 +1,25 @@
-"""The hero's bag-only slides (2026-10-20): WiWU's studio renders, cut out of their white and set on a dark
-studio sweep in the bag's tone, with a floor reflection, a contact shadow and a little film grain.
+"""The hero's bag-only posters (2026-10-20): WiWU's studio renders, cut out of their white and set on a dark
+studio sweep, with a floor reflection, contact shadows and a little film grain.
 
-    python tools/hero_slides.py media/source-photos/wiwu/brown-render-front.jpg out.png brown
-    python tools/hero_slides.py media/source-photos/wiwu/brown-render-back.jpg out.png brown
-    python tools/hero_slides.py media/source-photos/wiwu/white-three-quarter.png out.png silver
+    python tools/hero_slides.py <out.png> <palette> <render>[@x,y,width] ...
+
+One render: it stands left of centre, high, a third of the frame wide. Several: each at x, y (its centre,
+as fractions of the frame) and width (of the frame), drawn in the order given, so the last is in front:
+
+    W=media/source-photos/wiwu
+    python tools/hero_slides.py bag-black.png steel $W/black-three-quarter.jpg
+    python tools/hero_slides.py bag-brown.png brown $W/brown-render-front.jpg
+    python tools/hero_slides.py bag-brown-back.png brown $W/brown-render-back.jpg
+    python tools/hero_slides.py bag-silver.png silver $W/white-three-quarter.png
+    python tools/hero_slides.py bag-colors.png graphite $W/black-three-quarter.jpg@0.16,0.29,0.22 \\
+        $W/white-three-quarter.png@0.52,0.29,0.22 $W/brown-render-front.jpg@0.34,0.31,0.25
 
 Writes a 1600 x 2400 PNG; media/source-photos/look/bag-*.jpg are those, and the hero's 1200/600 px files
-and its 160 px thumbnails (cropped closer on the bag) are made from them (frontend/public/images/look/).
+come from them (frontend/public/images/look/).
 
-The hero shows 2:3 photos with object-fit: cover. On wide screens only a band shows (views.LOOK puts it
-round the bag) and the headline sits on the right; on phones the full height shows, the sides cropped, the
-text over the lower half. So the bag sits left of centre (x 31%), high (y 30%), a third of the frame wide.
+The hero shows 2:3 pictures with object-fit: cover. On wide screens only a band shows (views.LOOK puts it
+round the bags) and the headline sits on the right; on phones the full height shows, the sides cropped, the
+text over the lower half. So the bags stand left of centre (x 31%), high (y 30%).
 """
 import sys
 
@@ -20,16 +29,19 @@ from PIL import Image
 from scipy import ndimage
 
 W, H = 1600, 2400
-CX, CY = 0.31, 0.30
+SINGLE = (0.31, 0.30, 0.34)  # x, y, width of a lone bag
 
 PALETTES = {
-    # top of the wall, wall at the floor line, floor near, light colour
+    # top of the wall, the wall where it meets the floor, the floor near the camera, the light's colour
     'brown': ((21, 19, 18), (68, 60, 54), (11, 10, 9), (255, 230, 204)),  # taupe, so the brown stands out
     'silver': ((16, 19, 24), (44, 50, 58), (8, 9, 11), (205, 222, 255)),
+    'steel': ((30, 32, 36), (118, 121, 127), (13, 14, 16), (240, 244, 255)),  # light enough for black
+    'graphite': ((24, 26, 29), (92, 95, 100), (11, 12, 13), (245, 245, 250)),  # all three colours
 }
 
 
 def cut_out(path):
+    """The bag (colour, alpha), cropped to it, from a render on white."""
     img = np.asarray(Image.open(path).convert('RGB')).astype(np.float32)
     near_white = img.min(axis=2) > 246
     labels, _ = ndimage.label(near_white)
@@ -58,9 +70,9 @@ def cut_out(path):
     return rgb[y0:y1, x0:x1], alpha[y0:y1, x0:x1]
 
 
-def backdrop(palette, horizon):
+def backdrop(palette, horizon, light_at):
     """A seamless studio sweep: the wall brightening down to where it curves into the floor (horizon,
-    behind the bag's base), the floor darkening towards the camera."""
+    behind the bags), the floor darkening towards the camera, a broad key light from the upper left."""
     top, wall, floor, light = (np.array(c, np.float32) for c in PALETTES[palette])
     y = np.linspace(0, 1, H)[:, None, None]
     x = np.linspace(0, 1, W)[None, :, None]
@@ -69,46 +81,37 @@ def backdrop(palette, horizon):
     t = np.clip((y - horizon + 0.03) / 0.06, 0, 1)
     t = t * t * (3 - 2 * t)  # the curve of the sweep
     img = (wall_part * (1 - t) + floor_part * t) * np.ones((1, W, 1), np.float32)
-    # A broad key light from the upper left, washing over the wall and the floor around the bag.
-    d = np.sqrt(((x - CX + 0.02) / 0.7) ** 2 + ((y - CY + 0.03) / 0.42) ** 2)
+    lx, ly = light_at
+    d = np.sqrt(((x - lx + 0.02) / 0.7) ** 2 + ((y - ly + 0.03) / 0.42) ** 2)
     img += light * 0.12 * np.exp(-d ** 2 * 1.6)
-    # Vignette.
     v = np.sqrt(((x - 0.4) / 0.9) ** 2 + ((y - 0.45) / 0.8) ** 2)
     img *= np.clip(1.08 - 0.55 * v ** 2, 0.35, 1)
     return img
 
 
-def place(img, rgb, alpha, width_frac):
-    bw = int(W * width_frac)
+def place(img, rgb, alpha, cx, cy, width):
+    """One bag standing on the floor with its centre at (cx, cy): shadows and reflection, then the bag."""
+    bw = int(W * width)
     bh = int(rgb.shape[0] * bw / rgb.shape[1])
     bag = cv2.resize(rgb, (bw, bh), interpolation=cv2.INTER_AREA)
     a = cv2.resize(alpha, (bw, bh), interpolation=cv2.INTER_AREA)[..., None]
     # Settle it into the scene: a touch darker, with the light falling off to the lower right.
     yy, xx = np.mgrid[0:bh, 0:bw]
-    fall = 1.0 - 0.10 * (yy / bh) - 0.06 * (xx / bw)
-    bag = bag * 0.93 * fall[..., None]
-    x0 = int(W * CX - bw / 2)
-    y0 = int(H * CY - bh / 2)
+    bag = bag * 0.93 * (1.0 - 0.10 * (yy / bh) - 0.06 * (xx / bw))[..., None]
+    x0 = int(W * cx - bw / 2)
+    y0 = int(H * cy - bh / 2)
     base = y0 + bh  # where it stands
-    # Contact shadow and a soft drop shadow under it.
-    shadow = np.zeros((H, W), np.float32)
-    cv2.ellipse(shadow, (x0 + bw // 2, base - int(bh * 0.02)), (int(bw * 0.47), int(bh * 0.05)), 0, 0, 360, 1.0, -1)
-    shadow = cv2.GaussianBlur(shadow, (0, 0), bh * 0.035)
-    img *= (1 - 0.75 * shadow)[..., None]
-    wide = np.zeros((H, W), np.float32)
-    cv2.ellipse(wide, (x0 + bw // 2, base + int(bh * 0.04)), (int(bw * 0.58), int(bh * 0.14)), 0, 0, 360, 1.0, -1)
-    wide = cv2.GaussianBlur(wide, (0, 0), bh * 0.12)
-    img *= (1 - 0.45 * wide)[..., None]
+    for (ry, rx, ryy), strength, blur in (((-0.02, 0.47, 0.05), 0.75, 0.035), ((0.04, 0.58, 0.14), 0.45, 0.12)):
+        shadow = np.zeros((H, W), np.float32)
+        cv2.ellipse(shadow, (x0 + bw // 2, base + int(bh * ry)), (int(bw * rx), int(bh * ryy)), 0, 0, 360, 1.0, -1)
+        img *= (1 - strength * cv2.GaussianBlur(shadow, (0, 0), bh * blur))[..., None]
     # Reflection on the glossy floor: the bag upside down, fading out.
-    refl = bag[::-1]
-    ra = a[::-1] * np.linspace(0.16, 0, bh)[:, None, None] ** 1.0
-    ry0 = base + 2
-    rh = min(bh, H - ry0)
-    region = img[ry0:ry0 + rh, x0:x0 + bw]
-    img[ry0:ry0 + rh, x0:x0 + bw] = region * (1 - ra[:rh]) + refl[:rh] * ra[:rh]
+    ra = a[::-1] * np.linspace(0.16, 0, bh)[:, None, None]
+    rh = min(bh, H - base - 2)
+    region = img[base + 2:base + 2 + rh, x0:x0 + bw]
+    img[base + 2:base + 2 + rh, x0:x0 + bw] = region * (1 - ra[:rh]) + bag[::-1][:rh] * ra[:rh]
     region = img[y0:y0 + bh, x0:x0 + bw]
     img[y0:y0 + bh, x0:x0 + bw] = region * (1 - a) + bag * a
-    return img
 
 
 def grain(img, seed=7):
@@ -118,16 +121,22 @@ def grain(img, seed=7):
 
 
 def main():
-    src, out, palette = sys.argv[1], sys.argv[2], sys.argv[3]
-    width = float(sys.argv[4]) if len(sys.argv) > 4 else 0.34
-    rgb, alpha = cut_out(src)
-    bh = W * width * rgb.shape[0] / rgb.shape[1]
-    base = (H * CY + bh / 2) / H
-    img = backdrop(palette, horizon=base - 0.35 * bh / H)  # the floor line well behind the bag
-    img = place(img, rgb, alpha, width)
-    img = grain(img)
-    Image.fromarray(np.clip(img, 0, 255).astype(np.uint8)).save(out)
-    print(out, 'bag', rgb.shape[1], 'x', rgb.shape[0])
+    out, palette, *specs = sys.argv[1:]
+    bags = []
+    for spec in specs:
+        path, _, where = spec.partition('@')
+        cx, cy, width = (float(v) for v in where.split(',')) if where else SINGLE
+        rgb, alpha = cut_out(path)
+        bags.append((rgb, alpha, cx, cy, width, W * width * rgb.shape[0] / rgb.shape[1]))
+    # The floor line well behind the furthest bag.
+    horizon = min((H * cy + bh / 2 - 0.35 * bh) / H for _, _, _, cy, _, bh in bags)
+    light_x = sum(b[2] for b in bags) / len(bags)
+    light_y = sum(b[3] for b in bags) / len(bags)
+    img = backdrop(palette, horizon, (light_x, light_y))
+    for rgb, alpha, cx, cy, width, _ in bags:
+        place(img, rgb, alpha, cx, cy, width)
+    Image.fromarray(np.clip(grain(img), 0, 255).astype(np.uint8)).save(out)
+    print(out)
 
 
 if __name__ == '__main__':

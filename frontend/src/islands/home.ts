@@ -3,40 +3,30 @@
 // too.
 
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
-const fa = (n: number) => n.toLocaleString('fa-IR');
 
-// The hero's photos, one at a time behind its text. Each has a bar that fills over --slide-time; when
-// it's full the next photo fades in (the CSS animation is the clock, so pausing is pausing it). It waits
-// while its controls are pointed at, while keyboard focus is in the hero, while it's touched or off
-// screen; it stays put after the pause button, and never moves on its own for people who turn motion
-// off. A swipe anywhere on the hero, the bars, or the arrow keys on them move it by hand. Right to left:
-// the next photo is to the left.
+// The hero's pictures, one at a time behind its text, the next fading in every --slide-time. No controls
+// (Amir, 2026-10-20: the thumbnails crowded it): it waits while keyboard focus is in the hero, while it's
+// touched, off screen or in a background tab, and never moves on its own for people who turn motion off.
+// A sideways swipe anywhere on the hero moves it by hand. Right to left: the next picture is to the left.
 function photoSlider() {
   const slider = document.querySelector<HTMLElement>('[data-slider]');
-  const controls = slider?.querySelector<HTMLElement>('[data-slider-controls]');
-  if (!slider || !controls) return;
+  if (!slider) return;
   const slides = [...slider.querySelectorAll<HTMLImageElement>('[data-slide]')];
-  const bars = [...controls.querySelectorAll<HTMLButtonElement>('[data-goto]')];
-  const count = slider.querySelector<HTMLElement>('[data-slider-count]');
-  const toggle = slider.querySelector<HTMLButtonElement>('[data-slider-toggle]');
   if (slides.length < 2) return;
-  controls.hidden = false;
+  const time = (parseFloat(getComputedStyle(slider).getPropertyValue('--slide-time')) || 6) * 1000;
 
   let current = 0;
-  let stopped = reducedMotion();
+  let timer = 0;
   const holds = new Set<string>();
-  const sync = () => {
-    slider.toggleAttribute('data-still', stopped);
+  const schedule = () => {
+    window.clearTimeout(timer);
     slider.toggleAttribute('data-paused', holds.size > 0);
-    const [pause, play] = toggle?.querySelectorAll('.icon') ?? [];
-    pause?.classList.toggle('hidden', stopped);
-    play?.classList.toggle('hidden', !stopped);
-    toggle?.setAttribute('aria-label', stopped ? 'پخش' : 'توقف');
+    if (!holds.size && !reducedMotion()) timer = window.setTimeout(() => show(current + 1), time);
   };
   const hold = (reason: string, on: boolean) => {
     if (on) holds.add(reason);
     else holds.delete(reason);
-    sync();
+    schedule();
   };
 
   const show = (index: number) => {
@@ -49,40 +39,21 @@ function photoSlider() {
     });
     current = next;
     slides[(current + 1) % slides.length].hidden = false; // the one after starts loading
-    bars.forEach((bar, i) => {
-      bar.dataset.state = i < current ? 'done' : i === current ? 'on' : '';
-      bar.setAttribute('aria-current', String(i === current));
-    });
-    if (count) count.textContent = `${fa(current + 1)} / ${fa(slides.length)}`;
+    schedule();
   };
 
-  // The other photos load once the page has (the first one is the page's largest picture).
+  // The other pictures load once the page has (the first one is the page's largest picture).
   const reveal = () => slides.forEach((slide) => (slide.hidden = false));
   if (document.readyState === 'complete') reveal();
   else addEventListener('load', reveal, { once: true });
 
-  controls.addEventListener('animationend', (event) => {
-    if ((event.target as Element).closest('[data-goto]') === bars[current]) show(current + 1);
-  });
-  bars.forEach((bar, i) => bar.addEventListener('click', () => show(i)));
-  toggle?.addEventListener('click', () => {
-    stopped = !stopped;
-    sync();
-  });
-  controls.addEventListener('keydown', (event) => {
-    const step = event.key === 'ArrowLeft' ? 1 : event.key === 'ArrowRight' ? -1 : 0;
-    if (step) show(current + step);
-  });
-
-  // The hero fills the screen, so a mouse anywhere on it would stop it for good: only the controls.
-  controls.addEventListener('pointerenter', (event) => event.pointerType === 'mouse' && hold('pointer', true));
-  controls.addEventListener('pointerleave', (event) => event.pointerType === 'mouse' && hold('pointer', false));
-  // Keyboard focus only: a tapped bar keeps focus, and the photos shouldn't stop for good after a tap.
+  // Keyboard focus only: a tapped link keeps focus, and the pictures shouldn't stop for good after a tap.
   slider.addEventListener('focusin', (event) => hold('focus', (event.target as Element).matches(':focus-visible')));
   slider.addEventListener('focusout', (event) => {
     if (!slider.contains(event.relatedTarget as Node | null)) hold('focus', false);
   });
   new IntersectionObserver(([entry]) => hold('away', !entry.isIntersecting)).observe(slider);
+  document.addEventListener('visibilitychange', () => hold('hidden', document.hidden));
 
   // A sideways swipe anywhere but on a link or button; up and down still scroll the page (touch-action:
   // pan-y on the hero).
@@ -104,7 +75,7 @@ function photoSlider() {
     start = null;
     hold('touch', false);
   });
-  sync();
+  schedule();
 }
 
 // The header laid over the hero's photo (data-header="clear"): see-through until the hero has scrolled
