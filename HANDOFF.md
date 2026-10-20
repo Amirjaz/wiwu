@@ -1,6 +1,6 @@
 # PurseShop: handoff
 
-State on **2026-10-19 (27 Mehr 1405)**, written so the work can go on in a new chat.
+State on **2026-10-20 (28 Mehr 1405)**, written so the work can go on in a new chat.
 
 **A new chat should start here:** read this page, then [README.md](README.md) for how everything works,
 [PLAN.md](PLAN.md) for the decisions and risks, and [LOADTEST.md](LOADTEST.md) for the server capacity.
@@ -53,10 +53,8 @@ This page is the short version, plus what isn't written down anywhere else.
 
 1. **ArvanCloud cache rule for `/models/*`** (his Arvan panel): cache everything, 7 days. The 3D model
    still reads `x-cache: BYPASS`, so every visitor downloads it (0.3 to 0.7 MB) from our server.
-2. **Tripling NISA-70 to 73** on Plane (still at measured times). He has had every other PurseShop
-   item tripled.
-3. **The questions for the client** (below): he sends them and brings back the answers.
-4. **Deploy go-ahead**, whenever there is new work (only on his word).
+2. **The questions for the client** (below): he sends them and brings back the answers.
+3. **Deploy go-ahead**, whenever there is new work (only on his word).
 
 ## Waiting on the client
 
@@ -103,6 +101,11 @@ a VPN. Screenshots in `media/quotes/` (not in git): Arvan's calculator per size 
 - **Kavenegar:** the Advanced plan is 600,000 toman a year (their FAQ says the OTP service needs it).
   The per-message price only shows in their panel; a Persian SMS costs about 12 to 20 toman (the
   regulator's ceiling is 116 rial on a postpaid SIM). About 5 SMS per order.
+- **Arvan's panel prices more than its calculator.** Amir's panel (2026-10-20, Tehran بامداد) offered
+  **G6-Small5**, 4 vCPU / 4 GB / 75 GB SSD, at 1,386,240 rial a day: 2,079,360 toman for 15 days (the
+  calculator's 4 cores / 4 GB: 1,256,100). C5-Medium1, 2 / 4 / 25 GB, 870,240 rial a day; C5-Medium2,
+  4 / 8 / 75 GB, 1,800,480. An hourly server can't be deleted in its first 48 hours. Recommended to him:
+  G6-Small5 with **Ubuntu 24.04**, as on staging (Python 3.12), not 26.04.
 
 Older items the client still owes, from PLAN.md §11 (the earlier message, now mostly folded into the
 doc): the cards and the card holder's name, cartbecart's Max plan with API access and a separate Android
@@ -116,7 +119,8 @@ business address), the `.ir` domain under their national ID.
    fresh `scp -r deploy amir@185.231.180.92:purseshop-deploy` first; `amir` can't sudo). Then re-run the
    load test (LOADTEST.md, *Running it again*).
 2. **For the launch server**, recommended to Amir (not built): an Arvan cloud server in Tehran behind
-   Arvan's CDN, **4 cores / 8 GB** for the campaign (2026-10-20 quotes above; resize to 8 cores if needed),
+   Arvan's CDN, **4 cores** for the campaign (Amir is looking at G6-Small5, 4 cores / 4 GB, Ubuntu 24.04;
+   2026-10-20 quotes above; resize to 8 cores if needed),
    2 GB swap; gunicorn with about 2 workers per core × 4 threads (`--worker-class gthread`, in
    `deploy/systemd/purseshop.service`), so SMS and payment calls don't hold up pages. Today's shared server (1 core, 1 GB, three other sites) tops out around 18 visits a second
    without the Arvan rule (LOADTEST.md).
@@ -301,8 +305,9 @@ node tools/compare.mjs && .venv-3d/Scripts/python tools/dev/compose.py
   note here.
 - **Plane:** every task is an item (project Nisatech, `NISA-*`, name starting "PurseShop: "), Done,
   assigned to Amir, first line `Estimate: X · Spent: Y`. Spent is measured working time rounded up (15m,
-  30m, 1h, then the next full hour), **tripled at his request**; follow-up work adds to Spent with a
-  breakdown. Redeploys go on NISA-69. Estimates: about a third of classic hours.
+  30m, 1h, then the next full hour), **not tripled** (Amir, 2026-10-20: he had the last five tripled
+  items put back to measured time); follow-up work adds to Spent with a breakdown. Redeploys go on
+  NISA-69. Estimates: about a third of classic hours.
 - **Credentials:** never repeated in chat or committed. Amir types passwords himself (sudo, panel
   accounts).
 
@@ -314,18 +319,23 @@ node tools/compare.mjs && .venv-3d/Scripts/python tools/dev/compose.py
 | NISA-66 | Store core | 3h* |
 | NISA-67 | 3D hero and scroll tour | 9h* (1h30m + 3h + 3h + 1h30m) |
 | NISA-68 | Site design around the 3D bag, instrument look | 6h* (3h + 1h30m + 1h30m) |
-| NISA-69 | Staging online at shop.nisatech.org, redeploys | 4h30m* (1h30m + 45m + 45m + 45m + 45m) |
+| NISA-69 | Staging online at shop.nisatech.org, redeploys | 2h (30m + 15m + 15m + 15m + 15m + 15m + 15m) |
 | NISA-70 | Load test of the live server, page cache | 30m |
 | NISA-71 | Colours (panel, product page, checkout, orders) | 30m |
 | NISA-72 | Phone layout (one-screen tour, roomier sections) | 15m |
 | NISA-73 | Hero shows only the 3D bag (no ring, no glow, photos as backup) | 30m |
-| NISA-75 | Hero as a photo campaign page, the 3D bag in the parts section | 6h* |
-| NISA-76 | Questions for the client, server and SMS costs | 1h30m* |
-| NISA-77 | WiWU name, brown and white colours, the 3D bag recoloured, studio photos | 3h* |
-| NISA-78 | WiWU logo on the 3D bag's brand plate | 3h* |
+| NISA-75 | Hero as a photo campaign page, the 3D bag in the parts section | 2h |
+| NISA-76 | Questions for the client, server and SMS costs | 30m |
+| NISA-77 | WiWU name, brown and white colours, the 3D bag recoloured, studio photos | 1h |
+| NISA-78 | WiWU logo on the 3D bag's brand plate | 1h |
+| NISA-79 | The client's answers on the site (price, shipping, battery, warranty, WiWU name and logo) | 15m |
+| NISA-80 | Server and SMS quotes for the client, traffic per server size | 30m |
+| NISA-81 | Hero posters of the bag in each colour, the logo in the site's colours | 1h |
+| NISA-82 | Hero sharp on laptops, colour dots to their poster, the 3D backup in the picked colour, pick-a-colour section | 1h |
 
-\* Three times the measured time, at Amir's request (2026-10-16, 18 and 19). NISA-70 to 73 are measured;
-ask him about tripling them. NISA-74 is another project's (Finance).
+\* Three times the measured time, at Amir's request. On 2026-10-20 he had the last
+five tripled items (NISA-69, 75 to 78) put back to measured time; everything else is measured. NISA-74 is
+another project's (Finance).
 
 ## Deploy history
 
