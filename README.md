@@ -88,12 +88,13 @@ add them to a group. Sign-in lasts two weeks, 10 attempts per 15 minutes per add
 
 ## The hero and the 3D bag (`frontend/src/islands/home.ts`, `frontend/src/bag3d/`, `frontend/src/islands/bag3d.ts`, `tools/build_model.py`)
 
-The home page opens as a campaign page (Amir's pick of three designs, 2026-10-18): seven pictures, one
+The home page opens as a campaign page (Amir's pick of three designs, 2026-10-18): six pictures, one
 at a time over the whole first screen (`views.LOOK`, the originals in `media/source-photos/look/`, the
-site's copies 600 and 1200 px wide in `public/images/look/`). Five are posters of the bag alone, the black
-one first, then all three colours side by side, brown from the front and the back, silver (WiWU's studio
-renders on a dark studio sweep, `tools/hero_slides.py`, 2026-10-20); two are Amir's photos of the bag in
-use. A large line at the bottom over a dark fade, the price and a compact buy button; nothing else (Amir,
+site's copies 600 and 1200 px wide in `public/images/look/`). Four are posters of the bag alone, all turned
+the same way: black first, then all three colours side by side with black in front, brown, silver (WiWU's
+studio renders on a dark studio sweep, `tools/hero_slides.py`, 2026-10-20; WiWU's black render is from
+another angle, so the black is their brown render made black, `tools/black_render.py`). Between them, two
+of Amir's photos of the bag in use. A large line at the bottom over a dark fade, the price and a compact buy button; nothing else (Amir,
 2026-10-20: the thumbnails, pause button and counter crowded it). The header lies over the picture,
 see-through until the hero scrolls away (`data-header="clear"`). Each picture has a crop point for tall
 screens and one for wide ones, where only a band of the tall picture shows. Every 6 s the next fades in

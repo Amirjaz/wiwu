@@ -24,10 +24,11 @@ This page is the short version, plus what isn't written down anywhere else.
   brand in the specs and the search data), in **black, brown and silver-white («سفید»)**, all on sale at
   one price: **14,100,000 toman**, shipping from Dubai included (the client, 2026-10-20).
 - **The home page, top to bottom** (README, *Look* and *The hero and the 3D bag*):
-  1. **Hero:** a campaign page. Seven pictures over the whole first screen, one at a time: posters of
-     the bag alone (black first, all three colours side by side, brown front and back, silver) and two of
-     Amir's photos of it in use, with a large line, the price and a compact buy button at the bottom; no
-     thumbnails (2026-10-20, not deployed yet). The header lies over it, see-through. Colour dots.
+  1. **Hero:** a campaign page. Six pictures over the whole first screen, one at a time: four posters of
+     the bag alone, all turned the same way (black first, all three colours with black in front, brown,
+     silver) between two of Amir's photos of it in use, with a large line, the price and a compact buy
+     button at the bottom; no thumbnails (2026-10-20, not deployed yet). The header lies over it,
+     see-through. Colour dots.
   2. **جزء به جزء:** the 3D bag with a tab per side, numbered pins, the parts listed beside it, colour dots
      that recolour the bag. The backup where the 3D can't run: WiWU's studio photos with the same numbers.
   3. **The lock** (dark), the hold-to-unlock demo; **specs** with the size drawn over a centimetre mat;
@@ -234,9 +235,9 @@ node tools/compare.mjs && .venv-3d/Scripts/python tools/dev/compose.py
 
 ## The site's photos
 
-- **Hero:** `frontend/public/images/look/` (600, 1200 px), from two of Amir's photos and five bag-only
+- **Hero:** `frontend/public/images/look/` (600, 1200 px), from two of Amir's photos and four bag-only
   posters (`tools/hero_slides.py` from WiWU's renders in `media/source-photos/wiwu/`, its docstring has the
-  commands) in `media/source-photos/look/` (`views.LOOK`: alt text and crop points for tall and wide
+  commands; the black render at the others' angle is made by `tools/black_render.py`) in `media/source-photos/look/` (`views.LOOK`: alt text and crop points for tall and wide
   screens). Amir's other four photos stay in `media/source-photos/look/`, off the site.
 - **Logo:** WiWU's marks, traced, in the site's colours (`shop/wiwu_logo.html`: the text's colour, the
   i-dots green; Amir didn't want WiWU's navy, 2026-10-20). The favicon is the emblem on ink.

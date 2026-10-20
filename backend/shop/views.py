@@ -31,17 +31,16 @@ PROVINCES = [
 # originals in media/source-photos/look/): name, alt text, and the point kept in view when the picture
 # fills a frame of another shape (CSS object-position): on tall screens, and on wide ones, where only a
 # band of the tall picture shows, around the bag.
-#   The bag-only posters (Amir, 2026-10-20: the black one first, then all three colours side by side):
-# WiWU's studio renders on a dark studio sweep (tools/hero_slides.py), the bags left of centre so the
-# headline stays clear. Of Amir's photos of the bag in use, these two.
+#   Four posters of the bag alone (Amir, 2026-10-20: black first, then all three colours side by side,
+# all turned the same way) between Amir's two photos of it in use: WiWU's studio renders on a dark studio
+# sweep (tools/hero_slides.py), the bags left of centre so the headline stays clear.
 LOOK = [
     ('bag-black', 'کیف ویوو آلفا مشکی، با قفل اثر انگشت و پلاک برند', '0% 50%', '50% 25%'),
-    ('bag-colors', 'کیف ویوو آلفا در سه رنگ مشکی، قهوه‌ای و سفید، کنار هم', '0% 50%', '50% 25%'),
     ('in-the-car', 'کیف ویوو آلفا جلوی دوربین، داخل خودرو', '50% 62%', '50% 62%'),
+    ('bag-colors', 'کیف ویوو آلفا در سه رنگ مشکی، قهوه‌ای و سفید، کنار هم', '0% 50%', '50% 25%'),
+    ('plate', 'نمای نزدیک کیف ویوو آلفا در دست: چرم دانه‌دار و پلاک فلزی برند', '50% 45%', '50% 36%'),
     ('bag-brown', 'کیف ویوو آلفا قهوه‌ای، با قفل اثر انگشت و پلاک برند', '0% 50%', '50% 25%'),
     ('bag-silver', 'کیف ویوو آلفا سفید نقره‌ای، با قفل اثر انگشت', '0% 50%', '50% 25%'),
-    ('plate', 'نمای نزدیک کیف ویوو آلفا در دست: چرم دانه‌دار و پلاک فلزی برند', '50% 45%', '50% 36%'),
-    ('bag-brown-back', 'پشت کیف ویوو آلفا قهوه‌ای: جیب زیپ‌دار و بند مچی', '0% 50%', '50% 25%'),
 ]
 
 CLAIM_TYPES = {'image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'application/pdf'}

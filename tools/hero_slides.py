@@ -7,12 +7,11 @@ One render: it stands left of centre, high, a third of the frame wide. Several: 
 as fractions of the frame) and width (of the frame), drawn in the order given, so the last is in front:
 
     W=media/source-photos/wiwu
-    python tools/hero_slides.py bag-black.png steel $W/black-three-quarter.jpg
+    python tools/hero_slides.py bag-black.png steel $W/black-render-front.jpg   (from tools/black_render.py)
     python tools/hero_slides.py bag-brown.png brown $W/brown-render-front.jpg
-    python tools/hero_slides.py bag-brown-back.png brown $W/brown-render-back.jpg
     python tools/hero_slides.py bag-silver.png silver $W/white-three-quarter.png
-    python tools/hero_slides.py bag-colors.png graphite $W/black-three-quarter.jpg@0.16,0.29,0.22 \\
-        $W/white-three-quarter.png@0.52,0.29,0.22 $W/brown-render-front.jpg@0.34,0.31,0.25
+    python tools/hero_slides.py bag-colors.png graphite $W/brown-render-front.jpg@0.16,0.29,0.22 \\
+        $W/white-three-quarter.png@0.52,0.29,0.22 $W/black-render-front.jpg@0.34,0.31,0.25   (black in front)
 
 Writes a 1600 x 2400 PNG; media/source-photos/look/bag-*.jpg are those, and the hero's 1200/600 px files
 come from them (frontend/public/images/look/).
