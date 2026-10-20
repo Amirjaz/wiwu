@@ -8,10 +8,11 @@ This page is the short version, plus what isn't written down anywhere else.
 
 ## Where it stands
 
-- **Staging is online at https://shop.nisatech.org** and runs **b9f23f3**, deployed on 2026-10-20 (`main`
+- **Staging is online at https://shop.nisatech.org** and runs **4563f06**, deployed on 2026-10-20 (`main`
   is the same; the handoff commits after it change only this file): the client's answers (the shop is
   **ویوو** with WiWU's logo in the site's colours, the price, free post and Tipax on delivery, 4 to 6
-  working days, the battery, the 72-hour warranty) and the new hero.
+  working days, the battery, the 72-hour warranty), the hero (sharp on laptops, colour dots that jump to
+  their poster), the 3D backup in the picked colour, a pick-a-colour closing section, WiWU's coffee brown.
   - Open to everyone (no password, Amir's choice), but kept out of search engines (noindex).
   - SMS codes only go to the server log and payments are manual, so people can browse but can't finish
     an order. No orders yet.
@@ -330,6 +331,7 @@ ask him about tripling them. NISA-74 is another project's (Finance).
 
 | Date | Commit | What |
 | --- | --- | --- |
+| 2026-10-20 | 4563f06 | Hero on laptops: wide posters (up to 2560 px), Amir's photos at their own shape; hero colour dots jump to their poster; the 3D backup shows the picked colour and catches a 3D that draws nothing; pick-a-colour closing section; the brown is WiWU's coffee brown with gunmetal hardware (migration 0005, page cache emptied after it; backup `db-20261020-102414.sqlite3`, server time) |
 | 2026-10-20 | b9f23f3 | The client's answers: shop «ویوو» with WiWU's logo in the site's colours, 14,100,000 toman, free post and Tipax on delivery, 4 to 6 working days, battery, 72-hour warranty; hero of four bag-only posters (black first) and two of Amir's photos, no thumbnails, a compact buy button (migration 0004, page cache emptied after it; backup `db-20261020-092929.sqlite3`, server time) |
 | 2026-10-19 | f04fddb | WiWU's logo on the 3D bag's plate (emblem and name), pin 1 beside it, new models `?v=bccdb021` / `?v=9b666061` (no migration; backup `db-20261019-094240.sqlite3`, server time) |
 | 2026-10-19 | ebc1158 | WiWU name, three colours, recoloured and taut 3D bag, studio photos, `?v=` addresses (migration 0003; backup `db-20261018-205907.sqlite3`, server time) |
