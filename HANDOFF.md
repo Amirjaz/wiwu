@@ -26,18 +26,18 @@ This page is the short version, plus what isn't written down anywhere else.
   - **Panel accounts:** `amir` and `salar`, both superusers (Amir set the passwords himself on
     2026-10-19). Log in at `/panel/` (the store) or `/admin/` (Django, for the Owners/Staff groups).
 - **The bag:** the WiWU Alpha fingerprint-lock clutch, sold as **«کیف دستی ویوو آلفا»** (WiWU as the
-  brand in the specs and the search data), in **black, brown and silver-white («سفید»)**, all on sale at
-  one price: **14,100,000 toman**, shipping from Dubai included (the client, 2026-10-20).
+  brand in the specs and the search data), in **black and brown** (no silver: the client doesn't have
+  it, 2026-10-21), both on sale at one price: **14,100,000 toman**, shipping from Dubai included (the client, 2026-10-20).
 - **The home page, top to bottom** (README, *Look* and *The hero and the 3D bag*):
-  1. **Hero:** a campaign page. Six pictures over the whole first screen, one at a time: four posters of
-     the bag alone, all turned the same way (black first, all three colours with black in front, brown,
-     silver) between two of Amir's photos of it in use, with a large line, the price and a compact buy
-     button at the bottom; no thumbnails (2026-10-20). The header lies over it,
+  1. **Hero:** a campaign page. Five pictures over the whole first screen, one at a time: Amir's photo
+     of the man with the bag first, for 3 s (2026-10-21), then posters of the bag alone, all turned the
+     same way (black, black and brown side by side as mirror images, his plate photo, brown), with a large line, the
+     price and a compact buy button at the bottom; no thumbnails (2026-10-20). The header lies over it,
      see-through. Colour dots.
   2. **جزء به جزء:** the 3D bag with a tab per side, numbered pins, the parts listed beside it, colour dots
      that recolour the bag. The backup where the 3D can't run or draws nothing: the bag in the picked colour.
   3. **The lock** (dark), the hold-to-unlock demo; **specs** with the size drawn over a centimetre mat;
-     **buying** with the sample bill; **FAQ**; **pick a colour** (the three bags side by side, each opening
+     **buying** with the sample bill; **FAQ**; **pick a colour** (the bags side by side, each opening
      checkout in its colour; it replaced the green band); the footer.
 - **Store features:** checkout with an SMS code, card-to-card payment with a unique amount per order,
   "I've paid" review, the payment timer, shipping, returns, staff panel, SMS templates, SEO, colours
@@ -144,10 +144,12 @@ business address), the `.ir` domain under their national ID.
 4. **Client answers:** the domain must belong to whoever applies for Enamad; with the shop named WiWU, the
    client needs a domain they can register (risk R5). Fill the card holder's name and the contact details
    before applying for Enamad.
-5. **Hero photos:** the three bag-only slides are made from WiWU's renders (no AI image tool here; the
-   search for others is in `media/hero-candidates/`, not in git). Photos of the client's own brown and
-   silver bags would be better: run them through `tools/hero_slides.py` or add them as they are.
-6. **cartbecart:** once the client's Max account opens their API docs, finish `backend/shop/payments.py`
+5. **Hero photos:** the bag-only slides are made from WiWU's renders (no AI image tool here; the
+   search for others is in `media/hero-candidates/`, not in git). Photos of the client's own brown bag
+   would be better: run them through `tools/hero_slides.py` or add them as they are.
+6. **The two-zipper version** (Amir, 2026-10-21: the client has one): waiting for which bag it is (a
+   photo or link), its price and colours, and how to sell it beside the Alpha.
+7. **cartbecart:** once the client's Max account opens their API docs, finish `backend/shop/payments.py`
    (`TODO(cartbecart docs)`): field names and unit, checking each deposit, whether orders must be
    registered first. Until then `PAYMENT_PROVIDER=manual`.
 7. **Kavenegar:** the client's account and API key, with the 11 templates in README → *SMS*.
@@ -263,9 +265,9 @@ node tools/compare.mjs && .venv-3d/Scripts/python tools/dev/compose.py
   i-dots green; Amir didn't want WiWU's navy, 2026-10-20). The favicon is the emblem on ink.
 - **Product shots:** `front`, `back` and `side`, cut out of WiWU's studio photos by
   `tools/studio_images.py` (`media/source-photos/wiwu/`); the size drawing's `--cm` follows the front's
-  proportions (`home.html`). `colors/<black|brown|white>.webp` (checkout, the 3D backup, pick a colour) are
-  from `tools/color_photos.py`: WiWU's renders, all turned the same way (the black is their brown made black
-  by `tools/black_render.py`; the silver is their small silver photo, its lock differs).
+  proportions (`home.html`). `colors/<black|brown>.webp` (checkout, the 3D backup, pick a colour) are
+  from `tools/color_photos.py`: WiWU's renders, both turned the same way (the black is their brown made
+  black by `tools/black_render.py`).
 - The client's own three phone photos and their cutouts (`media/cutouts`, `tools/web_images.py`) are
   what the 3D model was baked from; the site no longer shows them.
 
@@ -287,7 +289,7 @@ node tools/compare.mjs && .venv-3d/Scripts/python tools/dev/compose.py
   (`Page.addScriptToEvaluateOnNewDocument`) to see why.
 - **`seed_store` runs on every deploy**: it only adds what's missing. It used to set placeholder shipping
   fees whenever both were 0, which would have undone free post; that's gone (2026-10-20).
-- **Tests and colours.** `seed_store` creates black, brown and white; the tests' `Base.setUp` deletes all
+- **Tests and colours.** `seed_store` creates black and brown; the tests' `Base.setUp` deletes all
   but black, because they assume a store that asks no colour.
 - **CSS layers.** A rule in `@layer components` loses to any Tailwind utility on the same element. The
   3D stage's state rules and the see-through header sit outside the layers, at the end of `site.css`.

@@ -4,7 +4,8 @@
 
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-// The hero's pictures, one at a time behind its text, the next fading in every --slide-time. No controls
+// The hero's pictures, one at a time behind its text, the next fading in after each one's --slide-time
+// (the slider's 6 s, or the slide's own: the opening photo stays 3 s). No controls
 // (Amir, 2026-10-20: the thumbnails crowded it): it waits while keyboard focus is in the hero, while it's
 // touched, off screen or in a background tab, and never moves on its own for people who turn motion off.
 // A sideways swipe anywhere on the hero moves it by hand (right to left: the next picture is to the left),
@@ -14,7 +15,7 @@ function photoSlider() {
   if (!slider) return;
   const slides = [...slider.querySelectorAll<HTMLElement>('[data-slide]')];
   if (slides.length < 2) return;
-  const time = (parseFloat(getComputedStyle(slider).getPropertyValue('--slide-time')) || 6) * 1000;
+  const time = (slide: HTMLElement) => (parseFloat(getComputedStyle(slide).getPropertyValue('--slide-time')) || 6) * 1000;
 
   let current = 0;
   let timer = 0;
@@ -22,7 +23,7 @@ function photoSlider() {
   const schedule = () => {
     window.clearTimeout(timer);
     slider.toggleAttribute('data-paused', holds.size > 0);
-    if (!holds.size && !reducedMotion()) timer = window.setTimeout(() => show(current + 1), time);
+    if (!holds.size && !reducedMotion()) timer = window.setTimeout(() => show(current + 1), time(slides[current]));
   };
   const hold = (reason: string, on: boolean) => {
     if (on) holds.add(reason);
@@ -41,6 +42,11 @@ function photoSlider() {
     current = next;
     slides[(current + 1) % slides.length].hidden = false; // the one after starts loading
     schedule();
+    // The 3D bag waits for this before it starts (bag3d.ts).
+    if (!slider.hasAttribute('data-moved')) {
+      slider.setAttribute('data-moved', '');
+      document.dispatchEvent(new Event('hero:moved'));
+    }
   };
 
   // The other pictures load once the page has (the first one is the page's largest picture).

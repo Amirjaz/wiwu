@@ -1,12 +1,12 @@
-"""Each colour's picture (2026-10-20): the bag cut out of WiWU's studio render, all three turned the same way,
+"""Each colour's picture (2026-10-20): the bag cut out of WiWU's studio render, both turned the same way,
 on a transparent background with a soft shadow under it. Shown at checkout for the picked colour, beside
 the parts list where the 3D bag can't run, and in the home page's closing section.
 
-    python tools/color_photos.py   (writes frontend/public/images/colors/<black|brown|white>.webp)
+    python tools/color_photos.py   (writes frontend/public/images/colors/<black|brown>.webp)
 
 The black is WiWU's brown render made black (tools/black_render.py: their black render is from another
-angle); the silver is their silver photo, which is small (its lock differs, so it can't come from the brown
-render), so it's drawn a little bigger with Lanczos and sharpened.
+angle). There was a silver-white too, from their small silver photo (drawn bigger with Lanczos and
+sharpened, the branch below): dropped on 2026-10-21, the client doesn't have it.
 """
 import sys
 from pathlib import Path
@@ -24,7 +24,6 @@ OUT = ROOT / 'frontend' / 'public' / 'images' / 'colors'
 PHOTOS = {  # colour file: (render, the bag's width in pixels)
     'black': ('black-render-front.jpg', 1000),
     'brown': ('brown-render-front.jpg', 1000),
-    'white': ('white-three-quarter.png', 700),
 }
 
 

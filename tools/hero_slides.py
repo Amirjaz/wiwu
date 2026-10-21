@@ -7,22 +7,22 @@ Two of each poster: tall (1600 x 2400, for phones: the full height shows, the si
 the lower half, so the bags stand left of centre and high) and --wide (2560 x 1400, for laptops: the
 headline sits on the right, so the bags stand in the left half, a little above the middle). One render
 stands where its frame puts a lone bag. Several: each at x, y (its centre, as fractions of the frame) and
-width (of the frame), drawn in the order given, so the last is in front:
+width (of the frame), drawn in the order given, so the last is in front; ",mirror" after the width flips
+that bag left to right:
 
     W=media/source-photos/wiwu
     python tools/hero_slides.py bag-black.png steel $W/black-render-front.jpg   (from tools/black_render.py)
     python tools/hero_slides.py bag-brown.png brown $W/brown-render-front.jpg
-    python tools/hero_slides.py bag-silver.png silver $W/white-three-quarter.png
-    python tools/hero_slides.py bag-colors.png graphite $W/brown-render-front.jpg@0.16,0.29,0.22 \\
-        $W/white-three-quarter.png@0.52,0.29,0.22 $W/black-render-front.jpg@0.34,0.31,0.25   (black in front)
+    python tools/hero_slides.py bag-colors.png graphite $W/black-render-front.jpg@0.19,0.30,0.29 \\
+        $W/brown-render-front.jpg@0.50,0.30,0.29,mirror   (side by side as mirror images: Amir, 2026-10-21)
     python tools/hero_slides.py --wide bag-black-wide.png steel $W/black-render-front.jpg
     python tools/hero_slides.py --wide bag-brown-wide.png brown $W/brown-render-front.jpg
-    python tools/hero_slides.py --wide bag-silver-wide.png silver $W/white-three-quarter.png@0.25,0.47,0.25
-    python tools/hero_slides.py --wide bag-colors-wide.png graphite $W/brown-render-front.jpg@0.10,0.45,0.16 \\
-        $W/white-three-quarter.png@0.34,0.45,0.16 $W/black-render-front.jpg@0.22,0.48,0.20
+    python tools/hero_slides.py --wide bag-colors-wide.png graphite $W/black-render-front.jpg@0.13,0.47,0.175 \\
+        $W/brown-render-front.jpg@0.325,0.47,0.175,mirror
 
-WiWU's silver photo is only 658 px across (and its lock differs, so it can't come from the brown render), so
-the silver bag is drawn no bigger than that. media/source-photos/look/bag-*.jpg are the tall posters and
+The silver poster (palette 'silver', from WiWU's small silver photo, $W/white-three-quarter.png, drawn no
+bigger than its 658 px) was dropped on 2026-10-21: the client doesn't have the silver bag, and the colours
+poster shows black and brown only. media/source-photos/look/bag-*.jpg are the tall posters and
 bag-*-wide.jpg the wide ones; the hero's files come from them (frontend/public/images/look/).
 """
 import sys
@@ -42,7 +42,7 @@ PALETTES = {
     'brown': ((21, 19, 18), (68, 60, 54), (11, 10, 9), (255, 230, 204)),  # taupe, so the brown stands out
     'silver': ((16, 19, 24), (44, 50, 58), (8, 9, 11), (205, 222, 255)),
     'steel': ((30, 32, 36), (118, 121, 127), (13, 14, 16), (240, 244, 255)),  # light enough for black
-    'graphite': ((24, 26, 29), (92, 95, 100), (11, 12, 13), (245, 245, 250)),  # all three colours
+    'graphite': ((24, 26, 29), (92, 95, 100), (11, 12, 13), (245, 245, 250)),  # the colours together
 }
 
 
@@ -141,8 +141,13 @@ def main():
     bags = []
     for spec in specs:
         path, _, where = spec.partition('@')
-        cx, cy, width = (float(v) for v in where.split(',')) if where else SINGLE
+        fields = where.split(',') if where else []
+        mirror = fields[-1:] == ['mirror']
+        fields = fields[:3]
+        cx, cy, width = (float(v) for v in fields) if fields else SINGLE
         rgb, alpha = cut_out(path)
+        if mirror:  # flipped left to right, so two bags can face each other
+            rgb, alpha = np.ascontiguousarray(rgb[:, ::-1]), np.ascontiguousarray(alpha[:, ::-1])
         bags.append((rgb, alpha, cx, cy, width, W * width * rgb.shape[0] / rgb.shape[1]))
     # The floor line well behind the furthest bag.
     horizon = min((H * cy + bh / 2 - 0.35 * bh) / H for _, _, _, cy, _, bh in bags)

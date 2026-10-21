@@ -1,8 +1,8 @@
 # PurseShop
 
 Working name until the client picks one (see [PLAN.md](PLAN.md), the interview and all the decisions).
-An online store for one product, the WiWU Alpha fingerprint-lock clutch («کیف دستی ویوو آلفا»; black, brown
-and silver-white, about 10M toman), in
+An online store for one product, the WiWU Alpha fingerprint-lock clutch («کیف دستی ویوو آلفا»; black and
+brown, 14.1M toman), in
 Persian. Payment is card-to-card to the owner's cards, confirmed automatically from the bank's deposit
 SMS by cartbecart.com, or by staff in the panel.
 
@@ -88,17 +88,19 @@ add them to a group. Sign-in lasts two weeks, 10 attempts per 15 minutes per add
 
 ## The hero and the 3D bag (`frontend/src/islands/home.ts`, `frontend/src/bag3d/`, `frontend/src/islands/bag3d.ts`, `tools/build_model.py`)
 
-The home page opens as a campaign page (Amir's pick of three designs, 2026-10-18): six pictures, one
+The home page opens as a campaign page (Amir's pick of three designs, 2026-10-18): five pictures, one
 at a time over the whole first screen (`views.LOOK`, the originals in `media/source-photos/look/`, the
-site's copies 600 and 1200 px wide in `public/images/look/`). Four are posters of the bag alone, all turned
-the same way: black first, then all three colours side by side with black in front, brown, silver (WiWU's
-studio renders on a dark studio sweep, `tools/hero_slides.py`, 2026-10-20; WiWU's black render is from
-another angle, so the black is their brown render made black, `tools/black_render.py`). Between them, two
-of Amir's photos of the bag in use. A large line at the bottom over a dark fade, the price and a compact buy button; nothing else (Amir,
+site's copies 600 and 1200 px wide in `public/images/look/`). Amir's photo of the man with the bag opens
+it, for 3 seconds only (2026-10-21). Three are posters of the bag alone: black, black and brown side by
+side as mirror images (Amir, 2026-10-21), brown (WiWU's studio renders on a dark studio sweep,
+`tools/hero_slides.py`, 2026-10-20; WiWU's black render is from another angle, so the black is their
+brown render made black, `tools/black_render.py`; silver dropped 2026-10-21). Between them, Amir's other
+photo, the plate in hand. A large line at the bottom over a dark fade, the price and a compact buy button; nothing else (Amir,
 2026-10-20: the thumbnails, pause button and counter crowded it). The header lies over the picture,
 see-through until the hero scrolls away (`data-header="clear"`). Each picture has a crop point for tall
-screens and one for wide ones, where only a band of the tall picture shows. Every 6 s the next fades in
-while the last drifts slowly closer. It waits while keyboard focus is in the hero, it's touched, off
+screens and one for wide ones, where only a band of the tall picture shows. After each picture's time
+(6 s, or its own `--slide-time`: `time` in `views.LOOK`) the next fades in while the last drifts slowly
+closer. It waits while keyboard focus is in the hero, it's touched, off
 screen or in a background tab, and with reduced motion it never moves by itself. A sideways swipe moves
 it (right to left: the next picture is to the left). Without JavaScript the first picture stays.
 
@@ -123,7 +125,9 @@ added in the panel tints the bag the same way, from its swatch.
 
 Devices with WebGL2 (and no data saver, 2 GB+ memory) get the 3D: plain three.js, loaded as a separate
 chunk (170 KB gzipped), plus the model (`public/models/alpha.glb` 732 KB, `alpha-mobile.glb` 324 KB). It
-loads once the page has (the hero's photos come first) and the section is about a screen away.
+loads once the page has (the hero's photos come first), the section is about a screen away and the hero
+has moved past its opening photo, or the visitor has scrolled: starting the 3D holds the page for a second
+or more, and the opening photo's 3 seconds stretched to about 5 (2026-10-21).
 
 - **While it loads:** the stage is `[data-pending]`: a thin line shows the download.
 - **The backup is a picture of the bag in the picked colour** (`images/colors/`, swapped by the colour
@@ -220,10 +224,11 @@ Motion is CSS: scroll-driven where the browser has it, nothing otherwise, nothin
 
 ## Colours (`shop.models.Color`, panel → فروشگاه → رنگ‌ها)
 
-The bag comes in black, brown (قهوه‌ای) and silver-white (سفید), all at the product's price, all on
-show since 2026-10-19 (migration 0003; Amir's call). Each colour has a name, a swatch (#rrggbb, the
+The bag comes in black and brown (قهوه‌ای), both at the product's price, on show since 2026-10-19
+(migration 0003; Amir's call). The silver-white (سفید) went on 2026-10-21: the client doesn't have it
+(migration 0006; it is hidden instead if an order has it). Each colour has a name, a swatch (#rrggbb, the
 leather's colour on WiWU's renders, which the 3D bag is tinted to; the brown is their coffee brown since
-migration 0005), a picture (`images/colors/*.webp`, `tools/color_photos.py`: all three turned the same way,
+migration 0005), a picture (`images/colors/*.webp`, `tools/color_photos.py`: both turned the same way,
 on a transparent background) and two switches: *shown on the site* and *in stock*. While only one colour is
 shown nobody is asked and every order gets that colour. With two or more shown:
 
@@ -236,7 +241,7 @@ shown nobody is asked and every order gets that colour. With two or more shown:
 `orders.pick_color` checks the pick before the SMS code is used up. Orders keep the colour's name as it
 was (`color_name`), which the panel, the order page and the packing slip show. A colour with orders is
 hidden rather than deleted. New colours start hidden: add the photo first, then show them. The hero's
-lifestyle photos are of the black bag only; its bag-only slides show brown and silver.
+lifestyle photos are of the black bag only; its bag-only slides show black and brown.
 
 ## Load and caching
 

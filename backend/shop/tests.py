@@ -35,7 +35,7 @@ class Base(TestCase):
         self.store.owner_mobile = '09350000000'
         self.store.save()
         self.product = Product.objects.get(slug='alpha')
-        # The store as these tests assume it: black only (seed_store also adds brown and white; ColorTests
+        # The store as these tests assume it: black only (seed_store also adds brown; ColorTests
         # add the colours they need).
         self.product.colors.exclude(name='مشکی').delete()
 
@@ -448,15 +448,14 @@ class ColorTests(Base):
 
 
 class StartingColoursTests(TestCase):
-    def test_a_new_store_sells_three_colours_with_photos(self):
+    def test_a_new_store_sells_black_and_brown_with_photos(self):
         call_command('seed_store', stdout=io.StringIO())
         product = Product.objects.get(slug='alpha')
         self.assertEqual([(c.name, c.photo) for c in product.colors.all()], [
-            ('مشکی', 'images/colors/black.webp'), ('قهوه‌ای', 'images/colors/brown.webp'),
-            ('سفید', 'images/colors/white.webp')])
+            ('مشکی', 'images/colors/black.webp'), ('قهوه‌ای', 'images/colors/brown.webp')])
         self.assertIn('ویوو', product.name)
         page = self.client.get('/checkout/').content.decode()
-        self.assertEqual(page.count('data-color-photo='), 3)
+        self.assertEqual(page.count('data-color-photo='), 2)
         home = self.client.get('/').content.decode()
         self.assertEqual(home.count('data-color-picker'), 2)  # in the hero and beside the 3D bag
         self.assertIn('"brand": {"@type": "Brand", "name": "WiWU"}', home)

@@ -28,7 +28,7 @@ PRODUCT = {
         ['جنس بدنه', 'چرم مصنوعی PU، مقاوم در برابر آب و خط و خش'],
         ['آستر', 'میکروفایبر'],
         ['ابعاد', 'حدود ۲۵ × ۱۵٫۵ × ۶٫۵ سانتی‌متر'],
-        ['رنگ', 'مشکی، قهوه‌ای، سفید'],
+        ['رنگ', 'مشکی، قهوه‌ای'],
         ['جیب‌ها', 'جیب زیپ‌دار پشت، جای کارت و مدارک در داخل'],
         ['بند', 'بند مچی با دکمه فلزی'],
         ['برند', 'ویوو (WiWU)، وارداتی'],
@@ -36,10 +36,10 @@ PRODUCT = {
     ],
 }
 
-# Black, brown and silver-white; the swatches are the leather's colour on the maker's photos (the 3D bag
-# takes its tint from them), with each colour's photo (tools/studio_images.py).
-COLORS = [('مشکی', '#17181b', 'images/colors/black.webp'), ('قهوه‌ای', '#463930', 'images/colors/brown.webp'),
-          ('سفید', '#b6babf', 'images/colors/white.webp')]
+# Black and brown (no silver-white: the client doesn't have it, 2026-10-21); the swatches are the leather's
+# colour on the maker's renders (the 3D bag takes its tint from them), with each colour's picture
+# (tools/color_photos.py).
+COLORS = [('مشکی', '#17181b', 'images/colors/black.webp'), ('قهوه‌ای', '#463930', 'images/colors/brown.webp')]
 
 FAQS = [
     ('پرداخت چطور انجام می‌شود؟',

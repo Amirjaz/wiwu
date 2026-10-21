@@ -4,8 +4,8 @@
 // home.ts's (partsDiagram), which says what was picked through 'parts:view' and 'parts:focus' on the
 // section. Each side also has a photo with the same numbers ([data-parts-photo]), the backup: shown where
 // the 3D can't run, and where it fails or takes longer than PHOTO_DELAY. Until then a thin line shows the
-// model loading. The model only loads once the page has and the section is about a screen away: the
-// hero's photos come first.
+// model loading. The model only loads once the page has, the section is about a screen away and the hero
+// has moved past its opening photo: the hero's photos come first.
 import type { BagScene, Pin } from '../bag3d/scene';
 
 const PHOTO_DELAY = 6000;
@@ -134,11 +134,20 @@ function setup(section: HTMLElement, stage: HTMLElement) {
     }
   };
 
+  // Not while the hero's opening photo is up: starting the 3D holds the page for a second or more, and its
+  // 3 seconds stretched to 5 (2026-10-21). The hero says when it moves on (home.ts); scrolling, or a
+  // slider that won't move by itself, doesn't wait.
+  const heroDone = new Promise<void>((resolve) => {
+    const slider = document.querySelector('[data-slider]');
+    if (!slider || slider.hasAttribute('data-moved') || reducedMotion || scrollY > 0) return resolve();
+    addEventListener('scroll', () => resolve(), { once: true, passive: true });
+    document.addEventListener('hero:moved', () => resolve(), { once: true });
+  });
   const near = new IntersectionObserver(
     (entries) => {
       if (!entries.some((entry) => entry.isIntersecting)) return;
       near.disconnect();
-      load3d();
+      heroDone.then(load3d);
     },
     { rootMargin: '100% 0px' },
   );

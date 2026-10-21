@@ -26,10 +26,10 @@ no thumbnails). Without JavaScript the first picture stays.
   <div data-slider class="h-full touch-pan-y" style="--slide-time: 6s" aria-roledescription="carousel" aria-label="عکس‌های کیف">
     <div data-slides class="absolute inset-0 -z-10">
       {% for slide in look %}{% with name=slide.name %}
-      <div data-slide{% if forloop.first %} data-on{% else %} hidden aria-hidden="true"{% endif %}{% if slide.color %} data-color-name="{{ slide.color }}"{% endif %} class="absolute inset-0{% if slide.photo %} slide-photo{% endif %}" style="--focus: {{ slide.focus }}; --focus-wide: {{ slide.wide }}">
+      <div data-slide{% if forloop.first %} data-on{% else %} hidden aria-hidden="true"{% endif %}{% if slide.color %} data-color-name="{{ slide.color }}"{% endif %} class="absolute inset-0{% if slide.photo %} slide-photo{% endif %}" style="--focus: {{ slide.focus }}; --focus-wide: {{ slide.wide }}{% if slide.time %}; --slide-time: {{ slide.time }}s{% endif %}">
         {% if slide.photo %}
         {# Laptops: the photo at its own shape on the left, over a blurred, darkened copy of itself (site.css). #}
-        <img class="slide-blur absolute inset-0 size-full object-cover" src="{% asset 'images/look/'|add:name|add:'-600.webp' %}" alt="" width="600" height="900" draggable="false" loading="lazy">
+        <img class="slide-blur absolute inset-0 size-full object-cover" src="{% asset 'images/look/'|add:name|add:'-600.webp' %}" alt="" width="600" height="900" draggable="false"{% if not forloop.first %} loading="lazy"{% endif %}>
         <img class="slide-main absolute inset-0 size-full object-cover"
              src="{% asset 'images/look/'|add:name|add:'-1200.webp' %}" srcset="{% asset 'images/look/'|add:name|add:'-600.webp' %} 600w, {% asset 'images/look/'|add:name|add:'-1200.webp' %} 1200w"
              sizes="(min-aspect-ratio: 1/1) 67svh, 100vw" alt="{{ slide.alt }}" width="1200" height="1800" draggable="false"
@@ -310,7 +310,7 @@ can be dragged round. Where the 3D can't run, the same numbers sit on a photo pe
       </div>
     </div>
     {% if colors %}
-    <ul class="reveal mt-10 md:mt-14 grid grid-cols-3 gap-2 sm:gap-5">
+    <ul class="reveal mt-10 md:mt-14 grid {% if colors|length == 2 %}grid-cols-2 max-w-4xl{% else %}grid-cols-3{% endif %} gap-2 sm:gap-5">
       {% for color in colors %}
       <li>
         {% if color.available and product.is_available %}<a href="{% url 'checkout' %}?color={{ color.id }}" data-color-link class="group block h-full rounded-[var(--radius-surface)] bg-surface p-3 sm:p-6 lg:p-8 transition-colors hover:bg-page">{% else %}<div class="block h-full rounded-[var(--radius-surface)] bg-surface p-3 sm:p-6 lg:p-8 opacity-60">{% endif %}
