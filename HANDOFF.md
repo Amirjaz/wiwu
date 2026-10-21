@@ -8,12 +8,13 @@ This page is the short version, plus what isn't written down anywhere else.
 
 ## Where it stands
 
-- **Staging is online at https://shop.nisatech.org** and runs **82f2c89**, deployed on 2026-10-21 (`main`
+- **Staging is online at https://shop.nisatech.org** and runs **bb910c7**, deployed on 2026-10-21 (`main`
   is the same; the handoff commits after it change only this file): the client's answers (the shop is
   **ویوو** with WiWU's logo in the site's colours, the price, free post and Tipax on delivery, 4 to 6
   working days, the battery, the 72-hour warranty), the hero (opening with the man with the bag for 3 s,
   sharp on laptops, colour dots that jump to their poster), black and brown only (no silver), the 3D
-  backup in the picked colour, a pick-a-colour closing section, WiWU's coffee brown.
+  backup in the picked colour, a pick-a-colour closing section, WiWU's coffee brown; the two-zipper bag in
+  the data and the panel, hidden until it has a price.
   - Open to everyone (no password, Amir's choice), but kept out of search engines (noindex).
   - SMS codes only go to the server log and payments are manual, so people can browse but can't finish
     an order. No orders yet.
@@ -365,6 +366,7 @@ another project's (Finance).
 
 | Date | Commit | What |
 | --- | --- | --- |
+| 2026-10-21 | bb910c7 | The two-zipper bag (WiWU Phantom Pro) in black and brown as a second model, added by `seed_store` with price 0, so off the site until a price is set in the panel; the panel's model switch; checkout and orders for it (no migration; page cache emptied; backup `db-20261021-131307.sqlite3`, server time). Checked: hidden on home, checkout for it falls back to the Alpha, its pictures and the new scripts match the build |
 | 2026-10-21 | 82f2c89 | Hero opens with Amir's photo of the man with the bag for 3 s (counted from when it has loaded; the 3D bag starts only after the hero moves on, which had stretched it to 5 s); silver gone (migration 0006, page cache emptied after it; backups `db-20261021-114043.sqlite3` and the redeploy's, server time); the black-and-brown poster as mirror images; the closing section's grid follows the number of colours. The deploy's new HTTPS check passed. Arvan's proxy was back on |
 | 2026-10-20 | 4b38735 | Server only, no app deploy: the shop's own HTTPS (Let's Encrypt via `server-setup.sh CERT=1`) after https://shop.nisatech.org showed nisatak.com with Arvan's proxy off; the deploy-time HTTPS check is in `remote-deploy.sh` from the next deploy |
 | 2026-10-20 | 4563f06 | Hero on laptops: wide posters (up to 2560 px), Amir's photos at their own shape; hero colour dots jump to their poster; the 3D backup shows the picked colour and catches a 3D that draws nothing; pick-a-colour closing section; the brown is WiWU's coffee brown with gunmetal hardware (migration 0005, page cache emptied after it; backup `db-20261020-102414.sqlite3`, server time) |
