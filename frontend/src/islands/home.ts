@@ -19,11 +19,14 @@ function photoSlider() {
 
   let current = 0;
   let timer = 0;
+  // The first picture's time counts from when it shows, not from when the script runs: on a slow
+  // connection the opening photo's 3 seconds were mostly spent loading it.
+  let started = false;
   const holds = new Set<string>();
   const schedule = () => {
     window.clearTimeout(timer);
     slider.toggleAttribute('data-paused', holds.size > 0);
-    if (!holds.size && !reducedMotion()) timer = window.setTimeout(() => show(current + 1), time(slides[current]));
+    if (started && !holds.size && !reducedMotion()) timer = window.setTimeout(() => show(current + 1), time(slides[current]));
   };
   const hold = (reason: string, on: boolean) => {
     if (on) holds.add(reason);
@@ -86,7 +89,16 @@ function photoSlider() {
     start = null;
     hold('touch', false);
   });
-  schedule();
+  const begin = () => {
+    started = true;
+    schedule();
+  };
+  const first = slides[0].querySelector<HTMLImageElement>('.slide-main, picture img');
+  if (!first || first.complete) begin();
+  else {
+    first.addEventListener('load', begin, { once: true });
+    first.addEventListener('error', begin, { once: true });
+  }
 }
 
 // The header laid over the hero's photo (data-header="clear"): see-through until the hero has scrolled
