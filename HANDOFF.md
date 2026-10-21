@@ -1,6 +1,6 @@
 # PurseShop: handoff
 
-State on **2026-10-20 (28 Mehr 1405)**, written so the work can go on in a new chat.
+State on **2026-10-21 (29 Mehr 1405)**, written so the work can go on in a new chat.
 
 **A new chat should start here:** read this page, then [README.md](README.md) for how everything works,
 [PLAN.md](PLAN.md) for the decisions and risks, and [LOADTEST.md](LOADTEST.md) for the server capacity.
@@ -8,11 +8,12 @@ This page is the short version, plus what isn't written down anywhere else.
 
 ## Where it stands
 
-- **Staging is online at https://shop.nisatech.org** and runs **4563f06**, deployed on 2026-10-20 (`main`
+- **Staging is online at https://shop.nisatech.org** and runs **82f2c89**, deployed on 2026-10-21 (`main`
   is the same; the handoff commits after it change only this file): the client's answers (the shop is
   **ویوو** with WiWU's logo in the site's colours, the price, free post and Tipax on delivery, 4 to 6
-  working days, the battery, the 72-hour warranty), the hero (sharp on laptops, colour dots that jump to
-  their poster), the 3D backup in the picked colour, a pick-a-colour closing section, WiWU's coffee brown.
+  working days, the battery, the 72-hour warranty), the hero (opening with the man with the bag for 3 s,
+  sharp on laptops, colour dots that jump to their poster), black and brown only (no silver), the 3D
+  backup in the picked colour, a pick-a-colour closing section, WiWU's coffee brown.
   - Open to everyone (no password, Amir's choice), but kept out of search engines (noindex).
   - SMS codes only go to the server log and payments are manual, so people can browse but can't finish
     an order. No orders yet.
@@ -21,8 +22,8 @@ This page is the short version, plus what isn't written down anywhere else.
     browsers came straight to the server, and nginx answered https://shop.nisatech.org with nisatak.com
     (its only HTTPS site). The shop now has its own Let's Encrypt certificate (until 2027-01-18,
     certbot.timer renews it and reloads nginx) and works with the proxy on or off. Each deploy checks it
-    (`remote-deploy.sh`). Without the proxy there is no CDN cache: images and the 3D model come from
-    this 1-core server.
+    (`remote-deploy.sh`; it passed on the 2026-10-21 deploys). Amir turned the proxy back on by
+    2026-10-21 (the shop resolves to Arvan again, `server: ArvanCloud`).
   - **Panel accounts:** `amir` and `salar`, both superusers (Amir set the passwords himself on
     2026-10-19). Log in at `/panel/` (the store) or `/admin/` (Django, for the Owners/Staff groups).
 - **The bag:** the WiWU Alpha fingerprint-lock clutch, sold as **«کیف دستی ویوو آلفا»** (WiWU as the
@@ -61,11 +62,10 @@ This page is the short version, plus what isn't written down anywhere else.
    still reads `x-cache: BYPASS`, so every visitor downloads it (0.3 to 0.7 MB) from our server.
 2. **The questions for the client** (below): he sends them and brings back the answers.
 3. **Deploy go-ahead**, whenever there is new work (only on his word).
-4. **Arvan's proxy (the cloud icon) for nisatech.org**: off for every record on 2026-10-20 (his call, or
-   Arvan's). The shop works either way now; with it on, Arvan caches images and the 3D model again and
-   takes the traffic. Not this project's, but tell him: nisatech.org, contech, pd and ops have no HTTPS
-   of their own on the server, so with the proxy off their https addresses show nisatak.com's site
-   behind a certificate warning.
+4. **Arvan's proxy (the cloud icon) for nisatech.org**: it was off for every record on 2026-10-20; the
+   shop's is back on (2026-10-21). Told him the other records (nisatech.org, contech, pd, ops) need it
+   on too: they have no HTTPS of their own on the server, so without it their https addresses show
+   nisatak.com's site behind a certificate warning.
 
 ## Waiting on the client
 
@@ -362,6 +362,7 @@ another project's (Finance).
 
 | Date | Commit | What |
 | --- | --- | --- |
+| 2026-10-21 | 82f2c89 | Hero opens with Amir's photo of the man with the bag for 3 s (counted from when it has loaded; the 3D bag starts only after the hero moves on, which had stretched it to 5 s); silver gone (migration 0006, page cache emptied after it; backups `db-20261021-114043.sqlite3` and the redeploy's, server time); the black-and-brown poster as mirror images; the closing section's grid follows the number of colours. The deploy's new HTTPS check passed. Arvan's proxy was back on |
 | 2026-10-20 | 4b38735 | Server only, no app deploy: the shop's own HTTPS (Let's Encrypt via `server-setup.sh CERT=1`) after https://shop.nisatech.org showed nisatak.com with Arvan's proxy off; the deploy-time HTTPS check is in `remote-deploy.sh` from the next deploy |
 | 2026-10-20 | 4563f06 | Hero on laptops: wide posters (up to 2560 px), Amir's photos at their own shape; hero colour dots jump to their poster; the 3D backup shows the picked colour and catches a 3D that draws nothing; pick-a-colour closing section; the brown is WiWU's coffee brown with gunmetal hardware (migration 0005, page cache emptied after it; backup `db-20261020-102414.sqlite3`, server time) |
 | 2026-10-20 | b9f23f3 | The client's answers: shop «ویوو» with WiWU's logo in the site's colours, 14,100,000 toman, free post and Tipax on delivery, 4 to 6 working days, battery, 72-hour warranty; hero of four bag-only posters (black first) and two of Amir's photos, no thumbnails, a compact buy button (migration 0004, page cache emptied after it; backup `db-20261020-092929.sqlite3`, server time) |
