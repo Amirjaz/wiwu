@@ -243,6 +243,28 @@ was (`color_name`), which the panel, the order page and the packing slip show. A
 hidden rather than deleted. New colours start hidden: add the photo first, then show them. The hero's
 lifestyle photos are of the black bag only; its bag-only slides show black and brown.
 
+## The two-zipper model (WiWU Phantom Pro, `seed_store.PHANTOM`, `views.lineup`)
+
+The client also has WiWU's two-zipper bag, in black and brown (Amir, 2026-10-21): the Phantom Pro
+(«کیف دستی دو زیپ ویوو فانتوم پرو»), 28 × 12.5 × 9 cm, about 800 g, two compartments, a side handle, the same
+kind of fingerprint lock. It is a second `Product` (`phantom-pro`), with its own price, specs and colours;
+the Alpha stays the main bag (`PRODUCT_SLUG`): the hero, the 3D bag, the specs and the search data are the
+Alpha's.
+
+- **Off the site until it has a price.** `seed_store` adds it with price 0 (the client hasn't given one);
+  0 keeps it off the home page and out of checkout, and an order for it is refused (`unavailable`). The
+  Alpha's price can never be 0.
+- **With a price:** its own section before the closing one (`#phantom-pro`, dark: what's different, a few
+  spec rows from `views.HIGHLIGHTS`, the price, each colour on a light tile opening
+  `/checkout/?product=phantom-pro&color=<id>`), and checkout for it (`?product=`, its name, price and
+  colour pictures; the order is placed for it, `product` in `/api/orders/`).
+- **Panel → فروشگاه:** with two models, a switch at the top picks which one the colours and the
+  product fields below are for; the list says which has no price yet.
+- **Pictures:** `images/colors/phantom-<black|brown>.webp` from `tools/phantom_photos.py`. The only clean
+  studio render found was of its tan bag (a reseller's, `media/source-photos/wiwu/phantom-tan.png`; other
+  stores watermark theirs), so its leather is made each colour, as `tools/black_render.py` did for the
+  Alpha: the deep brown of Amir's screenshot of the bag, and a neutral black.
+
 ## Load and caching
 
 See [LOADTEST.md](LOADTEST.md) (2026-10-18). The home and policy pages are cached for 60 s in the

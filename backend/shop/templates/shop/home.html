@@ -294,6 +294,45 @@ can be dragged round. Where the 3D can't run, the same numbers sit on a photo pe
 </section>
 {% endif %}
 
+{% for model in models %}{% with item=model.product %}
+{% comment %}Another model beside the Alpha (views.lineup; Amir, 2026-10-21: WiWU's two-zipper Phantom Pro, in black and
+   brown), on its own dark ground: what's different about it, its price, and each colour on a light tile (the
+   cut-out pictures are made for light), opening checkout for it in that colour. Only there once it has a price in the panel.{% endcomment %}
+<section id="{{ item.slug }}" class="scroll-mt-16 bg-ink text-raised bg-[radial-gradient(ellipse_50%_60%_at_30%_55%,#26282d_0%,rgba(15,16,18,0)_75%)]">
+  <div class="mx-auto max-w-7xl px-4 sm:px-6 py-20 md:py-28 grid gap-10 lg:gap-16 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-center">
+    <div class="reveal space-y-6">
+      <p class="flex items-center gap-2 font-mono text-sm text-raised/60"><span class="led{% if item.is_available %} led-on{% endif %}"></span>نسخه‌ی دو زیپ</p>
+      <h2 class="text-3xl sm:text-[2.6rem] font-bold leading-[1.45]">{{ item.name }}</h2>
+      {% if item.subtitle %}<p class="max-w-xl text-lg leading-loose text-raised/75">{{ item.subtitle }}</p>{% endif %}
+      {% if model.highlights %}
+      <dl class="grid grid-cols-2 gap-px max-w-xl overflow-hidden rounded-[var(--radius-surface)] bg-raised/12">
+        {% for label, value in model.highlights %}<div class="bg-ink p-4"><dt class="font-mono text-xs text-raised/55">{{ label }}</dt><dd class="mt-1.5 leading-relaxed">{{ value }}</dd></div>{% endfor %}
+      </dl>
+      {% endif %}
+      <div class="flex items-center gap-6">
+        <p class="leading-tight"><span class="block text-2xl font-bold">{{ model.price }}</span><span class="block font-mono text-xs text-raised/55">تومان</span></p>
+        {% if item.is_available %}<a href="{% url 'checkout' %}?product={{ item.slug }}" data-color-link class="btn group min-h-11 gap-2 ps-6 pe-5 bg-raised text-ink">خرید{% icon 'arrow-left' 'size-4 transition-transform group-hover:-translate-x-0.5' %}</a>{% else %}<p class="text-raised/60">فعلاً موجود نیست</p>{% endif %}
+      </div>
+    </div>
+    {% if model.colors %}
+    <ul class="reveal grid {% if model.colors|length > 1 %}grid-cols-2{% endif %} gap-2 sm:gap-5">
+      {% for color in model.colors %}
+      <li>
+        {% if color.available and item.is_available %}<a href="{% url 'checkout' %}?product={{ item.slug }}&amp;color={{ color.id }}" data-color-link class="group block h-full rounded-[var(--radius-surface)] bg-raised text-ink p-3 sm:p-6 transition-colors hover:bg-page">{% else %}<div class="block h-full rounded-[var(--radius-surface)] bg-raised text-ink p-3 sm:p-6 opacity-60">{% endif %}
+          {% if color.photo %}<img src="{% asset color.photo %}" alt="{{ item.name }}، {{ color.name }}" loading="lazy" class="mx-auto block w-full max-w-[24rem] h-auto transition-transform duration-300 group-hover:-translate-y-1">{% endif %}
+          <p class="mt-3 sm:mt-5 flex flex-wrap items-center justify-between gap-2 text-sm sm:text-base">
+            <span class="flex items-center gap-2 font-bold"><span class="size-3 rounded-full ring-1 ring-ink/20" style="background: {{ color.swatch }}"></span>{{ color.name }}</span>
+            <span class="hidden sm:flex items-center gap-1.5 text-muted group-hover:text-ink">{% if color.available %}خرید این رنگ{% icon 'arrow-left' 'size-4' %}{% else %}ناموجود{% endif %}</span>
+          </p>
+        {% if color.available and item.is_available %}</a>{% else %}</div>{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+</section>
+{% endwith %}{% endfor %}
+
 {% comment %}Closing (Amir, 2026-10-20: not the green band): pick a colour. The bag in each colour side by side on a light
    table, each opening checkout in that colour; the price and the button above, what comes with buying here
    below.{% endcomment %}

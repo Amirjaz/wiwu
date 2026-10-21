@@ -41,6 +41,39 @@ PRODUCT = {
 # (tools/color_photos.py).
 COLORS = [('مشکی', '#17181b', 'images/colors/black.webp'), ('قهوه‌ای', '#463930', 'images/colors/brown.webp')]
 
+# The two-zipper bag (Amir, 2026-10-21: the client has it, in black and brown): WiWU's Phantom Pro. No price yet,
+# so the site doesn't show it (views.lineup) until one is set in the panel. Its facts are from resellers' pages
+# (elryan.com, applegadgetsbd.com): 28 x 12.5 x 9 cm, 795 g, PU leather, two compartments, a side handle, the
+# lock 10 fingerprints and USB-C. Pictures: tools/phantom_photos.py.
+PHANTOM = {
+    'slug': 'phantom-pro',
+    'name': 'کیف دستی دو زیپ ویوو فانتوم پرو با قفل اثر انگشت',
+    'subtitle': 'دو زیپ و دو بخش جدا، با همان قفل اثر انگشت.',
+    'description': (
+        'فانتوم پرو بزرگ‌تر از آلفاست و دو زیپ دارد: دو بخش جدا، یکی برای گوشی و پاوربانک و دیگری برای پاسپورت، '
+        'کارت‌ها و کابل‌ها. با قفل اثر انگشت بسته می‌ماند و با لمس انگشت شما باز می‌شود، و یک دسته‌ی کناری دارد '
+        'که در دست راحت نگهش می‌دارد.\n\n'
+        'بدنه از چرم مصنوعی PU است که در برابر آب و خط و خش مقاوم است، با آستر نرم و ضد خش.'
+    ),
+    'price_rial': 0,
+    'specs': [
+        ['زیپ‌ها', 'دو زیپ، دو بخش جدا'],
+        ['ابعاد', 'حدود ۲۸ × ۱۲٫۵ × ۹ سانتی‌متر'],
+        ['بند', 'دسته‌ی کناری'],
+        ['وزن', 'حدود ۸۰۰ گرم'],
+        ['قفل', 'اثر انگشت، تا ۱۰ اثر انگشت'],
+        ['باز شدن', 'حدود نیم ثانیه'],
+        ['شارژ قفل', 'USB-C'],
+        ['جنس بدنه', 'چرم مصنوعی PU، مقاوم در برابر آب و خط و خش'],
+        ['آستر', 'نرم و ضد خش'],
+        ['رنگ', 'مشکی، قهوه‌ای'],
+        ['برند', 'ویوو (WiWU)، وارداتی'],
+        ['گارانتی', '۷۲ ساعت تعویض، اگر قفل یا زیپ مشکل داشته باشد'],
+    ],
+}
+PHANTOM_COLORS = [('مشکی', '#17181b', 'images/colors/phantom-black.webp'),
+                  ('قهوه‌ای', '#422e23', 'images/colors/phantom-brown.webp')]
+
 FAQS = [
     ('پرداخت چطور انجام می‌شود؟',
      'پس از ثبت سفارش و تأیید شماره موبایل، شماره کارت و **مبلغ دقیق** سفارش را می‌بینید. همان مبلغ را با اپ '
@@ -149,6 +182,11 @@ class Command(BaseCommand):
             for position, (name, swatch, photo) in enumerate(COLORS):
                 product.colors.create(name=name, swatch=swatch, photo=photo, position=position)
             self.stdout.write(f'Color: added {len(COLORS)}')
+        phantom, created = Product.objects.get_or_create(slug=PHANTOM['slug'], defaults=PHANTOM)
+        if created:
+            for position, (name, swatch, photo) in enumerate(PHANTOM_COLORS):
+                phantom.colors.create(name=name, swatch=swatch, photo=photo, position=position)
+            self.stdout.write(f'Product: added {phantom.name}, no price yet (hidden until it has one)')
         if not Faq.objects.exists():
             for i, (question, answer) in enumerate(FAQS):
                 Faq.objects.create(question=question, answer=answer, position=i)

@@ -23,7 +23,7 @@ interface Color {
 
 interface Data {
   store: string;
-  product: { name: string; price_rial: number; available: boolean };
+  product: { slug: string; name: string; price_rial: number; available: boolean }; // ?product= picks another model
   colors: Color[]; // the colours on show; the buyer picks only when there's more than one
   shipping: Shipping[];
   provinces: string[];
@@ -163,7 +163,7 @@ function Checkout({ data }: { data: Data }) {
     setBusy(true);
     try {
       const result = await post<{ url: string }>('/api/orders/', {
-        ...form, color: asksColor ? form.color : null, code: latin(code).replace(/\D/g, ''),
+        ...form, product: data.product.slug, color: asksColor ? form.color : null, code: latin(code).replace(/\D/g, ''),
       });
       try {
         localStorage.removeItem(DRAFT_KEY);

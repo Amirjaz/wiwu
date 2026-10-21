@@ -387,7 +387,7 @@ class PageCacheTests(Base):
         caches['pages'].clear()
 
     def test_cached_until_the_product_is_saved(self):
-        product = Product.objects.get()
+        product = self.product
         self.client.get('/')
         Product.objects.filter(pk=product.pk).update(name='نام بی‌خبر')  # no save signal: still cached
         self.assertNotIn('نام بی‌خبر', self.client.get('/').content.decode())
@@ -459,6 +459,72 @@ class StartingColoursTests(TestCase):
         home = self.client.get('/').content.decode()
         self.assertEqual(home.count('data-color-picker'), 2)  # in the hero and beside the 3D bag
         self.assertIn('"brand": {"@type": "Brand", "name": "WiWU"}', home)
+
+
+class SecondModelTests(Base):
+    """The two-zipper bag (seed_store's phantom-pro): off the site until it has a price, then its own section,
+    checkout and orders; edited in the panel beside the Alpha."""
+
+    otp = ApiTests.otp
+
+    def setUp(self):
+        super().setUp()
+        self.phantom = Product.objects.get(slug='phantom-pro')
+
+    def priced(self):
+        self.phantom.price_rial = 150_000_000
+        self.phantom.save()
+
+    def test_without_a_price_it_is_nowhere_on_the_site(self):
+        self.assertEqual(self.phantom.price_rial, 0)
+        self.assertNotIn('id="phantom-pro"', self.client.get('/').content.decode())
+        checkout = self.client.get('/checkout/?product=phantom-pro').content.decode()
+        self.assertIn('کیف دستی ویوو آلفا', checkout)
+        self.assertNotIn('فانتوم', checkout)
+        code = self.otp()
+        response = self.client.post('/api/orders/', {**ADDRESS, 'code': code, 'product': 'phantom-pro'},
+                                    content_type='application/json')
+        self.assertEqual(response.json()['error'], 'unavailable')
+
+    def test_with_a_price_it_has_a_section_a_checkout_and_orders(self):
+        self.priced()
+        brown = self.phantom.colors.get(name='قهوه‌ای')
+        home = self.client.get('/').content.decode()
+        self.assertIn('id="phantom-pro"', home)
+        self.assertIn('۱۵٬۰۰۰٬۰۰۰', home)
+        self.assertIn(f'?product=phantom-pro&amp;color={brown.pk}', home)
+        checkout = self.client.get('/checkout/?product=phantom-pro').content.decode()
+        self.assertIn('فانتوم پرو', checkout)
+        self.assertEqual(checkout.count('data-color-photo='), 2)
+        code = self.otp()
+        response = self.client.post('/api/orders/', {**ADDRESS, 'code': code, 'product': 'phantom-pro', 'color': brown.pk},
+                                    content_type='application/json')
+        self.assertEqual(response.status_code, 200, response.content)
+        order = Order.objects.get()
+        self.assertEqual((order.product, order.unit_price_rial, order.color_name), (self.phantom, 150_000_000, 'قهوه‌ای'))
+
+    def test_the_panel_edits_either_model(self):
+        user = User.objects.create_user('owner', password='pw-123456!')
+        user.groups.add(Group.objects.get(name='Owners'))
+        self.client.post('/api/panel/login/', {'username': 'owner', 'password': 'pw-123456!'}, content_type='application/json')
+        data = self.client.get('/api/panel/settings/?product=phantom-pro').json()
+        self.assertEqual([p['slug'] for p in data['products']], ['alpha', 'phantom-pro'])
+        self.assertEqual(data['product']['slug'], 'phantom-pro')
+        colours = self.client.get('/api/panel/colors/?product=phantom-pro').json()['colors']
+        self.assertEqual([c['name'] for c in colours], ['مشکی', 'قهوه‌ای'])
+        # No price yet is fine for it, never for the Alpha.
+        response = self.client.post('/api/panel/settings/', {'product': {**data['product'], 'subtitle': 'دو زیپ'}},
+                                    content_type='application/json')
+        self.assertEqual(response.status_code, 200, response.content)
+        response = self.client.post('/api/panel/settings/', {'product': {'slug': 'alpha', 'price_rial': 0}},
+                                    content_type='application/json')
+        self.assertEqual(response.json()['fields'], {'price_rial': 'number'})
+        response = self.client.post('/api/panel/settings/', {'product': {'slug': 'phantom-pro', 'price_rial': 150_000_000}},
+                                    content_type='application/json')
+        self.assertTrue(response.json()['products'][1]['on_sale'])
+        self.phantom.refresh_from_db()
+        self.assertEqual((self.phantom.price_rial, self.phantom.subtitle), (150_000_000, 'دو زیپ'))
+        self.assertEqual(self.product.price_rial, Product.objects.get(slug='alpha').price_rial)  # the Alpha untouched
 
 
 class AssetVersionTests(TestCase):

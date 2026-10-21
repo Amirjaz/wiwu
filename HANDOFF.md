@@ -29,6 +29,9 @@ This page is the short version, plus what isn't written down anywhere else.
 - **The bag:** the WiWU Alpha fingerprint-lock clutch, sold as **«کیف دستی ویوو آلفا»** (WiWU as the
   brand in the specs and the search data), in **black and brown** (no silver: the client doesn't have
   it, 2026-10-21), both on sale at one price: **14,100,000 toman**, shipping from Dubai included (the client, 2026-10-20).
+- **A second model, not on the site yet:** WiWU's two-zipper **Phantom Pro** in black and brown (Amir,
+  2026-10-21; README, *The two-zipper model*). It has no price, so the site doesn't show it; once a price
+  is set in the panel (فروشگاه, the switch at the top) it gets its own section, checkout and orders.
 - **The home page, top to bottom** (README, *Look* and *The hero and the 3D bag*):
   1. **Hero:** a campaign page. Five pictures over the whole first screen, one at a time: Amir's photo
      of the man with the bag first, for 3 s (2026-10-21), then posters of the bag alone, all turned the
@@ -147,8 +150,8 @@ business address), the `.ir` domain under their national ID.
 5. **Hero photos:** the bag-only slides are made from WiWU's renders (no AI image tool here; the
    search for others is in `media/hero-candidates/`, not in git). Photos of the client's own brown bag
    would be better: run them through `tools/hero_slides.py` or add them as they are.
-6. **The two-zipper version** (Amir, 2026-10-21: the client has one): waiting for which bag it is (a
-   photo or link), its price and colours, and how to sell it beside the Alpha.
+6. **The two-zipper bag's price** (WiWU Phantom Pro, added 2026-10-21, hidden): the client's price, set in
+   the panel. Photos of the client's own one would be better than the recoloured reseller render.
 7. **cartbecart:** once the client's Max account opens their API docs, finish `backend/shop/payments.py`
    (`TODO(cartbecart docs)`): field names and unit, checking each deposit, whether orders must be
    registered first. Until then `PAYMENT_PROVIDER=manual`.

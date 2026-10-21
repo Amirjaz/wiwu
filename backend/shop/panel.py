@@ -353,12 +353,20 @@ STORE_FIELDS = ('store_name', 'tagline', 'phone', 'email', 'address', 'postal_co
 PRODUCT_FIELDS = ('name', 'subtitle', 'description', 'price_rial', 'is_available', 'specs')
 
 
-def _settings_json():
+def _panel_product(slug):
+    """The model being edited: the one named (?product=), else the main bag."""
+    product = Product.objects.filter(slug=slug).first() if slug else None
+    return product or Product.objects.filter(slug=PRODUCT_SLUG).first() or Product.objects.order_by('id').first()
+
+
+def _settings_json(product):
     store = StoreSettings.load()
-    product = Product.objects.filter(slug=PRODUCT_SLUG).first() or Product.objects.first()
     return {
         'store': {f: getattr(store, f) for f in STORE_FIELDS},
-        'product': {f: getattr(product, f) for f in PRODUCT_FIELDS} if product else None,
+        'product': {'slug': product.slug, **{f: getattr(product, f) for f in PRODUCT_FIELDS}} if product else None,
+        # Every model, the main bag first; another one shows on the site once it has a price.
+        'products': [{'slug': p.slug, 'name': p.name, 'main': p.slug == PRODUCT_SLUG, 'on_sale': bool(p.price_rial)}
+                     for p in sorted(Product.objects.all(), key=lambda p: (p.slug != PRODUCT_SLUG, p.id))],
     }
 
 
@@ -366,7 +374,7 @@ def _settings_json():
 @staff('shop.change_storesettings')
 def store_settings(request):
     if request.method == 'GET':
-        return JsonResponse(_settings_json())
+        return JsonResponse(_settings_json(_panel_product(request.GET.get('product'))))
     data = _json(request)
     store = StoreSettings.load()
     errors = {}
@@ -393,8 +401,8 @@ def store_settings(request):
         elif field != 'enamad_html':
             value = persian.clean_text(value, model_field.max_length)
         setattr(store, field, value)
-    product = Product.objects.filter(slug=PRODUCT_SLUG).first() or Product.objects.first()
     product_data = data.get('product') or {}
+    product = _panel_product(product_data.get('slug'))
     if product and product_data:
         before = product.price_rial
         for field in PRODUCT_FIELDS:
@@ -403,8 +411,9 @@ def store_settings(request):
             value = product_data[field]
             if field == 'price_rial':
                 try:
-                    value = int(persian.latin_digits(value))
-                    if value <= 0:
+                    value = int(persian.latin_digits(str(value)))  # str: latin_digits(0) is ''
+                    # 0 keeps another model off the site (no price yet); the main bag always has one.
+                    if value < 0 or (value == 0 and product.slug == PRODUCT_SLUG):
                         raise ValueError
                 except (TypeError, ValueError):
                     errors['price_rial'] = 'number'
@@ -424,9 +433,10 @@ def store_settings(request):
     if product and product_data:
         product.save()
         if product.price_rial != before:
-            orders.audit('price', None, request.user, f'{persian.toman(before)} → {persian.toman(product.price_rial)} تومان')
+            orders.audit('price', None, request.user,
+                         f'{product.name}: {persian.toman(before)} → {persian.toman(product.price_rial)} تومان')
     orders.audit('settings', None, request.user)
-    return JsonResponse(_settings_json())
+    return JsonResponse(_settings_json(product))
 
 
 def _card_json(card):
@@ -469,8 +479,9 @@ def _color_json(color):
 @require_http_methods(['GET', 'POST'])
 @staff('shop.change_storesettings')
 def colors(request):
-    """The product's colours. The site asks for a colour only while more than one is shown."""
-    product = Product.objects.order_by('id').first()
+    """A model's colours (?product=, else the main bag's). The site asks for a colour only while more than one
+    is shown."""
+    product = _panel_product(request.GET.get('product'))
     if request.method == 'POST':
         data = _json(request)
         color = get_object_or_404(Color, pk=data['id'], product=product) if data.get('id') else Color(product=product)

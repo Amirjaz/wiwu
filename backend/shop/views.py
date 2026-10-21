@@ -57,6 +57,28 @@ def _product():
     return Product.objects.filter(slug=PRODUCT_SLUG).first() or Product.objects.first()
 
 
+def _on_sale(slug):
+    """The model a buyer asked for (?product=): any with a price; a model without one isn't on the site yet."""
+    product = Product.objects.filter(slug=slug).first() if slug else None
+    return product if product and product.price_rial else None
+
+
+# What the home page says about another model, from its specs: these rows if it has them, else its first four.
+HIGHLIGHTS = ('زیپ‌ها', 'ابعاد', 'بند', 'وزن')
+
+
+def lineup(main):
+    """The other models on sale beside the main bag, for their own section on the home page."""
+    others = []
+    for product in Product.objects.exclude(pk=main.pk).order_by('id'):
+        if not product.price_rial:
+            continue
+        rows = [row for row in product.specs if row[0] in HIGHLIGHTS] or product.specs[:4]
+        others.append({'product': product, 'price': persian.toman(product.price_rial),
+                       'colors': product.shown_colors(), 'highlights': rows[:4]})
+    return others
+
+
 def _ip(request):
     return request.META.get('HTTP_X_REAL_IP') or request.META.get('REMOTE_ADDR') or None
 
@@ -76,7 +98,8 @@ def _json(request):
 def _store_json(store, product):
     return {
         'store': store.store_name,
-        'product': {'name': product.name, 'price_rial': product.price_rial, 'available': product.is_available},
+        'product': {'slug': product.slug, 'name': product.name, 'price_rial': product.price_rial,
+                    'available': product.is_available},
         # Only asked for when more than one colour is on show.
         'colors': [{'id': c.id, 'name': c.name, 'swatch': c.swatch, 'available': c.available}
                    for c in product.shown_colors()],
@@ -106,7 +129,7 @@ def home(request):
     return render(request, 'shop/home.html', {
         'product': product, 'faqs': faqs, 'price': persian.toman(product.price_rial),
         'shipping': shipping, 'example_total': persian.toman(example),
-        'look': LOOK, 'parts': PARTS, 'colors': product.shown_colors(),
+        'look': LOOK, 'parts': PARTS, 'colors': product.shown_colors(), 'models': lineup(product),
         'dims': dims, 'spec_cells': spec_cells,
         'jsonld': _jsonld(request, store, product, faqs),
     })
@@ -185,7 +208,7 @@ def _jsonld(request, store, product, faqs):
 @require_GET
 @ensure_csrf_cookie
 def checkout(request):
-    store, product = StoreSettings.load(), _product()
+    store, product = StoreSettings.load(), _on_sale(request.GET.get('product')) or _product()
     return render(request, 'shop/checkout.html', {
         'product': product, 'price': persian.toman(product.price_rial), 'island': _store_json(store, product),
         'colors': product.shown_colors(),
@@ -285,6 +308,10 @@ def api_place(request):
     if errors:
         return _error('fields', fields=errors)
     product = _product()
+    if data.get('product') and data['product'] != product.slug:  # another model, if it's on sale
+        product = _on_sale(data['product'])
+        if product is None:
+            return _error('unavailable')
     try:
         color = orders.pick_color(product, data.get('color'))
         orders.check_otp(clean['phone'], persian.latin_digits(data.get('code', '')))

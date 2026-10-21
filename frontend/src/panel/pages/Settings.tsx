@@ -12,7 +12,13 @@ interface Store {
   instagram: string; owner_mobile: string; shipping_post_rial: number; shipping_tipax_rial: number; tipax_on_delivery: boolean; post_days: string;
   tipax_days: string; payment_minutes: number; reminder_minutes: number; return_days: number; enamad_html: string;
 }
-interface Product { name: string; subtitle: string; description: string; price_rial: number; is_available: boolean; specs: [string, string][] }
+interface Product { slug: string; name: string; subtitle: string; description: string; price_rial: number; is_available: boolean; specs: [string, string][] }
+/** A model in the list: the main bag first; another shows on the site once it has a price. */
+interface Model { slug: string; name: string; main: boolean; on_sale: boolean }
+type SettingsData = { store: Store; product: Product; products: Model[] };
+
+/** The address of a page of the API for one model (the main bag's without ?product=). */
+const forModel = (url: string, slug: string) => (slug ? `${url}?product=${encodeURIComponent(slug)}` : url);
 interface Card { id: number; bank: string; number: string; holder: string; active: boolean }
 interface Color { id: number; name: string; swatch: string; shown: boolean; available: boolean; orders: number }
 
@@ -24,8 +30,8 @@ function TomanInput({ id, rial, onChange, describedBy }: { id: string; rial: num
   );
 }
 
-function StoreForm() {
-  const { data, error } = useLoad<{ store: Store; product: Product }>('/api/panel/settings/');
+function StoreForm({ slug, main }: { slug: string; main: boolean }) {
+  const { data, error } = useLoad<SettingsData>(forModel('/api/panel/settings/', slug));
   const [store, setStore] = useState<Store | null>(null);
   const [product, setProduct] = useState<Product | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -51,7 +57,7 @@ function StoreForm() {
     setStatus('saving');
     setErrors({});
     try {
-      const next = await post<{ store: Store; product: Product }>('/api/panel/settings/', { store, product });
+      const next = await post<SettingsData>('/api/panel/settings/', { store, product });
       setStore(next.store);
       setProduct(next.product);
       setStatus('saved');
@@ -64,9 +70,10 @@ function StoreForm() {
   return (
     <form onSubmit={save} className="grid gap-8">
       <section className="grid gap-5">
-        <h2 className="text-lg font-bold">کالا</h2>
+        <h2 className="text-lg font-bold">{data && data.products.length > 1 ? `کالا: ${product.name}` : 'کالا'}</h2>
         <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="قیمت (تومان)" error={err('price_rial')} help="برای سفارش‌های تازه. پیشنهاد: قیمت + ارسال زیر ۱۰ میلیون تومان بماند.">
+          <Field label="قیمت (تومان)" error={err('price_rial')}
+            help={main ? 'برای سفارش‌های تازه. پیشنهاد: قیمت + ارسال زیر ۱۰ میلیون تومان بماند.' : 'تا قیمت صفر است، این مدل در سایت نمایش داده نمی‌شود.'}>
             {(id, d) => <TomanInput id={id} describedBy={d} rial={product.price_rial} onChange={(v) => p('price_rial', v)} />}
           </Field>
           <label className="flex items-center gap-3 self-end min-h-12">
@@ -191,9 +198,10 @@ function Cards() {
   );
 }
 
-/** The bag's colours. The site asks buyers for a colour only while more than one is shown. */
-function Colors() {
-  const { data, setData, error } = useLoad<{ colors: Color[] }>('/api/panel/colors/');
+/** A model's colours. The site asks buyers for a colour only while more than one is shown. */
+function Colors({ slug }: { slug: string }) {
+  const url = forModel('/api/panel/colors/', slug);
+  const { data, setData, error } = useLoad<{ colors: Color[] }>(url);
   const [draft, setDraft] = useState({ name: '', swatch: '#17181b' });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [problem, setProblem] = useState('');
@@ -202,7 +210,7 @@ function Colors() {
     setProblem('');
     setErrors({});
     try {
-      setData(await post<{ colors: Color[] }>('/api/panel/colors/', body));
+      setData(await post<{ colors: Color[] }>(url, body));
       return true;
     } catch (e) {
       if (isApiError(e)) {
@@ -263,14 +271,36 @@ function Colors() {
   );
 }
 
+/** Which model the colours and the product fields below are for, once there's more than one. */
+function ModelPicker({ models, slug, onPick }: { models: Model[]; slug: string; onPick: (slug: string) => void }) {
+  return (
+    <div role="radiogroup" aria-label="کالا" className="flex flex-wrap gap-2">
+      {models.map((model) => {
+        const on = model.slug === slug || (!slug && model.main);
+        return (
+          <button key={model.slug} type="button" role="radio" aria-checked={on} onClick={() => onPick(model.main ? '' : model.slug)}
+            className={`btn btn-sm text-start ${on ? 'btn-primary' : 'btn-ghost border border-line'}`}>
+            {model.name}{!model.on_sale && <span className={`ms-2 text-xs ${on ? 'text-raised/70' : 'text-muted'}`}>(بدون قیمت، در سایت نیست)</span>}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function Settings() {
+  const { data } = useLoad<SettingsData>('/api/panel/settings/');
+  const [slug, setSlug] = useState('');
+  const models = data?.products ?? [];
+  const main = !slug || !!models.find((model) => model.slug === slug)?.main;
   return (
     <>
       <Title>فروشگاه</Title>
       <div className="grid gap-12">
-        <Colors />
+        {models.length > 1 && <ModelPicker models={models} slug={slug} onPick={setSlug} />}
+        <Colors key={`colors-${slug}`} slug={slug} />
         <Cards />
-        <StoreForm />
+        <StoreForm key={`form-${slug}`} slug={slug} main={main} />
       </div>
     </>
   );
