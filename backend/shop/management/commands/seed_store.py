@@ -41,8 +41,9 @@ PRODUCT = {
 # (tools/color_photos.py).
 COLORS = [('مشکی', '#17181b', 'images/colors/black.webp'), ('قهوه‌ای', '#463930', 'images/colors/brown.webp')]
 
-# The two-zipper bag (Amir, 2026-10-21: the client has it, in black and brown): WiWU's Phantom Pro. No price yet,
-# so the site doesn't show it (views.lineup) until one is set in the panel. Its facts are from resellers' pages
+# The two-zipper bag (Amir, 2026-10-21: the client has it, in black and brown): WiWU's Phantom Pro, 16,500,000
+# toman (2026-10-23; migration 0007 for the store that had it without a price, which kept it off the site,
+# views.lineup). Its facts are from resellers' pages
 # (elryan.com, applegadgetsbd.com): 28 x 12.5 x 9 cm, 795 g, PU leather, two compartments, a side handle, the
 # lock 10 fingerprints and USB-C. Pictures: tools/phantom_photos.py.
 PHANTOM = {
@@ -55,7 +56,7 @@ PHANTOM = {
         'که در دست راحت نگهش می‌دارد.\n\n'
         'بدنه از چرم مصنوعی PU است که در برابر آب و خط و خش مقاوم است، با آستر نرم و ضد خش.'
     ),
-    'price_rial': 0,
+    'price_rial': 165_000_000,
     'specs': [
         ['زیپ‌ها', 'دو زیپ، دو بخش جدا'],
         ['ابعاد', 'حدود ۲۸ × ۱۲٫۵ × ۹ سانتی‌متر'],
@@ -186,7 +187,7 @@ class Command(BaseCommand):
         if created:
             for position, (name, swatch, photo) in enumerate(PHANTOM_COLORS):
                 phantom.colors.create(name=name, swatch=swatch, photo=photo, position=position)
-            self.stdout.write(f'Product: added {phantom.name}, no price yet (hidden until it has one)')
+            self.stdout.write(f'Product: added {phantom.name}')
         if not Faq.objects.exists():
             for i, (question, answer) in enumerate(FAQS):
                 Faq.objects.create(question=question, answer=answer, position=i)

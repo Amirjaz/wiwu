@@ -457,13 +457,13 @@ class StartingColoursTests(TestCase):
         page = self.client.get('/checkout/').content.decode()
         self.assertEqual(page.count('data-color-photo='), 2)
         home = self.client.get('/').content.decode()
-        self.assertEqual(home.count('data-color-picker'), 2)  # in the hero and beside the 3D bag
+        self.assertEqual(home.count('data-color-picker'), 1)  # in the hero (the 3D bag's went with it)
         self.assertIn('"brand": {"@type": "Brand", "name": "WiWU"}', home)
 
 
 class SecondModelTests(Base):
-    """The two-zipper bag (seed_store's phantom-pro): off the site until it has a price, then its own section,
-    checkout and orders; edited in the panel beside the Alpha."""
+    """The two-zipper bag (seed_store's phantom-pro, 16,500,000 toman): off the site while it has no price, else its
+    own section, its pictures, checkout and orders; edited in the panel beside the Alpha."""
 
     otp = ApiTests.otp
 
@@ -475,9 +475,28 @@ class SecondModelTests(Base):
         self.phantom.price_rial = 150_000_000
         self.phantom.save()
 
+    def test_it_starts_at_its_price(self):
+        self.assertEqual(self.phantom.price_rial, 165_000_000)
+        self.assertEqual([c.name for c in self.phantom.colors.all()], ['مشکی', 'قهوه‌ای'])
+
+    def test_the_parts_section_pictures_every_bag_instead_of_the_3d(self):
+        home = self.client.get('/').content.decode()
+        self.assertNotIn('bag3d', home)
+        self.assertNotIn('data-bag-stage', home)
+        black = self.product.colors.get()  # (Base keeps only the Alpha's black)
+        parts = home[home.index('id="parts"'):home.index('id="try"')]
+        self.assertIn(f'href="/checkout/?color={black.pk}"', parts)
+        for colour in self.phantom.colors.all():
+            self.assertIn(f'href="/checkout/?product=phantom-pro&amp;color={colour.pk}"', parts)
+        self.assertEqual(parts.count('<img '), 3)
+        self.assertIn('۱۶٬۵۰۰٬۰۰۰', parts)
+
     def test_without_a_price_it_is_nowhere_on_the_site(self):
-        self.assertEqual(self.phantom.price_rial, 0)
-        self.assertNotIn('id="phantom-pro"', self.client.get('/').content.decode())
+        self.phantom.price_rial = 0
+        self.phantom.save()
+        home = self.client.get('/').content.decode()
+        self.assertNotIn('id="phantom-pro"', home)
+        self.assertNotIn('phantom-black', home)
         checkout = self.client.get('/checkout/?product=phantom-pro').content.decode()
         self.assertIn('کیف دستی ویوو آلفا', checkout)
         self.assertNotIn('فانتوم', checkout)

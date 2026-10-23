@@ -30,17 +30,18 @@ This page is the short version, plus what isn't written down anywhere else.
 - **The bag:** the WiWU Alpha fingerprint-lock clutch, sold as **«کیف دستی ویوو آلفا»** (WiWU as the
   brand in the specs and the search data), in **black and brown** (no silver: the client doesn't have
   it, 2026-10-21), both on sale at one price: **14,100,000 toman**, shipping from Dubai included (the client, 2026-10-20).
-- **A second model, not on the site yet:** WiWU's two-zipper **Phantom Pro** in black and brown (Amir,
-  2026-10-21; README, *The two-zipper model*). It has no price, so the site doesn't show it; once a price
-  is set in the panel (فروشگاه, the switch at the top) it gets its own section, checkout and orders.
+- **A second model:** WiWU's two-zipper **Phantom Pro** in black and brown, **16,500,000 toman** (Amir,
+  2026-10-21 and 23; README, *The two-zipper model*): its pictures in جزء به جزء, its own section, checkout
+  and orders. The panel (فروشگاه) has a switch at the top for which model the colours and fields are for.
 - **The home page, top to bottom** (README, *Look* and *The hero and the 3D bag*):
   1. **Hero:** a campaign page. Five pictures over the whole first screen, one at a time: Amir's photo
      of the man with the bag first, for 3 s (2026-10-21), then posters of the bag alone, all turned the
      same way (black, black and brown side by side as mirror images, his plate photo, brown), with a large line, the
      price and a compact buy button at the bottom; no thumbnails (2026-10-20). The header lies over it,
      see-through. Colour dots.
-  2. **جزء به جزء:** the 3D bag with a tab per side, numbered pins, the parts listed beside it, colour dots
-     that recolour the bag. The backup where the 3D can't run or draws nothing: the bag in the picked colour.
+  2. **جزء به جزء:** a picture of each bag (Alpha black and brown, two-zipper black and brown), each with its
+     price and opening its checkout, the Alpha's parts listed beside them with a tab per side. The 3D bag
+     was here until 2026-10-23 (Amir: pictures instead); its code stays, unused (README).
   3. **The lock** (dark), the hold-to-unlock demo; **specs** with the size drawn over a centimetre mat;
      **buying** with the sample bill; **FAQ**; **pick a colour** (the bags side by side, each opening
      checkout in its colour; it replaced the green band); the footer.
@@ -62,11 +63,9 @@ This page is the short version, plus what isn't written down anywhere else.
 
 ## Waiting on Amir
 
-1. **ArvanCloud cache rule for `/models/*`** (his Arvan panel): cache everything, 7 days. The 3D model
-   still reads `x-cache: BYPASS`, so every visitor downloads it (0.3 to 0.7 MB) from our server.
-2. **The questions for the client** (below): he sends them and brings back the answers.
-3. **Deploy go-ahead**, whenever there is new work (only on his word).
-4. **Arvan's proxy (the cloud icon) for nisatech.org**: it was off for every record on 2026-10-20; the
+1. **The questions for the client** (below): he sends them and brings back the answers.
+2. **Deploy go-ahead**, whenever there is new work (only on his word).
+3. **Arvan's proxy (the cloud icon) for nisatech.org**: it was off for every record on 2026-10-20; the
    shop's is back on (2026-10-21). Told him the other records (nisatech.org, contech, pd, ops) need it
    on too: they have no HTTPS of their own on the server, so without it their https addresses show
    nisatak.com's site behind a certificate warning.
@@ -133,10 +132,8 @@ business address), the `.ir` domain under their national ID.
 
 ## Next, in order
 
-1. **After Amir's Arvan rule:** check that `/models/alpha-mobile.glb?v=…` reads `x-cache: HIT` on the
-   second request. The server admin re-runs the root setup so nginx stops gzipping the models (send a
-   fresh `scp -r deploy amir@185.231.180.92:purseshop-deploy` first; `amir` can't sudo). Then re-run the
-   load test (LOADTEST.md, *Running it again*).
+1. **Re-run the load test** (LOADTEST.md, *Running it again*) now the page has no 3D model to download
+   (2026-10-23); the Arvan rule for `/models/*` it waited for isn't needed while the 3D bag is off.
 2. **For the launch server**, recommended to Amir (not built): an Arvan cloud server in Tehran behind
    Arvan's CDN, **4 cores** for the campaign (Amir is looking at G6-Small5, 4 cores / 4 GB, Ubuntu 24.04;
    2026-10-20 quotes above; resize to 8 cores if needed),
@@ -151,14 +148,14 @@ business address), the `.ir` domain under their national ID.
 5. **Hero photos:** the bag-only slides are made from WiWU's renders (no AI image tool here; the
    search for others is in `media/hero-candidates/`, not in git). Photos of the client's own brown bag
    would be better: run them through `tools/hero_slides.py` or add them as they are.
-6. **The two-zipper bag's price** (WiWU Phantom Pro, added 2026-10-21, hidden): the client's price, set in
-   the panel. Photos of the client's own one would be better than the recoloured reseller render.
+6. **The two-zipper bag's photos:** its pictures are a reseller's tan render recoloured
+   (`tools/phantom_photos.py`); photos of the client's own bags would be better.
 7. **cartbecart:** once the client's Max account opens their API docs, finish `backend/shop/payments.py`
    (`TODO(cartbecart docs)`): field names and unit, checking each deposit, whether orders must be
    registered first. Until then `PAYMENT_PROVIDER=manual`.
-7. **Kavenegar:** the client's account and API key, with the 11 templates in README → *SMS*.
-8. **Go live, then Enamad:** PLAN.md §8 and phase 2 in §9. One real 14.1M payment end to end, then refund it.
-9. **3D, if wanted:** see *The 3D model* below.
+8. **Kavenegar:** the client's account and API key, with the 11 templates in README → *SMS*.
+9. **Go live, then Enamad:** PLAN.md §8 and phase 2 in §9. One real 14.1M payment end to end, then refund it.
+10. **3D, if wanted back:** see *The 3D model* below and README (it's off the page since 2026-10-23).
 
 ## What Amir asks for, and how he reacts
 
@@ -171,8 +168,9 @@ business address), the `.ir` domain under their national ID.
 - **The hero:** photos as the background with the text on top (he sent a Pinterest pin of a full-bleed
   landscape with a floating pill menu and centred text). Of three designs built on that (centred poster,
   campaign page, frosted panel) he kept the **campaign page**. He didn't like a photo beside the text.
-- **The 3D bag** lives in جزء به جزء, right after the hero; its tabs turn it. Never: a white glow or a
-  circular fade around it, an edge fade, wheel zoom, or a view that cuts the bag at the stage's edges.
+- **The 3D bag** lived in جزء به جزء until 2026-10-23, when he asked for a picture of each bag instead. If
+  it comes back, never: a white glow or a circular fade around it, an edge fade, wheel zoom, or a view
+  that cuts the bag at the stage's edges.
 - **Phones:** he reviews on the live site on his phone. An older layout was "mid".
 - **Persian must join properly:** Vazirmatn for text; Vazir Code only for figures and Latin
   (`unicode-range`). A self-hosted font without ی ک گ پ broke words apart on his phone.

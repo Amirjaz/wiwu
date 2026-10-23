@@ -6,7 +6,7 @@
 {% block og_title %}{{ product.name }}{% endblock %}
 {% block og_description %}{{ product.subtitle }}{% endblock %}
 {% block og_type %}product{% endblock %}
-{% block vite %}{% vite 'src/site.ts' 'src/islands/bag3d.ts' 'src/islands/home.ts' %}{% endblock %}
+{% block vite %}{% vite 'src/site.ts' 'src/islands/home.ts' %}{% endblock %}
 {% block head %}
 {% for item in jsonld %}<script type="application/ld+json">{{ item|jsonld }}</script>{% endfor %}
 {% endblock %}
@@ -71,17 +71,16 @@ no thumbnails). Without JavaScript the first picture stays.
 </section>
 
 {% comment %}
-The parts, on a light table: the bag in 3D (islands/bag3d.ts) with a tab per side, numbered pins on it and
-the list beside it. A tab turns the bag to its side, a row or a pin tapped turns it to that part, and it
-can be dragged round. Where the 3D can't run, the same numbers sit on a photo per side (views.PARTS).
+The parts, on a light table: the bags themselves, every model in every colour (views.bag_pictures; Amir,
+2026-10-23: pictures instead of the 3D bag), each opening checkout for that bag, and the Alpha's parts listed
+beside them, a tab per side (views.PARTS).
 {% endcomment %}
 <section id="parts" class="scroll-mt-16 overflow-x-clip bg-raised">
   <div class="mx-auto max-w-7xl px-4 sm:px-6 py-16 md:py-24">
-    <div class="reveal flex flex-wrap items-end justify-between gap-6 mb-4 md:mb-8">
+    <div class="reveal flex flex-wrap items-end justify-between gap-6 mb-6 md:mb-10">
       <div class="space-y-3">
         <h2 class="text-3xl sm:text-[2.6rem] font-bold leading-[1.45]">جزء به جزء</h2>
-        <p class="text-ink-soft leading-relaxed max-w-[46ch]">هر سطر را بزنید تا جایش روی کیف روشن شود.</p>
-        {% include 'shop/color_picker.html' with classes='pt-2' %}
+        <p class="text-ink-soft leading-relaxed max-w-[46ch]">{% if models %}آلفا و نسخه‌ی دو زیپ، هر کدام در هر رنگ. فهرست کنارشان اجزای آلفاست، از هر طرف.{% else %}کیف در هر رنگ، و اجزایش از هر طرف.{% endif %}</p>
       </div>
       <div role="tablist" aria-label="نمای کیف" class="max-md:grid max-md:w-full max-md:grid-cols-3 md:inline-flex gap-1 rounded-[var(--radius-surface)] border border-line bg-surface p-1 text-sm">
         {% for key, label, image, w, h, items in parts %}
@@ -90,50 +89,33 @@ can be dragged round. Where the 3D can't run, the same numbers sit on a photo pe
         {% endfor %}
       </div>
     </div>
-    <div class="reveal grid gap-4 lg:grid-cols-[1.4fr_1fr] lg:gap-16 items-center">
-      <div data-bag-stage data-model="{% asset 'models/alpha.glb' %}" data-model-small="{% asset 'models/alpha-mobile.glb' %}" class="relative -mx-4 sm:mx-0 h-[23rem] sm:h-[28rem] lg:h-[34rem]">
-        {% comment %}Where the 3D bag can't run, fails or draws nothing: the bag in the picked colour (islands/home.ts
-           swaps it as the dots are picked); the numbered list beside it still names the parts.{% endcomment %}
-        <figure data-parts-photo class="absolute inset-0 flex items-center justify-center p-6">
-          {% for color in colors %}{% if color.photo %}
-          <img data-color-photo="{{ color.id }}" src="{% asset color.photo %}" alt="{{ product.name }}، {{ color.name }}"{% if not forloop.first %} hidden{% endif %} loading="lazy"
-               class="block w-auto h-auto max-w-full max-h-[17rem] sm:max-h-[22rem] lg:max-h-[27rem]">
-          {% endif %}{% empty %}
-          <img src="{% asset 'images/front.webp' %}" alt="{{ product.name }}" width="960" height="588" loading="lazy" class="block w-auto h-auto max-w-full max-h-[20rem] sm:max-h-[24rem] lg:max-h-[28rem]">
-          {% endfor %}
-        </figure>
-        {% for key, label, image, w, h, items in parts %}
-        {# The numbers on the 3D bag: bag3d.ts moves them with it and hides the ones turned away. Where a number would cover its part (the lock's), it sits off to the side, joined by a line. #}
-        <div data-pins data-parts-group="{{ key }}"{% if not forloop.first %} hidden{% endif %} class="absolute inset-0 z-10 pointer-events-none">
-          {% for x, y, name, note, bx, at, n in items %}
-          <span data-pin data-part="{{ forloop.counter }}" data-at="{{ at }}" data-normal="{{ n }}"{% if bx %} data-lead{% endif %} hidden aria-hidden="true" class="absolute top-0 left-0 size-0 pointer-events-auto cursor-pointer">
-            {% if bx %}
-            <svg class="absolute top-0 left-0 overflow-visible text-ink/55" width="1" height="1"><line x1="0" y1="0" x2="-96" y2="0" stroke="currentColor"/></svg>
-            <span class="absolute size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-raised ring-2 ring-ink/70"></span>
-            {% endif %}
-            <span data-pin-number class="marker absolute -translate-x-1/2 -translate-y-1/2{% if bx %} -left-24{% endif %}">{{ forloop.counter|fa }}</span>
-          </span>
-          {% endfor %}
-        </div>
-        {% endfor %}
-        <div data-bag-loading class="absolute inset-0 flex-col items-center justify-center gap-3 pointer-events-none" aria-hidden="true">
-          <span class="relative block h-0.5 w-28 overflow-hidden rounded-full bg-line-strong/50"><span data-bag-progress class="bag-progress absolute inset-y-0 start-0 w-full bg-ink"></span></span>
-          <span class="font-mono text-xs text-muted">در حال آماده شدن سه‌بعدی</span>
-        </div>
-        <p data-drag-hint hidden class="absolute bottom-2 inset-x-0 z-10 flex items-center justify-center gap-2 font-mono text-xs text-muted transition-opacity duration-300 pointer-events-none">{% icon 'hand-grabbing' 'size-4' %}برای چرخاندن، بکشید</p>
-      </div>
+    <div class="reveal grid gap-8 lg:grid-cols-[1.4fr_1fr] lg:gap-16 items-start">
+      <ul class="grid grid-cols-2 gap-2 sm:gap-4">
+        {% for bag in bags %}{% with item=bag.product color=bag.color %}
+        <li>
+          {% if color.available and item.is_available %}<a href="{% url 'checkout' %}?{% if item.pk != product.pk %}product={{ item.slug }}&amp;{% endif %}color={{ color.id }}" data-color-link class="group block h-full rounded-[var(--radius-surface)] bg-surface p-3 sm:p-5 transition-colors hover:bg-page">{% else %}<div class="block h-full rounded-[var(--radius-surface)] bg-surface p-3 sm:p-5 opacity-60">{% endif %}
+            <img src="{% asset color.photo %}" alt="{{ item.name }}، {{ color.name }}" loading="lazy" class="mx-auto block w-full max-w-[20rem] h-auto transition-transform duration-300 group-hover:-translate-y-1">
+            <p class="mt-2 sm:mt-4 flex flex-wrap items-end justify-between gap-x-3 gap-y-1">
+              <span class="grid gap-1">
+                <span class="font-mono text-[0.72rem] sm:text-xs text-muted">{{ bag.model }}</span>
+                <span class="flex items-center gap-2 font-bold"><span class="size-3 rounded-full ring-1 ring-ink/20" style="background: {{ color.swatch }}"></span>{{ color.name }}</span>
+              </span>
+              <span class="flex items-center gap-1.5 text-sm text-muted group-hover:text-ink">{% if color.available and item.is_available %}{{ bag.price }}<span class="hidden sm:inline"> تومان</span>{% icon 'arrow-left' 'size-4 max-sm:hidden' %}{% else %}ناموجود{% endif %}</span>
+            </p>
+          {% if color.available and item.is_available %}</a>{% else %}</div>{% endif %}
+        </li>
+        {% endwith %}{% endfor %}
+      </ul>
       {% for key, label, image, w, h, items in parts %}
       <div role="tabpanel" id="parts-{{ key }}" aria-labelledby="parts-tab-{{ key }}" data-parts-group="{{ key }}"{% if not forloop.first %} hidden{% endif %}>
         <ol class="border-t border-ink">
           {% for x, y, name, note, bx, at, n in items %}
-          <li class="border-b border-line">
-            <button type="button" data-part="{{ forloop.counter }}" class="flex w-full gap-4 py-4 sm:px-3 text-start transition-colors data-[active]:bg-surface">
-              <span class="marker mt-0.5" aria-hidden="true">{{ forloop.counter|fa }}</span>
-              <span>
-                <span class="block font-bold">{{ name }}</span>
-                <span class="block mt-1 text-[0.95rem] text-ink-soft leading-relaxed">{{ note }}</span>
-              </span>
-            </button>
+          <li class="flex gap-4 py-4 sm:px-3 border-b border-line">
+            <span class="marker mt-0.5" aria-hidden="true">{{ forloop.counter|fa }}</span>
+            <span>
+              <span class="block font-bold">{{ name }}</span>
+              <span class="block mt-1 text-[0.95rem] text-ink-soft leading-relaxed">{{ note }}</span>
+            </span>
           </li>
           {% endfor %}
         </ol>

@@ -88,6 +88,14 @@ add them to a group. Sign-in lasts two weeks, 10 attempts per 15 minutes per add
 
 ## The hero and the 3D bag (`frontend/src/islands/home.ts`, `frontend/src/bag3d/`, `frontend/src/islands/bag3d.ts`, `tools/build_model.py`)
 
+**The 3D bag is off the page since 2026-10-23** (Amir: a picture of each bag instead). جزء به جزء shows every
+model in every colour (`views.bag_pictures`: the Alpha in black and brown, the two-zipper bag in black and
+brown), each on a light tile with its price, opening checkout for that bag; the Alpha's parts are listed
+beside them, a tab per side. The page no longer loads `islands/bag3d.ts` (out of the build's inputs in
+`vite.config.ts`), so no three.js and no model download. Everything below about the 3D bag still describes
+the code, the models and the tools, which stay in the repo for if it comes back: add the island back to
+the build and to `home.html`, and the stage (git history, `home.html` before 2026-10-23).
+
 The home page opens as a campaign page (Amir's pick of three designs, 2026-10-18): five pictures, one
 at a time over the whole first screen (`views.LOOK`, the originals in `media/source-photos/look/`, the
 site's copies 600 and 1200 px wide in `public/images/look/`). Amir's photo of the man with the bag opens
@@ -248,13 +256,12 @@ lifestyle photos are of the black bag only; its bag-only slides show black and b
 The client also has WiWU's two-zipper bag, in black and brown (Amir, 2026-10-21): the Phantom Pro
 («کیف دستی دو زیپ ویوو فانتوم پرو»), 28 × 12.5 × 9 cm, about 800 g, two compartments, a side handle, the same
 kind of fingerprint lock. It is a second `Product` (`phantom-pro`), with its own price, specs and colours;
-the Alpha stays the main bag (`PRODUCT_SLUG`): the hero, the 3D bag, the specs and the search data are the
-Alpha's.
+the Alpha stays the main bag (`PRODUCT_SLUG`): the hero, the specs and the search data are the Alpha's.
 
-- **Off the site until it has a price.** `seed_store` adds it with price 0 (the client hasn't given one);
-  0 keeps it off the home page and out of checkout, and an order for it is refused (`unavailable`). The
+- **Price: 16,500,000 toman** (Amir, 2026-10-23; migration 0007, and `seed_store` for a new store). A price
+  of 0 keeps it off the home page and out of checkout, and an order for it is refused (`unavailable`); the
   Alpha's price can never be 0.
-- **With a price:** its own section before the closing one (`#phantom-pro`, dark: what's different, a few
+- **On the page:** its two pictures beside the Alpha's in جزء به جزء, and its own section before the closing one (`#phantom-pro`, dark: what's different, a few
   spec rows from `views.HIGHLIGHTS`, the price, each colour on a light tile opening
   `/checkout/?product=phantom-pro&color=<id>`), and checkout for it (`?product=`, its name, price and
   colour pictures; the order is placed for it, `product` in `/api/orders/`).

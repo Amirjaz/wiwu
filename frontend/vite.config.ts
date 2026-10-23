@@ -17,7 +17,8 @@ export default defineConfig({
     rollupOptions: {
       input: {
         site: 'src/site.ts',
-        bag3d: 'src/islands/bag3d.ts',
+        // Not islands/bag3d.ts: the 3D bag is off the page since 2026-10-23 (four pictures instead, Amir).
+        // Its code stays (src/bag3d/, islands/bag3d.ts, tools/build_model.py) for if it comes back.
         home: 'src/islands/home.ts',
         checkout: 'src/islands/checkout.tsx',
         order: 'src/islands/order.tsx',

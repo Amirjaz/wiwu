@@ -1,6 +1,6 @@
-// The home page's small interactions, besides the 3D bag (bag3d.ts): the hero's photo slider, the colour
-// picker, the lock demo, and the tabs and numbers of the parts section. Everything here works by keyboard
-// too.
+// The home page's small interactions: the hero's photo slider, the colour picker, the lock demo, and the
+// parts section's tabs. Everything here works by keyboard too. (The 3D bag, islands/bag3d.ts, is off the
+// page since 2026-10-23: pictures of the bags instead.)
 
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -45,11 +45,6 @@ function photoSlider() {
     current = next;
     slides[(current + 1) % slides.length].hidden = false; // the one after starts loading
     schedule();
-    // The 3D bag waits for this before it starts (bag3d.ts).
-    if (!slider.hasAttribute('data-moved')) {
-      slider.setAttribute('data-moved', '');
-      document.dispatchEvent(new Event('hero:moved'));
-    }
   };
 
   // The other pictures load once the page has (the first one is the page's largest picture).
@@ -112,10 +107,8 @@ function headerOverHero() {
   }).observe(hero);
 }
 
-// Colour pickers, shown once more than one colour is on show (in the hero and beside the 3D bag), all
-// moving together: the pick is named beside the dots, rides along to checkout on every buy link
-// (?color=), and turns the 3D bag that colour (bag3d.ts reads it from <html data-bag-color> and hears
-// 'bag:color', since the model may load after the pick).
+// The colour picker in the hero, shown once more than one colour is on show: the pick is named beside the
+// dots and rides along to checkout on every buy link (?color=).
 function colorPicker() {
   const pickers = [...document.querySelectorAll<HTMLElement>('[data-color-picker]')];
   if (!pickers.length) return;
@@ -132,19 +125,13 @@ function colorPicker() {
       const label = picker.querySelector<HTMLElement>('[data-color-label]');
       if (label) label.textContent = chosen?.dataset.colorName ?? '';
     });
-    // (Not the closing section's links, which each open checkout in their own colour.)
+    // (Not the links to one bag in one colour: the parts section's pictures, the two-zipper section, the
+    // closing section.)
     document.querySelectorAll<HTMLAnchorElement>('a[href*="/checkout/"]:not([data-color-link])').forEach((link) => {
       const url = new URL(link.href);
       url.searchParams.set('color', id);
       link.href = url.pathname + url.search;
     });
-    const swatch = chosen.dataset.swatch ?? '';
-    // The bag in that colour where the 3D can't run (home.html, the parts section's stage).
-    document.querySelectorAll<HTMLElement>('[data-parts-photo] [data-color-photo]').forEach((img) => {
-      img.hidden = img.dataset.colorPhoto !== id;
-    });
-    document.documentElement.dataset.bagColor = swatch;
-    document.dispatchEvent(new CustomEvent('bag:color', { detail: swatch }));
   };
   const usable = dots.filter((dot) => dot.getAttribute('aria-disabled') !== 'true');
   usable.forEach((dot) => dot.addEventListener('click', () => {
@@ -206,10 +193,7 @@ function lockDemo() {
   });
 }
 
-// Parts: a tab per side of the bag. Each side's numbers appear three times, in its group
-// ([data-parts-group]): in the list, as pins on the 3D bag and on the side's photo (whichever of the two
-// is showing). Pointing at a number lights it everywhere; a tap also turns the 3D bag to that part. The 3D
-// (bag3d.ts) hears about it on the section: 'parts:view' (a side) and 'parts:focus' (a part).
+// Parts: a tab per side of the bag, each showing that side's list ([data-parts-group]).
 function partsDiagram() {
   const section = document.getElementById('parts');
   if (!section) return;
@@ -224,7 +208,6 @@ function partsDiagram() {
       other.tabIndex = on ? 0 : -1;
       group(other.dataset.partsTab ?? '').forEach((el) => (el.hidden = !on));
     });
-    section.dispatchEvent(new CustomEvent('parts:view', { detail: tab.dataset.partsTab }));
   };
   tabs.forEach((tab, i) => {
     tab.addEventListener('click', () => select(tab));
@@ -232,29 +215,6 @@ function partsDiagram() {
       // Right-to-left: the right arrow goes to the previous tab.
       const step = event.key === 'ArrowLeft' ? 1 : event.key === 'ArrowRight' ? -1 : 0;
       if (step) select(tabs[(i + step + tabs.length) % tabs.length], true);
-    });
-  });
-
-  tabs.forEach((tab) => {
-    const view = tab.dataset.partsTab ?? '';
-    const items = group(view).flatMap((el) => [...el.querySelectorAll<HTMLElement>('[data-part]')]);
-    const light = (part: string | null) =>
-      items.forEach((item) => item.toggleAttribute('data-active', part !== null && item.dataset.part === part));
-    // A mouse lights a part while it's over it; a tap lights it until the next tap.
-    let tapped: string | null = null;
-    items.forEach((item) => {
-      const part = item.dataset.part ?? null;
-      item.addEventListener('pointerenter', (event) => event.pointerType === 'mouse' && light(part));
-      item.addEventListener('pointerleave', (event) => event.pointerType === 'mouse' && light(tapped));
-      item.addEventListener('click', () => {
-        tapped = part;
-        light(part);
-        section.dispatchEvent(new CustomEvent('parts:focus', { detail: { view, part: Number(part) } }));
-      });
-    });
-    section.addEventListener('parts:view', () => {
-      tapped = null;
-      light(null);
     });
   });
 }

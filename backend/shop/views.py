@@ -67,6 +67,22 @@ def _on_sale(slug):
 HIGHLIGHTS = ('زیپ‌ها', 'ابعاد', 'بند', 'وزن')
 
 
+# Each model's short name beside its pictures (bag_pictures); another model's full name otherwise.
+SHORT_NAMES = {'alpha': 'آلفا، تک‌زیپ', 'phantom-pro': 'فانتوم پرو، دو زیپ'}
+
+
+def bag_pictures(main, others):
+    """The bags pictured in the parts section (Amir, 2026-10-23: pictures instead of the 3D bag): every model on
+    sale in every colour on show that has a picture, the main bag first, each with its price."""
+    bags = []
+    for product in [main] + [other['product'] for other in others]:
+        for color in product.shown_colors():
+            if color.photo:
+                bags.append({'product': product, 'color': color, 'model': SHORT_NAMES.get(product.slug, product.name),
+                             'price': persian.toman(product.price_rial)})
+    return bags
+
+
 def lineup(main):
     """The other models on sale beside the main bag, for their own section on the home page."""
     others = []
@@ -123,13 +139,15 @@ def home(request):
     for faq in faqs:
         faq.html = text.render(faq.answer)
     shipping = store.shipping_options()
+    models = lineup(product)
     dims, spec_cells = _specs(product)
     # The sample bill's total: price, the first shipping option and 437 toman of the per-order offset.
     example = product.price_rial + (shipping[0]['price_rial'] if shipping else 0) + 4370
     return render(request, 'shop/home.html', {
         'product': product, 'faqs': faqs, 'price': persian.toman(product.price_rial),
         'shipping': shipping, 'example_total': persian.toman(example),
-        'look': LOOK, 'parts': PARTS, 'colors': product.shown_colors(), 'models': lineup(product),
+        'look': LOOK, 'parts': PARTS, 'colors': product.shown_colors(), 'models': models,
+        'bags': bag_pictures(product, models),
         'dims': dims, 'spec_cells': spec_cells,
         'jsonld': _jsonld(request, store, product, faqs),
     })
@@ -139,7 +157,8 @@ def home(request):
 # on the photo as percentages (strings, so the template doesn't localise them), a name, a note, where
 # the number goes on the photo when it would hide what it points at (x in %, beside the bag, joined by
 # a line), and its pin on the 3D bag: the point, and the way that surface faces (the pin hides when it
-# turns away), in the model's metres (frontend/src/bag3d/scene.ts).
+# turns away), in the model's metres (frontend/src/bag3d/scene.ts). Since the 3D bag left the page
+# (2026-10-23) only the names and notes show; the rest stays for if it comes back.
 PARTS = [
     ('front', 'روبه‌رو', 'images/front.webp', 960, 588, [
         ('82.2', '78.5', 'پلاک برند', 'پلاک فلزی برند ویوو روی رویه‌ی جلو.', '70',
