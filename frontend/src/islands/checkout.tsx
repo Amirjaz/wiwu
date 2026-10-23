@@ -21,10 +21,19 @@ interface Color {
   available: boolean;
 }
 
+interface Model {
+  slug: string;
+  name: string;
+  short: string; // its version, «تک‌زیپ» or «دو زیپ»
+  price_rial: number;
+  available: boolean;
+  colors: Color[]; // the colours on show; the buyer picks only when there's more than one
+}
+
 interface Data {
   store: string;
-  product: { slug: string; name: string; price_rial: number; available: boolean }; // ?product= picks another model
-  colors: Color[]; // the colours on show; the buyer picks only when there's more than one
+  models: Model[]; // every model on sale, the main bag first; the buyer picks one when there's more than one
+  start: string; // the one asked for (?product=)
   shipping: Shipping[];
   provinces: string[];
   payment_minutes: number;
@@ -41,10 +50,11 @@ interface Form {
   postal_code: string;
   shipping: 'post' | 'tipax';
   is_gift: boolean;
+  model: string;
   color: number | null;
 }
 
-const EMPTY: Form = { name: '', phone: '', province: '', city: '', address: '', postal_code: '', shipping: 'post', is_gift: false, color: null };
+const EMPTY: Form = { name: '', phone: '', province: '', city: '', address: '', postal_code: '', shipping: 'post', is_gift: false, model: '', color: null };
 const DRAFT_KEY = 'checkout-draft';
 
 // The form survives leaving the page (switching apps, the in-app browser reloading). Best effort:
@@ -87,10 +97,14 @@ function validate(form: Form, colors: Color[]): Record<string, string> {
 function Checkout({ data }: { data: Data }) {
   const [form, setForm] = useState<Form>(() => {
     const draft = loadDraft();
-    return { ...draft, color: startingColor(draft, data.colors) };
+    // The model asked for (?product=, else the main bag), not the draft's: the link the buyer came by says.
+    const start = data.models.find((m) => m.slug === data.start) ?? data.models[0];
+    return { ...draft, model: start.slug, color: startingColor(draft, start.colors) };
   });
-  const asksColor = data.colors.length > 1;
-  const color = data.colors.find((c) => c.id === form.color);
+  const model = data.models.find((m) => m.slug === form.model) ?? data.models[0];
+  const asksModel = data.models.length > 1;
+  const asksColor = model.colors.length > 1;
+  const color = model.colors.find((c) => c.id === form.color);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [step, setStep] = useState<'form' | 'code'>('form');
   const [code, setCode] = useState('');
@@ -101,16 +115,18 @@ function Checkout({ data }: { data: Data }) {
   const codeInput = useRef<HTMLInputElement>(null);
 
   const shipping = data.shipping.find((s) => s.id === form.shipping) ?? data.shipping[0];
-  const total = data.product.price_rial + shipping.price_rial;
+  const total = model.price_rial + shipping.price_rial;
 
   useEffect(() => saveDraft(form), [form]);
-  // The summary beside the form shows the bag in the picked colour (checkout.html, one photo per colour;
-  // the first until one is picked).
+  // The summary beside the form shows the picked model, its bag in the picked colour (checkout.html, one
+  // photo per model and colour; its first until a colour is picked).
   useEffect(() => {
-    const photos = [...document.querySelectorAll<HTMLElement>('[data-color-photo]')];
-    const shown = photos.find((photo) => Number(photo.dataset.colorPhoto) === form.color) ?? photos[0];
+    const photos = [...document.querySelectorAll<HTMLElement>('img[data-model]')];
+    const mine = photos.filter((photo) => photo.dataset.model === model.slug);
+    const shown = mine.find((photo) => Number(photo.dataset.colorPhoto) === form.color) ?? mine[0];
     photos.forEach((photo) => (photo.hidden = photo !== shown));
-  }, [form.color]);
+    document.querySelectorAll<HTMLElement>('[data-model-summary]').forEach((el) => (el.hidden = el.dataset.modelSummary !== model.slug));
+  }, [model.slug, form.color]);
   useEffect(() => {
     if (resendIn <= 0) return;
     const id = window.setTimeout(() => setResendIn((s) => s - 1), 1000);
@@ -124,11 +140,17 @@ function Checkout({ data }: { data: Data }) {
     setForm((f) => ({ ...f, [key]: value }));
     if (errors[key]) setErrors((e) => ({ ...e, [key]: '' }));
   };
+  // Another model keeps the colour by its name (black stays black), if that model has it in stock.
+  const pickModel = (next: Model) => {
+    const same = next.colors.find((c) => c.name === color?.name && c.available);
+    setForm((f) => ({ ...f, model: next.slug, color: same ? same.id : null }));
+    setErrors((e) => ({ ...e, color: '' }));
+  };
 
   async function askCode(event?: FormEvent) {
     event?.preventDefault();
     setProblem('');
-    const found = validate(form, data.colors);
+    const found = validate(form, model.colors);
     setErrors(found);
     if (Object.values(found).some(Boolean)) {
       setProblem(message('fields'));
@@ -163,7 +185,7 @@ function Checkout({ data }: { data: Data }) {
     setBusy(true);
     try {
       const result = await post<{ url: string }>('/api/orders/', {
-        ...form, product: data.product.slug, color: asksColor ? form.color : null, code: latin(code).replace(/\D/g, ''),
+        ...form, product: model.slug, color: asksColor ? form.color : null, code: latin(code).replace(/\D/g, ''),
       });
       try {
         localStorage.removeItem(DRAFT_KEY);
@@ -188,7 +210,7 @@ function Checkout({ data }: { data: Data }) {
 
   const errorText = (key: keyof Form) => (errors[key] ? message(errors[key]) : undefined);
 
-  if (!data.product.available) {
+  if (!data.models.some((m) => m.available)) {
     return <Notice tone="warn">این کالا فعلاً موجود نیست. به‌زودی دوباره می‌آید.</Notice>;
   }
 
@@ -231,11 +253,39 @@ function Checkout({ data }: { data: Data }) {
 
   return (
     <form onSubmit={askCode} className="grid gap-8" noValidate>
+      {asksModel && (
+        <fieldset className="grid gap-3">
+          <legend className="label mb-2">مدل</legend>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {data.models.map((option) => (
+              <label
+                key={option.slug}
+                className={clsx(
+                  'flex items-start gap-3 rounded-[var(--radius-field)] border p-4 transition-colors',
+                  !option.available ? 'cursor-not-allowed opacity-55 border-line' : 'cursor-pointer',
+                  model.slug === option.slug ? 'border-ink bg-raised' : option.available && 'border-line-strong hover:border-ink-soft',
+                )}
+              >
+                <input type="radio" name="model" className="mt-1.5 accent-[var(--color-ink)] size-4" disabled={!option.available}
+                  checked={model.slug === option.slug} onChange={() => pickModel(option)} />
+                <span className="grid gap-0.5">
+                  <span className="font-semibold">{option.short}</span>
+                  <span className="text-sm text-muted">{option.name}</span>
+                  <span className="font-bold mt-1">{option.available ? `${toman(option.price_rial)} تومان` : 'ناموجود'}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
+      )}
+
+      {model.available ? null : <Notice tone="warn">این مدل فعلاً موجود نیست؛ مدل دیگر را انتخاب کنید.</Notice>}
+
       {asksColor && (
         <fieldset className="grid gap-3" aria-describedby={errors.color ? 'color-error' : undefined}>
           <legend className="label mb-2">رنگ</legend>
           <div className="flex flex-wrap gap-3">
-            {data.colors.map((option) => (
+            {model.colors.map((option) => (
               <label
                 key={option.id}
                 className={clsx(
@@ -316,7 +366,7 @@ function Checkout({ data }: { data: Data }) {
       </label>
 
       <div className="grid gap-3 rounded-[var(--radius-surface)] bg-surface border border-line p-5">
-        <div className="flex justify-between gap-4"><span className="text-ink-soft">{data.product.name}{asksColor && color ? `، ${color.name}` : ''}</span><span>{toman(data.product.price_rial)} تومان</span></div>
+        <div className="flex justify-between gap-4"><span className="text-ink-soft">{model.name}{asksColor && color ? `، ${color.name}` : ''}</span><span>{toman(model.price_rial)} تومان</span></div>
         <div className="flex justify-between gap-4"><span className="text-ink-soft">ارسال با {shipping.name}</span><span>{shippingFee(shipping.price_rial, shipping.on_delivery)}</span></div>
         <div className="flex justify-between gap-4 border-t border-line pt-3 text-lg font-bold"><span>جمع</span><span>{toman(total)} تومان</span></div>
         <p className="text-sm text-muted leading-relaxed">برای اینکه واریز شما بی‌اشتباه شناخته شود، چند تومان (کمتر از هزار تومان) به مبلغ پرداخت اضافه می‌شود.</p>

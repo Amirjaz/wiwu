@@ -322,27 +322,30 @@ beside them, a tab per side (views.PARTS).
   <div class="mx-auto max-w-7xl px-4 sm:px-6 pt-20 md:pt-28">
     <div class="reveal flex flex-wrap items-end justify-between gap-x-12 gap-y-6">
       <div class="space-y-4">
-        <p class="flex items-center gap-2 font-mono text-sm text-muted"><span class="led{% if product.is_available %} led-on{% endif %}"></span>{% if product.is_available %}موجود{% else %}فعلاً موجود نیست{% endif %}{% if colors|length > 1 %}، همه‌ی رنگ‌ها یک قیمت{% endif %}</p>
+        <p class="flex items-center gap-2 font-mono text-sm text-muted"><span class="led{% if product.is_available %} led-on{% endif %}"></span>{% if product.is_available %}موجود{% else %}فعلاً موجود نیست{% endif %}{% if models %}، تک‌زیپ و دو زیپ در هر رنگ{% elif colors|length > 1 %}، همه‌ی رنگ‌ها یک قیمت{% endif %}</p>
         <h2 class="text-3xl sm:text-[2.8rem] font-bold leading-[1.4]">{% if colors|length > 1 %}رنگ خودتان را انتخاب کنید.{% else %}{{ product.name }}{% endif %}</h2>
       </div>
       <div class="flex items-center gap-6">
-        <p class="leading-tight"><span class="block text-2xl font-bold">{{ price }}</span><span class="block font-mono text-xs text-muted">تومان</span></p>
+        <p class="leading-tight"><span class="block text-2xl font-bold">{% if models %}از {% endif %}{{ price }}</span><span class="block font-mono text-xs text-muted">تومان</span></p>
         {% if product.is_available %}<a href="{% url 'checkout' %}" class="btn btn-primary group min-h-11 gap-2 ps-6 pe-5">خرید{% icon 'arrow-left' 'size-4 transition-transform group-hover:-translate-x-0.5' %}</a>{% endif %}
       </div>
     </div>
-    {% if colors %}
-    <ul class="reveal mt-10 md:mt-14 grid {% if colors|length == 2 %}grid-cols-2 max-w-4xl{% else %}grid-cols-3{% endif %} gap-2 sm:gap-5">
-      {% for color in colors %}
+    {% if cards %}
+    {% comment %}A card per colour; with both versions in it, one picture of the two side by side and each one's price
+       (views.colour_cards), the version picked at checkout.{% endcomment %}
+    <ul class="reveal mt-10 md:mt-14 grid {% if models %}sm:grid-cols-2{% elif cards|length == 2 %}grid-cols-2 max-w-4xl{% else %}grid-cols-3{% endif %} gap-2 sm:gap-5">
+      {% for card in cards %}{% with color=card.color %}
       <li>
         {% if color.available and product.is_available %}<a href="{% url 'checkout' %}?color={{ color.id }}" data-color-link class="group block h-full rounded-[var(--radius-surface)] bg-surface p-3 sm:p-6 lg:p-8 transition-colors hover:bg-page">{% else %}<div class="block h-full rounded-[var(--radius-surface)] bg-surface p-3 sm:p-6 lg:p-8 opacity-60">{% endif %}
-          {% if color.photo %}<img src="{% asset color.photo %}" alt="{{ product.name }}، {{ color.name }}" loading="lazy" class="mx-auto block w-full max-w-[22rem] h-auto transition-transform duration-300 group-hover:-translate-y-1">{% endif %}
+          {% if card.picture %}<img src="{% asset card.picture %}" alt="{% if card.both %}کیف ویوو تک‌زیپ و دو زیپ، {{ color.name }}، کنار هم{% else %}{{ product.name }}، {{ color.name }}{% endif %}" loading="lazy" class="mx-auto block w-full {% if card.both %}max-w-[36rem]{% else %}max-w-[22rem]{% endif %} h-auto transition-transform duration-300 group-hover:-translate-y-1">{% endif %}
           <p class="mt-3 sm:mt-5 flex flex-wrap items-center justify-between gap-2 text-sm sm:text-base">
             <span class="flex items-center gap-2 font-bold"><span class="size-3 rounded-full ring-1 ring-ink/20" style="background: {{ color.swatch }}"></span>{{ color.name }}</span>
             <span class="hidden sm:flex items-center gap-1.5 text-muted group-hover:text-ink">{% if color.available %}خرید این رنگ{% icon 'arrow-left' 'size-4' %}{% else %}ناموجود{% endif %}</span>
           </p>
+          {% if card.versions %}<p class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted">{% for version, version_price in card.versions %}<span>{{ version }} <span class="font-semibold text-ink-soft">{{ version_price }}</span>{% if forloop.last %} تومان{% endif %}</span>{% endfor %}</p>{% endif %}
         {% if color.available and product.is_available %}</a>{% else %}</div>{% endif %}
       </li>
-      {% endfor %}
+      {% endwith %}{% endfor %}
     </ul>
     {% endif %}
     <ul class="reveal mt-10 md:mt-14 grid sm:grid-cols-3 border-t border-line text-[0.92rem] [&>li+li]:border-t sm:[&>li+li]:border-t-0 sm:[&>li+li]:border-s [&>li+li]:border-line">

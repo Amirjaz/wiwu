@@ -17,16 +17,19 @@
     </div>
   </div>
   <aside class="lg:sticky lg:top-24 rounded-[var(--radius-surface)] bg-surface border border-line p-6 space-y-4" aria-label="سفارش شما">
-    {# The bag in the colour picked in the form (islands/checkout.tsx), else the first; the front photo if no colour has one. #}
-    {% for color in colors %}{% if color.photo %}
-    <img data-color-photo="{{ color.id }}" src="{% asset color.photo %}" alt="{{ product.name }}، {{ color.name }}"{% if not forloop.first %} hidden{% endif %} class="w-full max-w-[280px] mx-auto h-auto">
+    {% comment %}The model picked in the form (islands/checkout.tsx; the one asked for until then), in the picked
+       colour, else its first; the front photo if no colour has one.{% endcomment %}
+    {% for summary in summaries %}{% with item=summary.product %}
+    {% for color in summary.colors %}{% if color.photo %}
+    <img data-model="{{ item.slug }}" data-color-photo="{{ color.id }}" src="{% asset color.photo %}" alt="{{ item.name }}، {{ color.name }}"{% if item.pk != product.pk or not forloop.first %} hidden{% endif %} class="w-full max-w-[280px] mx-auto h-auto">
     {% endif %}{% empty %}
-    <img src="{% asset 'images/front.webp' %}" alt="" width="960" height="588" class="w-full max-w-[280px] mx-auto h-auto">
+    <img data-model="{{ item.slug }}" src="{% asset 'images/front.webp' %}" alt=""{% if item.pk != product.pk %} hidden{% endif %} width="960" height="588" class="w-full max-w-[280px] mx-auto h-auto">
     {% endfor %}
-    <div class="flex items-baseline justify-between gap-4">
-      <p class="font-bold">{{ product.name }}</p>
-      <p class="whitespace-nowrap font-bold">{{ price }} <span class="text-muted font-medium text-sm">تومان</span></p>
+    <div data-model-summary="{{ item.slug }}"{% if item.pk != product.pk %} hidden{% endif %} class="flex items-baseline justify-between gap-4">
+      <p class="font-bold">{{ item.name }}</p>
+      <p class="whitespace-nowrap font-bold">{{ summary.price }} <span class="text-muted font-medium text-sm">تومان</span></p>
     </div>
+    {% endwith %}{% endfor %}
     <ul class="space-y-2 text-sm text-ink-soft">
       <li class="flex gap-2">{% icon 'credit-card' 'mt-0.5 text-muted' %} پرداخت کارت‌به‌کارت{% if card_holder %}، به کارت {{ card_holder }}{% endif %}</li>
       <li class="flex gap-2">{% icon 'shield-check' 'mt-0.5 text-muted' %} ۷۲ ساعت گارانتی تعویض، اگر قفل یا زیپ مشکل داشته باشد</li>

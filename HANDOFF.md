@@ -34,17 +34,19 @@ This page is the short version, plus what isn't written down anywhere else.
   2026-10-21 and 23; README, *The two-zipper model*): its pictures in جزء به جزء, its own section, checkout
   and orders. The panel (فروشگاه) has a switch at the top for which model the colours and fields are for.
 - **The home page, top to bottom** (README, *Look* and *The hero and the 3D bag*):
-  1. **Hero:** a campaign page. Five pictures over the whole first screen, one at a time: Amir's photo
+  1. **Hero:** a campaign page. Seven pictures over the whole first screen, one at a time: Amir's photo
      of the man with the bag first, for 3 s (2026-10-21), then posters of the bag alone, all turned the
-     same way (black, black and brown side by side as mirror images, his plate photo, brown), with a large line, the
+     same way (black, both versions in black, black and brown side by side as mirror images, his plate
+     photo, brown, both versions in brown; the both-versions posters 2026-10-23), with a large line, the
      price and a compact buy button at the bottom; no thumbnails (2026-10-20). The header lies over it,
      see-through. Colour dots.
   2. **جزء به جزء:** a picture of each bag (Alpha black and brown, two-zipper black and brown), each with its
      price and opening its checkout, the Alpha's parts listed beside them with a tab per side. The 3D bag
      was here until 2026-10-23 (Amir: pictures instead); its code stays, unused (README).
   3. **The lock** (dark), the hold-to-unlock demo; **specs** with the size drawn over a centimetre mat;
-     **buying** with the sample bill; **FAQ**; **pick a colour** (the bags side by side, each opening
-     checkout in its colour; it replaced the green band); the footer.
+     **buying** with the sample bill; FAQ; **the two-zipper bag's own section**; **pick a colour** (a card
+     per colour with both versions in one picture and both prices, each opening checkout in its colour,
+     where the buyer picks one zipper or two; it replaced the green band); the footer.
 - **Store features:** checkout with an SMS code, card-to-card payment with a unique amount per order,
   "I've paid" review, the payment timer, shipping, returns, staff panel, SMS templates, SEO, colours
   (each with a photo shown at checkout), a page cache.

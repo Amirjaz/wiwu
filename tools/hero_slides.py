@@ -20,6 +20,14 @@ that bag left to right:
     python tools/hero_slides.py --wide bag-colors-wide.png graphite $W/black-render-front.jpg@0.13,0.47,0.175 \\
         $W/brown-render-front.jpg@0.325,0.47,0.175,mirror
 
+Both versions in one colour (Amir, 2026-10-23), the two-zipper bag (tools/phantom_photos.py) on the left and
+28/25 the Alpha's width, as it is; the heights put both on the same floor line (C: black steel, brown brown):
+
+    python tools/hero_slides.py bag-C-duo.png <palette> $W/phantom-C.png@0.20,0.312,0.30 \\
+        $W/C-render-front.jpg@0.50,0.315,0.268
+    python tools/hero_slides.py --wide bag-C-duo-wide.png <palette> $W/phantom-C.png@0.12,0.466,0.18 \\
+        $W/C-render-front.jpg@0.315,0.4705,0.16
+
 The silver poster (palette 'silver', from WiWU's small silver photo, $W/white-three-quarter.png, drawn no
 bigger than its 658 px) was dropped on 2026-10-21: the client doesn't have the silver bag, and the colours
 poster shows black and brown only. media/source-photos/look/bag-*.jpg are the tall posters and
@@ -47,8 +55,20 @@ PALETTES = {
 
 
 def cut_out(path):
-    """The bag (colour, alpha), cropped to it, from a render on white."""
-    img = np.asarray(Image.open(path).convert('RGB')).astype(np.float32)
+    """The bag (colour, alpha), cropped to it, from a render on white, or from a picture already cut out (a
+    PNG with transparency: tools/phantom_photos.py), whose own edge is kept."""
+    source = Image.open(path)
+    if source.mode == 'RGBA' and source.getextrema()[3][0] < 250:
+        rgba = np.asarray(source).astype(np.float32)
+        alpha = rgba[..., 3] / 255
+        # Under the soft edge, the colour of the nearest solid pixel (a half-see-through pixel's colour can be
+        # anything), then cropped to the bag.
+        _, (iy, ix) = ndimage.distance_transform_edt(alpha < 0.98, return_indices=True)
+        rgb = rgba[..., :3][iy, ix]
+        ys, xs = np.nonzero(alpha > 0.02)
+        y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
+        return rgb[y0:y1, x0:x1], alpha[y0:y1, x0:x1]
+    img = np.asarray(source.convert('RGB')).astype(np.float32)
     near_white = img.min(axis=2) > 246
     labels, _ = ndimage.label(near_white)
     border = np.unique(np.concatenate([labels[0], labels[-1], labels[:, 0], labels[:, -1]]))

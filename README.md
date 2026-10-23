@@ -96,11 +96,12 @@ beside them, a tab per side. The page no longer loads `islands/bag3d.ts` (out of
 the code, the models and the tools, which stay in the repo for if it comes back: add the island back to
 the build and to `home.html`, and the stage (git history, `home.html` before 2026-10-23).
 
-The home page opens as a campaign page (Amir's pick of three designs, 2026-10-18): five pictures, one
+The home page opens as a campaign page (Amir's pick of three designs, 2026-10-18): seven pictures, one
 at a time over the whole first screen (`views.LOOK`, the originals in `media/source-photos/look/`, the
 site's copies 600 and 1200 px wide in `public/images/look/`). Amir's photo of the man with the bag opens
-it, for 3 seconds only (2026-10-21). Three are posters of the bag alone: black, black and brown side by
-side as mirror images (Amir, 2026-10-21), brown (WiWU's studio renders on a dark studio sweep,
+it, for 3 seconds only (2026-10-21). Five are posters of the bag alone: black, both versions in black
+(the two-zipper bag beside the Alpha, 2026-10-23), black and brown side by side as mirror images (Amir,
+2026-10-21), brown, both versions in brown (WiWU's studio renders on a dark studio sweep,
 `tools/hero_slides.py`, 2026-10-20; WiWU's black render is from another angle, so the black is their
 brown render made black, `tools/black_render.py`; silver dropped 2026-10-21). Between them, Amir's other
 photo, the plate in hand. A large line at the bottom over a dark fade, the price and a compact buy button; nothing else (Amir,
@@ -261,16 +262,22 @@ the Alpha stays the main bag (`PRODUCT_SLUG`): the hero, the specs and the searc
 - **Price: 16,500,000 toman** (Amir, 2026-10-23; migration 0007, and `seed_store` for a new store). A price
   of 0 keeps it off the home page and out of checkout, and an order for it is refused (`unavailable`); the
   Alpha's price can never be 0.
-- **On the page:** its two pictures beside the Alpha's in جزء به جزء, and its own section before the closing one (`#phantom-pro`, dark: what's different, a few
+- **On the page:** a poster of both versions per colour in the hero; its two pictures beside the Alpha's in
+  جزء به جزء; the closing section's card per colour shows both versions in one picture
+  (`views.colour_cards`, `tools/duo_pictures.py`) with each one's price; and its own section before the closing one (`#phantom-pro`, dark: what's different, a few
   spec rows from `views.HIGHLIGHTS`, the price, each colour on a light tile opening
-  `/checkout/?product=phantom-pro&color=<id>`), and checkout for it (`?product=`, its name, price and
-  colour pictures; the order is placed for it, `product` in `/api/orders/`).
+  `/checkout/?product=phantom-pro&color=<id>`).
+- **Checkout asks which version** (مدل: تک‌زیپ or دو زیپ, Amir 2026-10-23), starting from the one the link
+  asked for (`?product=`, else the Alpha); switching keeps the colour by its name, and the summary beside
+  the form (name, price, the bag in that colour) and the bill follow. The order is placed for the version
+  picked (`product` in `/api/orders/`).
 - **Panel → فروشگاه:** with two models, a switch at the top picks which one the colours and the
   product fields below are for; the list says which has no price yet.
 - **Pictures:** `images/colors/phantom-<black|brown>.webp` from `tools/phantom_photos.py`. The only clean
   studio render found was of its tan bag (a reseller's, `media/source-photos/wiwu/phantom-tan.png`; other
   stores watermark theirs), so its leather is made each colour, as `tools/black_render.py` did for the
-  Alpha: the deep brown of Amir's screenshot of the bag, and a neutral black.
+  Alpha: the deep brown of Amir's screenshot of the bag, and a neutral black. The render's own cut-out is
+  kept (`phantom-<colour>.png`, transparent): cut out from white, it showed a pale rim on the dark posters.
 
 ## Load and caching
 

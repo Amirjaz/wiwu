@@ -1,5 +1,6 @@
 import io
 import json
+import re
 from datetime import timedelta
 from unittest import mock
 
@@ -455,7 +456,7 @@ class StartingColoursTests(TestCase):
             ('مشکی', 'images/colors/black.webp'), ('قهوه‌ای', 'images/colors/brown.webp')])
         self.assertIn('ویوو', product.name)
         page = self.client.get('/checkout/').content.decode()
-        self.assertEqual(page.count('data-color-photo='), 2)
+        self.assertEqual(page.count('data-color-photo='), 4)  # each model's bag in each colour
         home = self.client.get('/').content.decode()
         self.assertEqual(home.count('data-color-picker'), 1)  # in the hero (the 3D bag's went with it)
         self.assertIn('"brand": {"@type": "Brand", "name": "WiWU"}', home)
@@ -491,6 +492,18 @@ class SecondModelTests(Base):
         self.assertEqual(parts.count('<img '), 3)
         self.assertIn('۱۶٬۵۰۰٬۰۰۰', parts)
 
+    def test_the_closing_cards_and_the_hero_show_both_versions_of_each_colour(self):
+        self.product.colors.create(name='قهوه‌ای', swatch='#463930', photo='images/colors/brown.webp', position=1)
+        home = self.client.get('/').content.decode()
+        closing = home[home.index('id="colors"'):]
+        self.assertIn('images/colors/duo-black.webp', closing)
+        self.assertIn('images/colors/duo-brown.webp', closing)
+        self.assertIn('تک‌زیپ <span class="font-semibold text-ink-soft">۱۴٬۱۰۰٬۰۰۰</span>', closing)
+        self.assertIn('دو زیپ <span class="font-semibold text-ink-soft">۱۶٬۵۰۰٬۰۰۰</span>', closing)
+        hero = home[:home.index('id="parts"')]
+        self.assertIn('bag-black-duo', hero)
+        self.assertIn('bag-brown-duo', hero)
+
     def test_without_a_price_it_is_nowhere_on_the_site(self):
         self.phantom.price_rial = 0
         self.phantom.save()
@@ -513,8 +526,12 @@ class SecondModelTests(Base):
         self.assertIn('۱۵٬۰۰۰٬۰۰۰', home)
         self.assertIn(f'?product=phantom-pro&amp;color={brown.pk}', home)
         checkout = self.client.get('/checkout/?product=phantom-pro').content.decode()
-        self.assertIn('فانتوم پرو', checkout)
-        self.assertEqual(checkout.count('data-color-photo='), 2)
+        # Both models in the summary, the one asked for showing; the form starts from it and offers both.
+        self.assertIn('<div data-model-summary="phantom-pro" class=', checkout)
+        self.assertIn('<div data-model-summary="alpha" hidden', checkout)
+        island = json.loads(re.search(r'id="island-data"[^>]*>(.*?)</script>', checkout, re.S).group(1))
+        self.assertEqual((island['start'], [m['short'] for m in island['models']]), ('phantom-pro', ['تک‌زیپ', 'دو زیپ']))
+        self.assertEqual([c['name'] for c in island['models'][1]['colors']], ['مشکی', 'قهوه‌ای'])
         code = self.otp()
         response = self.client.post('/api/orders/', {**ADDRESS, 'code': code, 'product': 'phantom-pro', 'color': brown.pk},
                                     content_type='application/json')

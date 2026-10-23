@@ -29,8 +29,9 @@ PROVINCES = [
 ]
 # The hero's pictures, in the slider's order (frontend/public/images/look/, the originals in
 # media/source-photos/look/). Amir's photo of the man with the bag opens it, for 3 seconds only (Amir,
-# 2026-10-21); then three posters of the bag alone (black, black and brown side by side as mirror images,
-# brown; silver dropped 2026-10-21, the client doesn't have it): WiWU's studio renders on a dark studio
+# 2026-10-21); then posters of the bag alone (black, black and brown side by side as mirror images, brown,
+# and after each colour both versions of it, the two-zipper bag beside the Alpha, 2026-10-23; silver dropped
+# 2026-10-21, the client doesn't have it): WiWU's studio renders on a dark studio
 # sweep (tools/hero_slides.py), drawn twice, tall for phones (<name>-600/-1200.webp) and wide for laptops
 # (<name>-wide-1600/-2560.webp), the bags clear of the headline. Amir's photos (2:3) fill the screen on
 # phones and stand beside the headline at their own shape on laptops (a stretched photo was blurry there).
@@ -42,12 +43,16 @@ LOOK = [
      'focus': '50% 62%', 'wide': '50% 50%', 'photo': True, 'time': 3},
     {'name': 'bag-black', 'alt': 'کیف ویوو آلفا مشکی، با قفل اثر انگشت و پلاک برند',
      'focus': '0% 50%', 'wide': '0% 50%', 'color': 'مشکی'},
+    {'name': 'bag-black-duo', 'alt': 'کیف ویوو مشکی در دو مدل، دو زیپ و تک‌زیپ، کنار هم',
+     'focus': '0% 50%', 'wide': '0% 50%'},
     {'name': 'bag-colors', 'alt': 'کیف ویوو آلفا در دو رنگ مشکی و قهوه‌ای، کنار هم',
      'focus': '0% 50%', 'wide': '0% 50%'},
     {'name': 'plate', 'alt': 'نمای نزدیک کیف ویوو آلفا در دست: چرم دانه‌دار و پلاک فلزی برند',
      'focus': '50% 45%', 'wide': '50% 50%', 'photo': True},
     {'name': 'bag-brown', 'alt': 'کیف ویوو آلفا قهوه‌ای، با قفل اثر انگشت و پلاک برند',
      'focus': '0% 50%', 'wide': '0% 50%', 'color': 'قهوه‌ای'},
+    {'name': 'bag-brown-duo', 'alt': 'کیف ویوو قهوه‌ای در دو مدل، دو زیپ و تک‌زیپ، کنار هم',
+     'focus': '0% 50%', 'wide': '0% 50%'},
 ]
 
 CLAIM_TYPES = {'image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif', 'application/pdf'}
@@ -67,8 +72,27 @@ def _on_sale(slug):
 HIGHLIGHTS = ('زیپ‌ها', 'ابعاد', 'بند', 'وزن')
 
 
-# Each model's short name beside its pictures (bag_pictures); another model's full name otherwise.
+# Each model's short name beside its pictures (bag_pictures) and at checkout, and its version where both
+# are named side by side (the closing section's prices); another model's full name otherwise.
 SHORT_NAMES = {'alpha': 'آلفا، تک‌زیپ', 'phantom-pro': 'فانتوم پرو، دو زیپ'}
+VERSIONS = {'alpha': 'تک‌زیپ', 'phantom-pro': 'دو زیپ'}
+# Both versions in one colour, side by side (tools/duo_pictures.py), by the colour's name in the panel.
+DUO_PICTURES = {'مشکی': 'images/colors/duo-black.webp', 'قهوه‌ای': 'images/colors/duo-brown.webp'}
+
+
+def colour_cards(main, others):
+    """The closing section's cards (Amir, 2026-10-23): one per colour of the main bag, showing every model
+    that comes in it (by the colour's name) in one picture, with each one's price. A card opens checkout in
+    its colour, where the version is picked."""
+    cards = []
+    for color in main.shown_colors():
+        versions = [main] + [o['product'] for o in others
+                             if any(c.name == color.name for c in o['product'].shown_colors())]
+        both = len(versions) > 1 and color.name in DUO_PICTURES
+        cards.append({'color': color, 'picture': DUO_PICTURES[color.name] if both else color.photo, 'both': both,
+                      'versions': [(VERSIONS.get(p.slug, p.name), persian.toman(p.price_rial)) for p in versions]
+                      if both else []})
+    return cards
 
 
 def bag_pictures(main, others):
@@ -111,14 +135,18 @@ def _json(request):
     return data if isinstance(data, dict) else {}
 
 
-def _store_json(store, product):
+def _store_json(store, product, models):
     return {
         'store': store.store_name,
-        'product': {'slug': product.slug, 'name': product.name, 'price_rial': product.price_rial,
-                    'available': product.is_available},
-        # Only asked for when more than one colour is on show.
-        'colors': [{'id': c.id, 'name': c.name, 'swatch': c.swatch, 'available': c.available}
-                   for c in product.shown_colors()],
+        # Every model on sale, the main bag first; the buyer picks one when there's more than one (Amir,
+        # 2026-10-23: one zipper or two), starting from the one asked for (?product=).
+        'models': [{'slug': m.slug, 'name': m.name, 'short': VERSIONS.get(m.slug, m.name),
+                    'price_rial': m.price_rial, 'available': m.is_available,
+                    # Only asked for when more than one colour is on show.
+                    'colors': [{'id': c.id, 'name': c.name, 'swatch': c.swatch, 'available': c.available}
+                               for c in m.shown_colors()]}
+                   for m in models],
+        'start': product.slug,
         'shipping': store.shipping_options(),
         'provinces': PROVINCES,
         'payment_minutes': store.payment_minutes,
@@ -147,7 +175,7 @@ def home(request):
         'product': product, 'faqs': faqs, 'price': persian.toman(product.price_rial),
         'shipping': shipping, 'example_total': persian.toman(example),
         'look': LOOK, 'parts': PARTS, 'colors': product.shown_colors(), 'models': models,
-        'bags': bag_pictures(product, models),
+        'bags': bag_pictures(product, models), 'cards': colour_cards(product, models),
         'dims': dims, 'spec_cells': spec_cells,
         'jsonld': _jsonld(request, store, product, faqs),
     })
@@ -227,10 +255,14 @@ def _jsonld(request, store, product, faqs):
 @require_GET
 @ensure_csrf_cookie
 def checkout(request):
-    store, product = StoreSettings.load(), _on_sale(request.GET.get('product')) or _product()
+    store, main = StoreSettings.load(), _product()
+    product = _on_sale(request.GET.get('product')) or main
+    models = [main] + [other['product'] for other in lineup(main)]
+    # The summary beside the form: each model's name and price and its bag in each colour; checkout.tsx shows
+    # the picked model's, in the picked colour (the first until one is).
+    summaries = [{'product': m, 'price': persian.toman(m.price_rial), 'colors': m.shown_colors()} for m in models]
     return render(request, 'shop/checkout.html', {
-        'product': product, 'price': persian.toman(product.price_rial), 'island': _store_json(store, product),
-        'colors': product.shown_colors(),
+        'product': product, 'summaries': summaries, 'island': _store_json(store, product, models),
     })
 
 
