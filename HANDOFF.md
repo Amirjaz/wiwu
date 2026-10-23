@@ -8,13 +8,14 @@ This page is the short version, plus what isn't written down anywhere else.
 
 ## Where it stands
 
-- **Staging is online at https://shop.nisatech.org** and runs **6d8de65**, deployed on 2026-10-23 (`main`
+- **Staging is online at https://shop.nisatech.org** and runs **deb2f75**, deployed on 2026-10-23 (`main`
   is the same; the handoff commits after it change only this file): the client's answers (the shop is
   **ویوو** with WiWU's logo in the site's colours, the price, free post and Tipax on delivery, 4 to 6
   working days, the battery, the 72-hour warranty), the hero (opening with the man with the bag for 3 s,
   sharp on laptops, colour dots that jump to their poster), black and brown only (no silver), a picture
   of each bag in جزء به جزء instead of the 3D bag, the two-zipper bag at 16,500,000 toman with its own
-  section, a pick-a-colour closing section, WiWU's coffee brown.
+  section and a both-versions poster per colour, a pick-a-colour closing section with both versions per
+  card, checkout that asks one zipper or two, WiWU's coffee brown.
   - Open to everyone (no password, Amir's choice), but kept out of search engines (noindex).
   - SMS codes only go to the server log and payments are manual, so people can browse but can't finish
     an order. No orders yet.
@@ -366,6 +367,7 @@ another project's (Finance).
 
 | Date | Commit | What |
 | --- | --- | --- |
+| 2026-10-23 | deb2f75 | Both versions per colour: two hero posters (black, brown) with the two-zipper bag beside the Alpha, the closing cards with one picture of both and both prices; checkout asks one zipper or two and keeps the colour; the two-zipper pictures from its own cut-out (no migration; page cache emptied; backup `db-20261023-122110.sqlite3`, server time). Checked on the live site: the seven hero pictures, the closing cards, switching versions at checkout on desktop and phone |
 | 2026-10-23 | 6d8de65 | A picture of each bag instead of the 3D bag in جزء به جزء (Alpha and two-zipper, black and brown, each with its price and checkout), the 3D island off the page (no three.js, no model download); the two-zipper bag at 16,500,000 toman (migration 0007, page cache emptied after it; backup `db-20261023-120433.sqlite3`, server time). The first run dropped its SSH connection after pushing the code; the second went through. Checked: the four pictures and their links, the two-zipper section and checkout, no 3D requests, desktop and phone in headless Edge |
 | 2026-10-21 | bb910c7 | The two-zipper bag (WiWU Phantom Pro) in black and brown as a second model, added by `seed_store` with price 0, so off the site until a price is set in the panel; the panel's model switch; checkout and orders for it (no migration; page cache emptied; backup `db-20261021-131307.sqlite3`, server time). Checked: hidden on home, checkout for it falls back to the Alpha, its pictures and the new scripts match the build |
 | 2026-10-21 | 82f2c89 | Hero opens with Amir's photo of the man with the bag for 3 s (counted from when it has loaded; the 3D bag starts only after the hero moves on, which had stretched it to 5 s); silver gone (migration 0006, page cache emptied after it; backups `db-20261021-114043.sqlite3` and the redeploy's, server time); the black-and-brown poster as mirror images; the closing section's grid follows the number of colours. The deploy's new HTTPS check passed. Arvan's proxy was back on |
