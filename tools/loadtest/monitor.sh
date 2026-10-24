@@ -10,6 +10,6 @@ while [ "$(date +%s)" -lt "$end" ]; do
   swap=$(free -m | awk '/^Swap:/ {print $3}')
   t() { curl -s -o /dev/null -m 10 -w '%{time_total}' -H "Host: $1" -H 'X-Forwarded-Proto: https' "http://127.0.0.1$2"; }
   printf '%s %6s %6s %6s %6s %7s %12s %13s %12s %8s %6s\n' "$(date +%T)" "$us" "$sy" "$id" "$wa" "$free_mb" "$swap" \
-    "$(t nisatech.org /)" "$(t nisatak.com /)" "$(t contech.nisatech.org /)" "$(t shop.nisatech.org /)"
+    "$(t nisatech.org /)" "$(t nisatak.com /)" "$(t contech.nisatech.org /)" "$(t penolinshop.com /)"
   sleep 3
 done

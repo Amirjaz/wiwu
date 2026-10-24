@@ -2,21 +2,29 @@
 # One-time root setup for the purse store on the Nisatech server (Ubuntu 24.04), next to
 # nisatech.org, nisatak.com and contech.
 #   scp -r deploy amir@185.231.180.92:purseshop-deploy
-#   ssh -t amir@185.231.180.92 'sudo DOMAIN=<host> STAGING=1 bash purseshop-deploy/server-setup.sh'
-# DOMAIN: the site's host name (staging: a nisatech.org subdomain; later the client's .ir).
+#   ssh -t amir@185.231.180.92 'sudo DOMAIN=<host> REDIRECT="<names>" CERT=1 bash purseshop-deploy/server-setup.sh'
+# DOMAIN: the site's host name (penolinshop.com since 2026-10-24; shop.nisatech.org before).
+# REDIRECT: other names (space-separated) that send visitors to DOMAIN, keeping the path: its www and
+# any address the shop used to have, e.g. REDIRECT="www.penolinshop.com shop.nisatech.org".
 # STAGING=1 puts the whole site behind a password (asked for here) except the payment webhook.
-# CERT=1 gets the site a Let's Encrypt certificate (once; certbot.timer renews it) so it answers HTTPS
-# itself, for when Arvan's proxy is off or connects over HTTPS. Re-runs keep HTTPS on once it exists.
-# Safe to re-run (do, after changing anything under deploy/nginx or deploy/systemd).
+# CERT=1 gets DOMAIN and each REDIRECT name its own Let's Encrypt certificate (once; certbot.timer renews
+# them) so they answer HTTPS themselves, for when Arvan's proxy is off or connects over HTTPS. Re-runs
+# keep HTTPS on once a name has one.
+# Safe to re-run (do, after changing anything under deploy/nginx or deploy/systemd). Pass the same
+# REDIRECT every time: a name left out stops redirecting.
 set -euo pipefail
 
 DEPLOY_USER=${DEPLOY_USER:-amir}
-DOMAIN=${DOMAIN:?set DOMAIN, e.g. DOMAIN=shop.nisatech.org}
+DOMAIN=${DOMAIN:?set DOMAIN, e.g. DOMAIN=penolinshop.com}
+REDIRECT=${REDIRECT:-}
 STAGING=${STAGING:-0}
 ROOT=/srv/purseshop
 HERE=$(cd "$(dirname "$0")" && pwd)
 
 [ "$(id -u)" -eq 0 ] || { echo "Run with sudo."; exit 1; }
+for name in $REDIRECT; do
+  [ "$name" != "$DOMAIN" ] || { echo "REDIRECT must not include DOMAIN ($DOMAIN)." >&2; exit 1; }
+done
 
 echo "==> Service user 'purseshop' and $ROOT"
 id purseshop &>/dev/null || useradd --system --no-create-home --home-dir "$ROOT" --shell /usr/sbin/nologin purseshop
@@ -47,21 +55,31 @@ else
   : > "$ACCESS"
 fi
 
-echo "==> nginx site for $DOMAIN"
-# HTTPS lines for the site's server block, once it has a certificate (empty until then).
-TLS=/etc/nginx/snippets/purseshop-tls.conf
-LIVE=/etc/letsencrypt/live/$DOMAIN
-write_tls() {
-  if [ -f "$LIVE/fullchain.pem" ]; then
+echo "==> nginx site for $DOMAIN${REDIRECT:+ (and $REDIRECT, sent to it)}"
+# HTTPS lines for a server block, once its name has a certificate (empty until then): the shop's block
+# includes purseshop-tls.conf, each REDIRECT name's block purseshop-tls-<name>.conf.
+tls_file() {
+  if [ "$1" = "$DOMAIN" ]; then echo /etc/nginx/snippets/purseshop-tls.conf
+  else echo "/etc/nginx/snippets/purseshop-tls-$1.conf"; fi
+}
+write_tls() {  # $1: a host name
+  local live=/etc/letsencrypt/live/$1
+  if [ -f "$live/fullchain.pem" ]; then
     printf '%s\n' 'listen 443 ssl;' 'listen [::]:443 ssl;' \
-      "ssl_certificate $LIVE/fullchain.pem;" "ssl_certificate_key $LIVE/privkey.pem;" \
-      'include /etc/letsencrypt/options-ssl-nginx.conf;' 'ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;' > "$TLS"
+      "ssl_certificate $live/fullchain.pem;" "ssl_certificate_key $live/privkey.pem;" \
+      'include /etc/letsencrypt/options-ssl-nginx.conf;' 'ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;' > "$(tls_file "$1")"
   else
-    : > "$TLS"
+    : > "$(tls_file "$1")"
   fi
 }
-write_tls
-sed "s/__DOMAIN__/$DOMAIN/" "$HERE/nginx/purseshop.conf" > /etc/nginx/sites-available/purseshop
+for name in $DOMAIN $REDIRECT; do write_tls "$name"; done
+{
+  sed "s/__DOMAIN__/$DOMAIN/" "$HERE/nginx/purseshop.conf"
+  for name in $REDIRECT; do
+    echo
+    sed -e "s/__NAME__/$name/g" -e "s/__DOMAIN__/$DOMAIN/g" "$HERE/nginx/purseshop-redirect.conf"
+  done
+} > /etc/nginx/sites-available/purseshop
 ln -sf /etc/nginx/sites-available/purseshop /etc/nginx/sites-enabled/purseshop
 # A broken site would also block reloads for the other sites: take it out again.
 if ! nginx -t; then
@@ -71,17 +89,20 @@ if ! nginx -t; then
 fi
 systemctl reload nginx
 
-if [ "${CERT:-0}" = 1 ] && [ ! -f "$LIVE/fullchain.pem" ]; then
-  echo "==> Let's Encrypt certificate for $DOMAIN"
-  # Checked over plain HTTP on the site above; the reload hook puts each renewal in use.
-  certbot certonly --nginx -d "$DOMAIN" --non-interactive --agree-tos --deploy-hook 'systemctl reload nginx'
-  write_tls
-  if ! nginx -t; then
-    : > "$TLS"
-    echo "nginx rejected the HTTPS lines; the site stays on HTTP only." >&2
-    exit 1
-  fi
-  systemctl reload nginx
+if [ "${CERT:-0}" = 1 ]; then
+  for name in $DOMAIN $REDIRECT; do
+    if [ -f "/etc/letsencrypt/live/$name/fullchain.pem" ]; then continue; fi
+    echo "==> Let's Encrypt certificate for $name"
+    # Checked over plain HTTP on the blocks above; the reload hook puts each renewal in use.
+    certbot certonly --nginx -d "$name" --non-interactive --agree-tos --deploy-hook 'systemctl reload nginx'
+    write_tls "$name"
+    if ! nginx -t; then
+      : > "$(tls_file "$name")"
+      echo "nginx rejected the HTTPS lines for $name; it stays on HTTP only." >&2
+      exit 1
+    fi
+    systemctl reload nginx
+  done
 fi
 
 echo "==> Let $DEPLOY_USER restart the service without a password (and nothing else)"

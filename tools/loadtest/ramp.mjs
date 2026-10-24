@@ -2,7 +2,7 @@
 // simultaneous visitors with no pause between requests, for a fixed time, on a mix of the pages
 // people open. Stops at the first sign of trouble.
 //   node ramp.mjs <base> '[1,2,5,10,20,40]' <seconds-per-stage>
-const BASE = process.argv[2] ?? 'https://shop.nisatech.org';
+const BASE = process.argv[2] ?? 'https://penolinshop.com';
 const STAGES = JSON.parse(process.argv[3] ?? '[1,2,5,10,20,40]');
 const SECS = Number(process.argv[4] ?? 30);
 const MIX = [['/', 0.7], ['/checkout/', 0.15], ['/orders/', 0.1], ['/p/returns/', 0.05]];
