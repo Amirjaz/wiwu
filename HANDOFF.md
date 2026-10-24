@@ -1,6 +1,6 @@
 # PurseShop: handoff
 
-State on **2026-10-23 (1 Aban 1405)**, written so the work can go on in a new chat.
+State on **2026-10-24 (2 Aban 1405)**, written so the work can go on in a new chat.
 
 **A new chat should start here:** read this page, then [README.md](README.md) for how everything works,
 [PLAN.md](PLAN.md) for the decisions and risks, and [LOADTEST.md](LOADTEST.md) for the server capacity.
@@ -8,8 +8,12 @@ This page is the short version, plus what isn't written down anywhere else.
 
 ## Where it stands
 
-- **Staging is online at https://shop.nisatech.org** and runs **deb2f75**, deployed on 2026-10-23 (`main`
-  is the same; the handoff commits after it change only this file): the client's answers (the shop is
+- **Staging is online at https://penolinshop.com** (since 2026-10-24, Amir's domain from Mihanwebhost,
+  DNS on his Arvan account; `www.penolinshop.com` and the old https://shop.nisatech.org redirect to it,
+  keeping the path) and runs **a7fc54a**, deployed on 2026-10-24 (the app is deb2f75's of 2026-10-23;
+  a7fc54a changes only the deploy scripts, docs and load-test tools; `main` is the same, the handoff
+  commits after it change only this file). Still on the shared Nisatech server; Amir will buy a new
+  server later. What it shows: the client's answers (the shop is
   **ویوو** with WiWU's logo in the site's colours, the price, free post and Tipax on delivery, 4 to 6
   working days, the battery, the 72-hour warranty), the hero (opening with the man with the bag for 3 s,
   sharp on laptops, colour dots that jump to their poster), black and brown only (no silver), a picture
@@ -26,6 +30,10 @@ This page is the short version, plus what isn't written down anywhere else.
     certbot.timer renews it and reloads nginx) and works with the proxy on or off. Each deploy checks it
     (`remote-deploy.sh`; it passed on the 2026-10-21 deploys). Amir turned the proxy back on by
     2026-10-21 (the shop resolves to Arvan again, `server: ArvanCloud`).
+  - **penolinshop.com** (2026-10-24): `penolinshop.com` and `www.penolinshop.com` each have their own
+    certificate (until 2027-01-22; renewal dry-runs passed), and shop.nisatech.org keeps its own for its
+    redirect (`server-setup.sh REDIRECT=…`, README → *Deploying*). Arvan's proxy is **off** for both
+    new records (they resolve to the server), so there is no CDN in front yet.
   - **Panel accounts:** `amir` and `salar`, both superusers (Amir set the passwords himself on
     2026-10-19). Log in at `/panel/` (the store) or `/admin/` (Django, for the Owners/Staff groups).
 - **The bag:** the WiWU Alpha fingerprint-lock clutch, sold as **«کیف دستی ویوو آلفا»** (WiWU as the
@@ -69,9 +77,16 @@ This page is the short version, plus what isn't written down anywhere else.
 1. **The questions for the client** (below): he sends them and brings back the answers.
 2. **Deploy go-ahead**, whenever there is new work (only on his word).
 3. **Arvan's proxy (the cloud icon) for nisatech.org**: it was off for every record on 2026-10-20; the
-   shop's is back on (2026-10-21). Told him the other records (nisatech.org, contech, pd, ops) need it
+   shop's was back on by 2026-10-21 and off again by 2026-10-24 (shop.nisatech.org resolves to the
+   server; it only redirects to penolinshop.com now and works either way). Told him the other records (nisatech.org, contech, pd, ops) need it
    on too: they have no HTTPS of their own on the server, so without it their https addresses show
    nisatak.com's site behind a certificate warning.
+4. **Arvan's proxy for penolinshop.com** (2026-10-24): off for `@` and `www`. Before turning it on, in
+   Arvan's panel for penolinshop.com, switch on HTTPS with Arvan's free certificate and wait until it
+   shows as issued; otherwise https visitors get a certificate error at Arvan. The server works with
+   either origin protocol.
+5. **Whose name penolinshop.com is in:** asked, not answered. Enamad is issued to the domain's owner
+   (PLAN.md), so if it isn't the client's, the launch still needs the client's own domain.
 
 ## Waiting on the client
 
@@ -311,7 +326,15 @@ node tools/compare.mjs && .venv-3d/Scripts/python tools/dev/compose.py
   `nslookup <host> k.ns.arvancdn.ir`: the server's IP means the proxy is off, Arvan's means on.
 - **A new HTTPS host on this server** needs its own certificate: nginx answers any name it has no
   HTTPS block for with nisatak.com, the first HTTPS site it loads and so its default
-  (`server-setup.sh CERT=1` for the shop).
+  (`server-setup.sh CERT=1` for the shop, with every other name of it in `REDIRECT`).
+- **Tests in the main checkout:** its `backend/.env` was given Kavenegar settings on 2026-10-24 (another
+  chat), so the OTP tests fail there with `sms_failed`. Run them with
+  `SMS_BACKEND=console PAYMENT_PROVIDER=manual` in front (53 tests pass that way).
+- **This PC's DNS** (10.255.255.1, the VPN's) failed to resolve penolinshop.com on 2026-10-24 while 8.8.8.8,
+  1.1.1.1, Shecan and Arvan's own servers answered. Check from here with `nslookup <host> 8.8.8.8`, or
+  `curl --resolve <host>:443:185.231.180.92`.
+- **certbot without a terminal** (over `ssh` with no `-t`) waits a random few minutes before a renewal or
+  dry run; it isn't stuck.
 - **Plane:** create and edit items from a signed-in Plane tab in the browser pane with
   `fetch('https://api.plane.so/api/workspaces/nisatech/projects/c2c38e4a-3e34-4392-b506-19d3bc8d9724/issues/', {credentials: 'include', headers: {'X-CSRFToken': …}})`
   (the token from `https://api.plane.so/auth/get-csrf-token/`). PATCH `description_html` only while the
@@ -325,7 +348,7 @@ node tools/compare.mjs && .venv-3d/Scripts/python tools/dev/compose.py
 - **Commits:** one commit per task, plain message. **No Co-Authored-By line or any Claude attribution**,
   anywhere.
 - **Deploys:** only on his explicit go-ahead. Work in a worktree goes onto `main` first (fast-forward),
-  then `DOMAIN=shop.nisatech.org bash deploy/deploy.sh` from `PurseShop/` on a clean `main`. Before:
+  then `DOMAIN=penolinshop.com bash deploy/deploy.sh` from `PurseShop/` on a clean `main`. Before:
   tests and typecheck. After: every page 200 on the server and through Arvan, the changed files served
   fresh, a browser pass on the live site, the page cache emptied if a migration changed content, and a
   note here.
@@ -367,6 +390,7 @@ another project's (Finance).
 
 | Date | Commit | What |
 | --- | --- | --- |
+| 2026-10-24 | a7fc54a | The shop moves to **penolinshop.com** on the same server: `server-setup.sh DOMAIN=penolinshop.com REDIRECT="www.penolinshop.com shop.nisatech.org" CERT=1` (certificates for the two new names; nginx config and TLS lines backed up as `~/purseshop.nginx.bak-20261024` and `~/purseshop-tls.bak-20261024`), `.env` set to `DJANGO_ALLOWED_HOSTS=penolinshop.com,localhost` and `PUBLIC_URL=https://penolinshop.com` (old one at `~/purseshop.env.bak-20261024`), then the deploy (no migration; backup `db-20261024-082250.sqlite3`, server time) and the page cache emptied. Checked: every page 200 on the new name, http and `www` and shop.nisatech.org 301 to it with the path kept, no old address left on the pages or sitemap, still noindex |
 | 2026-10-23 | deb2f75 | Both versions per colour: two hero posters (black, brown) with the two-zipper bag beside the Alpha, the closing cards with one picture of both and both prices; checkout asks one zipper or two and keeps the colour; the two-zipper pictures from its own cut-out (no migration; page cache emptied; backup `db-20261023-122110.sqlite3`, server time). Checked on the live site: the seven hero pictures, the closing cards, switching versions at checkout on desktop and phone |
 | 2026-10-23 | 6d8de65 | A picture of each bag instead of the 3D bag in جزء به جزء (Alpha and two-zipper, black and brown, each with its price and checkout), the 3D island off the page (no three.js, no model download); the two-zipper bag at 16,500,000 toman (migration 0007, page cache emptied after it; backup `db-20261023-120433.sqlite3`, server time). The first run dropped its SSH connection after pushing the code; the second went through. Checked: the four pictures and their links, the two-zipper section and checkout, no 3D requests, desktop and phone in headless Edge |
 | 2026-10-21 | bb910c7 | The two-zipper bag (WiWU Phantom Pro) in black and brown as a second model, added by `seed_store` with price 0, so off the site until a price is set in the panel; the panel's model switch; checkout and orders for it (no migration; page cache emptied; backup `db-20261021-131307.sqlite3`, server time). Checked: hidden on home, checkout for it falls back to the Alpha, its pictures and the new scripts match the build |
