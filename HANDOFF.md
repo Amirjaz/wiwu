@@ -108,7 +108,8 @@ This page is the short version, plus what isn't written down anywhere else.
    still redirects it to penolinshop.com (so it works). Point it at 37.32.25.183 too, then on the new
    server `certbot renew --cert-name shop.nisatech.org --dry-run`.
 7. **The new server's root password** was posted in the chat on 2026-10-24; change it in Arvan's panel.
-   Logins are by key, so nothing here needs it.
+   Logins are by key, so nothing here needs it. `amir` has full passwordless sudo there since 2026-10-24
+   (`/etc/sudoers.d/amir-full`, added by Amir as root, as on the old server); its password is locked.
 
 ## Waiting on the client
 
@@ -183,9 +184,9 @@ business address), the `.ir` domain under their national ID.
    app's messages stay in `journalctl -u purseshop`). It serves the home page ~850/s and checkout ~190/s
    with no errors, against an expected spike of 6–12 views a second.
 3. **On staging:** a real order end to end (the code now comes by SMS; pay cartbecart's rial amount to
-   its card), then refund and cancel it. cartbecart's own test order **TEST-1857E4** (100,017 rials,
-   created 2026-10-24 08:33 server time) was handed to Amir to pay; whether its webhook arrived wasn't
-   checked: look for a «سفارش آزمایشی» row in the panel's payments log.
+   its card), then refund and cancel it. cartbecart's test orders are proven (see 7): **TEST-6378D1**
+   (500,976 rials) was paid at 17:23 on 2026-10-24 and its signed `order.paid` reached the new server
+   (200), logged as a test in the panel's payments log.
 4. **Client answers:** the domain must belong to whoever applies for Enamad; with the shop named WiWU, the
    client needs a domain they can register (risk R5). Fill the card holder's name and the contact details
    before applying for Enamad.
@@ -200,8 +201,23 @@ business address), the `.ir` domain under their national ID.
    card, and signed webhooks confirm. Their account (the client's, «فروشگاه محمدسالار کبیری»): Max plan,
    API access, an active default card (…4142, Bank Shahr), no monthly limit, orders last 30 minutes plus
    their 60-minute grace. Webhook address in their dashboard: `https://penolinshop.com/api/payments/cartbecart/`.
-   The signing key was made again after the first deploy; local and server `.env` hold the new one.
    Their API refuses an empty `customer_phone` (fixed in 5c91b10). Check with `manage.py cartbecart_check`.
+   **Tested end to end on 2026-10-24** (`cartbecart_check --test`, paid by Amir): the default card is now
+   Behrad Bakhtiari's Pasargad card (…8502; his Blu card …8679 was tried and turned off again). What it
+   took: (a) **their forwarder app** on the card owner's Android phone, which wasn't running at first, so
+   every payment stayed `pending`; (b) **50,000 toman, not 10,000**: the 10,000-toman tests were never
+   matched while 50,000 ones were within minutes (Amir's finding; the cause is on their side); (c) **the
+   signing key**: Amir made new ones twice in their dashboard, and each time every webhook got
+   `401 signature` until the key in the server's `.env` was replaced. `~/set-cartbecart-keys.sh` on the
+   new server (and the old) asks for the signing key and optionally the API key without echoing them,
+   writes `.env` (backup in `~/purseshop.env.bak-*`) and restarts the shop; run it with
+   `ssh -t amir@37.32.25.183 bash set-cartbecart-keys.sh`. A 401 only shows in the logs
+   (`sudo journalctl -u purseshop | grep payments/cartbecart`), never in the database. They retry a
+   refused webhook at growing gaps (about 4, then 6 minutes). Final key set 2026-10-24 17:20.
+   **Open: paying 16,500,000 toman in one transfer** goes over the card-to-card limit (Amir, 2026-10-24),
+   so the two-zipper bag needs two transfers; each order is one cartbecart order with one exact amount,
+   so that needs orders split into parts (each its own cartbecart order, paid when all parts are).
+   Waiting on whether the limit is per transfer or per day per card, and its amount.
 8. **Kavenegar:** Amir's account (2026-10-24), identity verified, Advanced plan until 1406-08-01, about
    205,000 toman credit. **The account has no line it may send from**: `2000660110` (from their sample
    code) answers 427 "needs an access level", and with no line named, 412; so everything goes through
