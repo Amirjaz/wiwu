@@ -11,13 +11,14 @@ WorkingDirectory=/srv/purseshop/app/backend
 # 9 plain (sync) workers for the shop's own 4-core server, 2 x cores + 1 (2026-10-24, LOADTEST.md): not
 # for speed at full CPU (the CPU is the limit there) but because a buyer's checkout can wait up to 20 s on
 # cartbecart (payments.TIMEOUT, two calls) or 10 s on an SMS, so it takes nine such waits, not three, to
-# hold up every page. The access log below costs about 20% at full CPU; nginx logs every request too.
-# Threads (gthread) were half as fast: rendering is pure Python and the threads queue for one lock.
+# hold up every page. Threads (gthread) were half as fast: rendering is pure Python and the threads queue
+# for one lock. No access log of its own (2026-10-24): writing every request to the journal cost about
+# 20% at full CPU, and nginx logs every request already (/var/log/nginx/access.log, with the visitor's
+# IP). Errors and the app's own messages still go to the journal (journalctl -u purseshop).
 ExecStart=/srv/purseshop/app/backend/.venv/bin/gunicorn \
     --workers 9 \
     --bind 127.0.0.1:8030 \
     --timeout 60 \
-    --access-logfile - \
     purseshop.wsgi:application
 Restart=on-failure
 
