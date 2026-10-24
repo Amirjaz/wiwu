@@ -47,7 +47,8 @@ class Command(BaseCommand):
             try:
                 reg = payments.create_order(code, test * 10, f'{settings.PUBLIC_URL}/')
             except payments.CartbecartError as exc:
-                hint = ' (no active default card in their dashboard?)' if exc.status == 422 else ''
+                field_problem = str(exc.detail).startswith('[')
+                hint = ' (no active default card in their dashboard?)' if exc.status == 422 and not field_problem else ''
                 raise CommandError(printable(f'Test order refused: {exc}{hint}')) from None
             until = timezone.localtime(reg['expires_at']).strftime('%H:%M')
             self.say(f'Test order {code} ({reg["ref"]}): pay exactly {rial(reg["amount_rial"])} rials '

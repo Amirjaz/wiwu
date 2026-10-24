@@ -88,10 +88,13 @@ def _token_path(token):
 def create_order(code, amount_rial, callback_url, name='', phone=''):
     """Registers one of our orders. Returns token, ref (their CBC- code), amount_rial (the unique amount
     to pay), expires_at, card_number, card_holder and payment_url. Raises CartbecartError."""
-    created = _call('POST', '/api/v1/public/orders', {
-        'amount': amount_rial, 'callback_url': callback_url, 'merchant_order_id': code,
-        'customer_name': name[:80], 'customer_phone': phone,
-    })
+    body = {'amount': amount_rial, 'callback_url': callback_url, 'merchant_order_id': code}
+    # Optional, but an empty one is refused (their phone check wants 09…): send them only with a value.
+    if name:
+        body['customer_name'] = name[:80]
+    if phone:
+        body['customer_phone'] = phone
+    created = _call('POST', '/api/v1/public/orders', body)
     if not isinstance(created, dict):
         raise CartbecartError(None, f'unexpected answer: {str(created)[:200]}')
     token = str(created.get('payment_token') or '')

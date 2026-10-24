@@ -589,6 +589,9 @@ class CartbecartTests(Base):
         create = self.calls[1]
         self.assertTrue(create['body']['merchant_order_id'].startswith('TEST-'))
         self.assertEqual(create['body']['amount'], 50_000)
+        # They refuse an empty customer_phone (seen live, 2026-10-24): no buyer, so none is sent.
+        self.assertNotIn('customer_phone', create['body'])
+        self.assertNotIn('customer_name', create['body'])
 
 
 class PanelTests(Base):
