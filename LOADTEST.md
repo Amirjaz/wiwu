@@ -1,9 +1,8 @@
 # PurseShop: load test, 2026-10-18 (and the shop's own server, 2026-10-24)
 
-**The shop's own server, 2026-10-24** (its section below): on 4 cores the page cache serves the home page
-about 700–900 times a second and checkout renders about 160–200 times a second, with no errors up to 128
-simultaneous clients, on 9 plain gunicorn workers (the lower figures with gunicorn's access log on, as
-live). That is far beyond the campaign estimates further
+**The shop's own server, 2026-10-24** (its section below): on 4 cores, as it runs now (9 plain gunicorn
+workers, no gunicorn access log), the page cache serves the home page about 850 times a second and
+checkout renders about 190 times a second, with no errors up to 128 simultaneous clients. That is far beyond the campaign estimates further
 down (6–12 views a second at a spike). The 2026-10-18 test of the old shared server follows.
 
 **Question:** can the store take about 500 buyers a day, around 50,000 page views or more, and on what
@@ -108,17 +107,18 @@ these are a floor. Peaks over 1–128 simultaneous clients, and the 95th percent
 | gunicorn | Access log | Home (page cache), req/s | p95 at 64 | Checkout (rendered), req/s | p95 at 64 | Memory |
 | --- | --- | --- | --- | --- | --- | --- |
 | 3 sync workers (as it was, live) | on | ~800 | 109 ms | ~170 | 445 ms | ~170 MB |
-| **9 sync (installed, live)** | on | ~690–760 | 96 ms | ~157–166 | 425 ms | ~450 MB |
+| 9 sync (live, first install) | on | ~690–760 | 96 ms | ~157–166 | 425 ms | ~450 MB |
+| **9 sync (live, as it runs now)** | **off** | ~830–860 | 86 ms | ~178–199 | 373 ms | ~450 MB |
 | 5 sync (beside it) | off | ~1,070 | 72 ms | ~228 | 328 ms | ~270 MB |
 | 9 sync (beside it) | off | ~880–920 | 90 ms | ~180–210 | 375 ms | ~440 MB |
 | 4 workers × 4 threads, gthread (beside it) | off | ~510 | 407 ms | ~122 | 1,006 ms | ~230 MB |
 | 8 workers × 4 threads, gthread (beside it) | off | ~530 | 265 ms | ~141 | 1,204 ms | ~450 MB |
 
-**Mind the access log:** the live service writes every request to the journal (`--access-logfile -`); the
-setups run beside it didn't. At full CPU that log costs about 20% (journald's share), so compare rows
+**Mind the access log:** the live service wrote every request to the journal (`--access-logfile -`); the
+setups run beside it didn't. At full CPU that log cost about 15–20% (journald's share), so compare rows
 with the same log setting. Like for like, 9 workers serve about as many requests at full CPU as 3 did:
-the CPU, not the number of workers, is the limit there. nginx already logs every request, so dropping
-gunicorn's own access log would win that 20% back.
+the CPU, not the number of workers, is the limit there. nginx already logs every request, so gunicorn's
+own access log went (2026-10-24, Amir's go-ahead), and the live service matched the run beside it.
 
 - **No errors** in any run; the CPU was full (90–100%) from 8 clients up with 5 or more workers.
 - **Threads are slower here:** a page is rendered in Python start to finish, and Python's threads queue for

@@ -178,10 +178,10 @@ business address), the `.ir` domain under their national ID.
    (2026-10-23); the Arvan rule for `/models/*` it waited for isn't needed while the 3D bag is off.
 2. **The launch server is bought, running and load-tested** (2026-10-24, 37.32.25.183, 4 cores / 4 GB,
    behind Arvan; resize to 8 cores if needed). gunicorn is on 9 plain workers, so slow cartbecart or SMS
-   calls don't hold up pages; threads were half as fast (LOADTEST.md, *The shop's own server*). It serves
-   the home page ~700–900/s and checkout ~160–200/s with no errors, against an expected spike of 6–12
-   views a second. Optional: drop gunicorn's own access log (`--access-logfile -`; nginx logs every request
-   too) for about 20% more at full CPU.
+   calls don't hold up pages; threads were half as fast (LOADTEST.md, *The shop's own server*). gunicorn
+   keeps no access log of its own (nginx logs every request, `/var/log/nginx/access.log`; errors and the
+   app's messages stay in `journalctl -u purseshop`). It serves the home page ~850/s and checkout ~190/s
+   with no errors, against an expected spike of 6–12 views a second.
 3. **On staging:** a real order end to end (the code now comes by SMS; pay cartbecart's rial amount to
    its card), then refund and cancel it. cartbecart's own test order **TEST-1857E4** (100,017 rials,
    created 2026-10-24 08:33 server time) was handed to Amir to pay; whether its webhook arrived wasn't
@@ -424,6 +424,7 @@ another project's (Finance).
 
 | Date | Commit | What |
 | --- | --- | --- |
+| 2026-10-24 | 62a6ce3 | gunicorn's own access log off (nginx keeps one): the unit re-installed with `server-setup.sh` (same names), then the deploy (no migration; backup `db-20261024-134342.sqlite3`, server time). Live: home ~830–860/s, checkout ~178–199/s (were ~690–760 and ~157–166 with the log), no errors, pages 200 through Arvan |
 | 2026-10-24 | 5247585 | gunicorn on 9 plain workers (was 3), after benchmarking sync and threaded setups on the new server (LOADTEST.md; `tools/loadtest/bench.sh`); units re-installed with `server-setup.sh` (same names), then the deploy (no migration; backup `db-20261024-133815.sqlite3`, server time). The Kavenegar/cartbecart chat's `.env` on the new server untouched. Checked: 9 workers, ~450 MB, no errors, pages 200 through Arvan |
 | 2026-10-24 | 4e1a48e (no deploy) | **Real SMS on the new server**: its `.env` got `SMS_BACKEND=kavenegar`, `KAVENEGAR_API_KEY` and `KAVENEGAR_TEMPLATES=all` (old one at `.env.bak-before-kavenegar`), then a restart. Checked from the server: the key works and a `ps-otp` code reached Amir's phone. (The same edit first went to the old, stopped server by mistake and was undone there.) |
 | 2026-10-24 | 4e1a48e | **The shop moves to its own server, 37.32.25.183** (Amir bought it): packages, swap, user `amir`, the three certificates and their renewal account copied from the old server, `server-setup.sh` with the same names, the old server's `.env`, a sqlite snapshot of the database and `private/` copied, then the deploy (no migration; backup `db-20261024-115607.sqlite3`, server time). Checked on the new IP before the DNS change (pages, redirects, the cartbecart webhook's 401, checkout in a browser on desktop and phone), Amir pointed the records, a marked request reached the new server, the data was identical on both, the old copy stopped, disabled and masked, renewal dry runs for penolinshop.com and `www` passed through Arvan, and a browser pass through Arvan. shop.nisatech.org still reaches the old server (Waiting on Amir) |
