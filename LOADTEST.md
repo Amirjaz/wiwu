@@ -83,7 +83,7 @@ Response times stayed flat; most of the 0.65 s is the network between the PC and
    the second request. The model then never reaches the server again: about 28 ms of CPU and 0.3 MB less
    per visit.
 3. **Stop nginx gzipping the model** *(the server admin re-runs
-   `sudo DOMAIN=penolinshop.com REDIRECT="www.penolinshop.com shop.nisatech.org" bash /home/amir/purseshop-deploy/server-setup.sh` after a fresh
+   `sudo DOMAIN=penolinshop.com REDIRECT="www.penolinshop.com shop.nisatech.org" PANEL="panel.penolinshop.com" bash /home/amir/purseshop-deploy/server-setup.sh` after a fresh
    `scp -r deploy`).* `deploy/nginx/purseshop.conf` no longer lists it. Gzip saved only 18% for
    ~28 ms of CPU each time. This matters less once (2) is done, but it's free.
 

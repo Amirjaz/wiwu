@@ -51,7 +51,8 @@ This page is the short version, plus what isn't written down anywhere else.
     when the nameservers moved (the domain had cPanel mail at Mihanwebhost before, per the public
     certificate logs).
   - **Panel accounts:** `amir` and `salar`, both superusers (Amir set the passwords himself on
-    2026-10-19). Log in at `/panel/` (the store) or `/admin/` (Django, for the Owners/Staff groups).
+    2026-10-19). Log in at `/panel/` (the store; https://panel.penolinshop.com forwards there, 2026-10-24)
+    or `/admin/` (Django, for the Owners/Staff groups).
 - **The bag:** the WiWU Alpha fingerprint-lock clutch, sold as **«کیف دستی ویوو آلفا»** (WiWU as the
   brand in the specs and the search data), in **black and brown** (no silver: the client doesn't have
   it, 2026-10-21), both on sale at one price: **14,100,000 toman**, shipping from Dubai included (the client, 2026-10-20).
@@ -444,6 +445,7 @@ another project's (Finance).
 
 | Date | Commit | What |
 | --- | --- | --- |
+| 2026-10-24 | 48db3f0 | Server only: **panel.penolinshop.com** forwards to penolinshop.com/panel/, keeping the path (`server-setup.sh` takes `PANEL` names; Amir added the A record `panel` → 37.32.25.183, cloud on), with its own certificate (until 2027-01-22, renewal dry run passed through Arvan). Re-run with `REDIRECT="www.penolinshop.com shop.nisatech.org" PANEL="panel.penolinshop.com"`; nginx config before it at `/root/purseshop.nginx.bak-20261024-panel`. Checked: https and http through Arvan and straight to the server, the other names unchanged |
 | 2026-10-24 | 8aa0277 | **Orders over the card-to-card cap paid in several transfers** (migration 0009: `Transfer`, `StoreSettings.transfer_limit_rial` = 150,000,000 rials), on the new server; backup `db-20261024-142320.sqlite3` (server time). No content changed, so the page cache was left. Checked through Arvan: home, checkout, orders, panel, sitemap 200; the live checkout shows the two-zipper bag as 11,500,000 + 5,000,000 toman and the Alpha as one transfer |
 | 2026-10-24 | 62a6ce3 | gunicorn's own access log off (nginx keeps one): the unit re-installed with `server-setup.sh` (same names), then the deploy (no migration; backup `db-20261024-134342.sqlite3`, server time). Live: home ~830–860/s, checkout ~178–199/s (were ~690–760 and ~157–166 with the log), no errors, pages 200 through Arvan |
 | 2026-10-24 | 5247585 | gunicorn on 9 plain workers (was 3), after benchmarking sync and threaded setups on the new server (LOADTEST.md; `tools/loadtest/bench.sh`); units re-installed with `server-setup.sh` (same names), then the deploy (no migration; backup `db-20261024-133815.sqlite3`, server time). The Kavenegar/cartbecart chat's `.env` on the new server untouched. Checked: 9 workers, ~450 MB, no errors, pages 200 through Arvan |

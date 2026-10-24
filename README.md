@@ -357,9 +357,14 @@ applying for Enamad. The warranty, the battery and shipping came from the client
 
 ```bash
 scp -r deploy root@37.32.25.183:purseshop-deploy
-ssh root@37.32.25.183 'DOMAIN=penolinshop.com REDIRECT="www.penolinshop.com shop.nisatech.org" CERT=1 bash purseshop-deploy/server-setup.sh'
+ssh root@37.32.25.183 'DOMAIN=penolinshop.com REDIRECT="www.penolinshop.com shop.nisatech.org" PANEL="panel.penolinshop.com" CERT=1 bash purseshop-deploy/server-setup.sh'
 DOMAIN=penolinshop.com bash deploy/deploy.sh
 ```
+
+**Pass the same `REDIRECT` and `PANEL` on every run of `server-setup.sh`**: a name left out stops
+working. `PANEL` names open the staff panel: https://panel.penolinshop.com forwards to
+https://penolinshop.com/panel/, keeping the rest of the path (`/orders` opens `/panel/orders`), with its
+own certificate (Amir, 2026-10-24; an A record `panel` → 37.32.25.183 in Arvan, cloud on).
 
 `deploy.sh` goes to `amir@37.32.25.183` (`SERVER=` for another). The server is an Arvan cloud server in
 Tehran (بامداد), 4 vCPU, 4 GB, 40 GB SSD, Ubuntu 24.04; `root` and `amir` log in with the deploying PC's
