@@ -24,10 +24,13 @@ This page is the short version, plus what isn't written down anywhere else.
   card, checkout that asks one zipper or two, WiWU's coffee brown.
   - Open to everyone (no password, Amir's choice), but kept out of search engines (noindex).
   - **Real SMS and automatic payments** (2026-10-24): SMS go through Kavenegar's templates
-    (`SMS_BACKEND=kavenegar`, `KAVENEGAR_TEMPLATES=all`; only `ps-otp` is approved so far, so the other
-    messages fail and show in the panel's SMS log until their templates are), and payments through
-    cartbecart (`PAYMENT_PROVIDER=cartbecart`, its key and signing key in `.env`). So checkout works end
-    to end now. No real orders yet.
+    (`SMS_BACKEND=kavenegar`, `KAVENEGAR_TEMPLATES=all`), payments through cartbecart
+    (`PAYMENT_PROVIDER=cartbecart`, its key and signing key in `.env`). **Checkout codes only reach
+    Amir's own number until Kavenegar approves `ps-otp` as a website template**: it was first made as
+    «تست فنی», which Kavenegar sends to the account owner's number only; switched to «وب سایت» the same
+    day (licence «سایر», ویوو, penolinshop.com) and under review, sending with the old version meanwhile.
+    `ps-paid` and `ps-shipped` are under review too; the other messages fail (panel → SMS log) until
+    their templates exist. No real orders yet.
   - Plain http redirects to https.
   - **HTTPS on the server itself** (2026-10-20): Arvan's proxy was off for every nisatech.org record, so
     browsers came straight to the server, and nginx answered https://shop.nisatech.org with nisatak.com
@@ -204,8 +207,14 @@ business address), the `.ir` domain under their national ID.
 8. **Kavenegar:** Amir's account (2026-10-24), identity verified, Advanced plan until 1406-08-01, about
    205,000 toman credit. **The account has no line it may send from**: `2000660110` (from their sample
    code) answers 427 "needs an access level", and with no line named, 412; so everything goes through
-   templates, which need none. `ps-otp` is approved («کد تأیید ویوو: %token»); create the other eleven
-   in their panel → اعتبارسنجی with the texts in `MESSAGES` (`%token`, `%token2`, `%token3` without
+   templates, which need none. Their panel is **console.kavenegar.com** (panel.kavenegar.com no longer
+   resolves); from this PC it opens in Amir's "personal chrome" (amir.m.jaz), not the built-in browser.
+   Templates there must be usage type **«وب سایت»** (licence «سایر», name ویوو, link penolinshop.com):
+   «تست فنی» ones only send to the owner's number. The text must name the brand; for a new template the
+   form adds «ویوو» as a last line by itself (type the text before it). Made on 2026-10-24, all under
+   review: `ps-otp` («کد تأیید ویوو: %token»), `ps-paid` («پرداخت سفارش %token تأیید شد. پیگیری:
+   %token2» + ویوو), `ps-shipped` («سفارش %token با %token10 ارسال شد. کد رهگیری: %token2» + ویوو).
+   The other nine can follow with the texts in `MESSAGES` (`%token`, `%token2`, `%token3` without
    spaces, `%token10` with); each works once approved, nothing to change here. Check with
    `manage.py sms_check [09…]`. The key never goes in git.
 9. **Go live, then Enamad:** PLAN.md §8 and phase 2 in §9. One real 14.1M payment end to end, then refund it.
