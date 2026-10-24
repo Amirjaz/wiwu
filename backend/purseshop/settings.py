@@ -156,10 +156,6 @@ KAVENEGAR_API_KEY = os.getenv('KAVENEGAR_API_KEY', '')
 # Kavenegar panel instead. See shop/sms.py.
 KAVENEGAR_SENDER = os.getenv('KAVENEGAR_SENDER', '').strip()
 KAVENEGAR_TEMPLATES = [k.strip().lower().replace('-', '_') for k in os.getenv('KAVENEGAR_TEMPLATES', '').split(',') if k.strip()]
-# Checkout asks for an SMS code. 'False' places orders without one (Amir, 2026-10-24: off on the live
-# site until Kavenegar approves ps-otp, which meanwhile only reaches his own number); orders are then
-# capped per address instead (orders.ORDERS_IP_PER_HOUR). Finding orders by phone (lookup) keeps its code.
-CHECKOUT_OTP = os.getenv('CHECKOUT_OTP', 'True') == 'True'
 
 # Payment confirmation: 'manual' (staff confirm in the panel) or 'cartbecart' (automatic, from the
 # bank's deposit SMS). Card-to-card either way; see shop/payments.py. The API key (cb_…) and the
@@ -173,7 +169,6 @@ CARTBECART_WEBHOOK_SECRET = os.getenv('CARTBECART_WEBHOOK_SECRET', '')
 # those calls fake them. (A .env with the real Kavenegar key once made the suite send for real.)
 if sys.argv[1:2] == ['test']:
     SMS_BACKEND, KAVENEGAR_API_KEY, KAVENEGAR_TEMPLATES = 'console', '', []
-    CHECKOUT_OTP = True
     PAYMENT_PROVIDER, CARTBECART_API_KEY, CARTBECART_WEBHOOK_SECRET = 'manual', '', ''
 
 LOGGING = {

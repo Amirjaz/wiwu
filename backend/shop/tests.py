@@ -497,8 +497,8 @@ class ApiTests(Base):
         self.assertEqual(response.json()['error'], 'otp_wrong')
         self.assertFalse(Order.objects.exists())
 
-    @override_settings(CHECKOUT_OTP=False)
     def test_no_code_while_otp_off(self):
+        StoreSettings.objects.update(checkout_otp=False)
         for _ in range(orders.ORDERS_IP_PER_HOUR):
             response = self.client.post('/api/orders/', ADDRESS, content_type='application/json')
             self.assertEqual(response.status_code, 200, response.content)

@@ -40,7 +40,7 @@ interface Data {
   payment_minutes: number;
   return_days: number;
   dev_sms: boolean;
-  otp: boolean; // false: orders go in without an SMS code (settings.CHECKOUT_OTP)
+  otp: boolean; // false: orders go in without an SMS code (the panel's settings)
 }
 
 interface Form {

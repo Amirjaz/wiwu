@@ -31,10 +31,11 @@ This page is the short version, plus what isn't written down anywhere else.
     day (licence «سایر», ویوو, penolinshop.com) and under review, sending with the old version meanwhile.
     `ps-paid` and `ps-shipped` are under review too; the other messages fail (panel → SMS log) until
     their templates exist. No real orders yet.
-  - **Checkout keeps its SMS code** (Amir, 2026-10-24: "it's working"). The `CHECKOUT_OTP` switch
-    (15606e2, on by default, not in the server's `.env`) can turn it off if codes stop arriving:
-    `CHECKOUT_OTP=False` in `.env` and a restart. Orders are then capped at 5 per address per hour
-    (`orders.ORDERS_IP_PER_HOUR`); finding orders by phone (/lookup) still asks for a code. Not deployed yet.
+  - **Checkout keeps its SMS code** (Amir, 2026-10-24: "it's working"), but he can switch it off himself:
+    panel → فروشگاه → «کد تأیید پیامکی هنگام سفارش» (`StoreSettings.checkout_otp`, migration 0011, on by
+    default). Off, orders go in without a code, capped at 5 per address per hour
+    (`orders.ORDERS_IP_PER_HOUR`); finding orders by phone (/lookup) still asks for a code. Takes effect on
+    the next checkout page load, no restart. Not deployed yet.
   - Plain http redirects to https.
   - **HTTPS on the server itself** (2026-10-20): Arvan's proxy was off for every nisatech.org record, so
     browsers came straight to the server, and nginx answered https://shop.nisatech.org with nisatak.com

@@ -45,7 +45,7 @@ OTP_GAP = timedelta(seconds=60)  # between two codes to the same phone
 OTP_PER_HOUR = 5  # codes per phone per hour
 OTP_IP_PER_HOUR = 15  # codes per address per hour (stops SMS-pumping from one place)
 OTP_MAX_TRIES = 5
-ORDERS_IP_PER_HOUR = 5  # orders per address per hour while checkout takes no code (settings.CHECKOUT_OTP)
+ORDERS_IP_PER_HOUR = 5  # orders per address per hour while checkout takes no code (StoreSettings.checkout_otp)
 
 
 class OrderError(Exception):
@@ -183,7 +183,7 @@ def place(product, data, ip=None, color=None):
     store = StoreSettings.load()
     if not product.is_available:
         raise OrderError('unavailable')
-    if (not settings.CHECKOUT_OTP and ip
+    if (not store.checkout_otp and ip
             and Order.objects.filter(ip=ip, created_at__gte=timezone.now() - timedelta(hours=1)).count() >= ORDERS_IP_PER_HOUR):
         raise OrderError('order_limit')
     if color is None and product.shown_colors():

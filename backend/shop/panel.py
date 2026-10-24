@@ -365,7 +365,7 @@ def sms_log(request):
 STORE_FIELDS = ('store_name', 'tagline', 'phone', 'email', 'address', 'postal_code', 'hours', 'instagram',
                 'owner_mobile', 'shipping_post_rial', 'shipping_tipax_rial', 'tipax_on_delivery', 'post_days', 'tipax_days',
                 'payment_minutes', 'reminder_minutes', 'return_days', 'transfer_limit_rial',
-                'sheba', 'sheba_holder', 'sheba_bank', 'sheba_minutes', 'enamad_html')
+                'sheba', 'sheba_holder', 'sheba_bank', 'sheba_minutes', 'checkout_otp', 'enamad_html')
 # The cap for one card-to-card: 0 (never split) or at least 10M toman, so an order splits into a few round
 # 5M transfers at most (orders.split_amounts).
 TRANSFER_LIMIT_MIN_RIAL = 100_000_000
