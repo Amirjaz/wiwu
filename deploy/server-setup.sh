@@ -4,28 +4,34 @@
 # needs nginx, certbot, python3-certbot-nginx and python3-venv, swap, and the deploy user with the
 # deployer's SSH key first (README -> Deploying, *A new server*). Then, as root:
 #   scp -r deploy root@37.32.25.183:purseshop-deploy
-#   ssh root@37.32.25.183 'DOMAIN=<host> REDIRECT="<names>" CERT=1 bash purseshop-deploy/server-setup.sh'
+#   ssh root@37.32.25.183 'DOMAIN=<host> REDIRECT="<names>" PANEL="<names>" CERT=1 bash purseshop-deploy/server-setup.sh'
 # DOMAIN: the site's host name (penolinshop.com since 2026-10-24; shop.nisatech.org before).
 # REDIRECT: other names (space-separated) that send visitors to DOMAIN, keeping the path: its www and
 # any address the shop used to have, e.g. REDIRECT="www.penolinshop.com shop.nisatech.org".
+# PANEL: names that open the staff panel, DOMAIN/panel/, keeping the rest of the path (Amir, 2026-10-24:
+# PANEL="panel.penolinshop.com"; panel.penolinshop.com/orders opens penolinshop.com/panel/orders).
 # STAGING=1 puts the whole site behind a password (asked for here) except the payment webhook.
-# CERT=1 gets DOMAIN and each REDIRECT name its own Let's Encrypt certificate (once; certbot.timer renews
+# CERT=1 gets DOMAIN and each REDIRECT and PANEL name its own Let's Encrypt certificate (once; certbot.timer renews
 # them) so they answer HTTPS themselves, for when Arvan's proxy is off or connects over HTTPS. Re-runs
 # keep HTTPS on once a name has one.
 # Safe to re-run (do, after changing anything under deploy/nginx or deploy/systemd). Pass the same
-# REDIRECT every time: a name left out stops redirecting.
+# REDIRECT and PANEL every time: a name left out stops redirecting.
 set -euo pipefail
 
 DEPLOY_USER=${DEPLOY_USER:-amir}
 DOMAIN=${DOMAIN:?set DOMAIN, e.g. DOMAIN=penolinshop.com}
 REDIRECT=${REDIRECT:-}
+PANEL=${PANEL:-}
 STAGING=${STAGING:-0}
 ROOT=/srv/purseshop
 HERE=$(cd "$(dirname "$0")" && pwd)
 
 [ "$(id -u)" -eq 0 ] || { echo "Run with sudo."; exit 1; }
-for name in $REDIRECT; do
-  [ "$name" != "$DOMAIN" ] || { echo "REDIRECT must not include DOMAIN ($DOMAIN)." >&2; exit 1; }
+for name in $REDIRECT $PANEL; do
+  [ "$name" != "$DOMAIN" ] || { echo "REDIRECT and PANEL must not include DOMAIN ($DOMAIN)." >&2; exit 1; }
+done
+for name in $PANEL; do
+  case " $REDIRECT " in *" $name "*) echo "$name is in both REDIRECT and PANEL." >&2; exit 1 ;; esac
 done
 
 echo "==> Service user 'purseshop' and $ROOT"
@@ -57,9 +63,9 @@ else
   : > "$ACCESS"
 fi
 
-echo "==> nginx site for $DOMAIN${REDIRECT:+ (and $REDIRECT, sent to it)}"
+echo "==> nginx site for $DOMAIN${REDIRECT:+ (and $REDIRECT, sent to it)}${PANEL:+ (and $PANEL, sent to its panel)}"
 # HTTPS lines for a server block, once its name has a certificate (empty until then): the shop's block
-# includes purseshop-tls.conf, each REDIRECT name's block purseshop-tls-<name>.conf.
+# includes purseshop-tls.conf, each REDIRECT or PANEL name's block purseshop-tls-<name>.conf.
 tls_file() {
   if [ "$1" = "$DOMAIN" ]; then echo /etc/nginx/snippets/purseshop-tls.conf
   else echo "/etc/nginx/snippets/purseshop-tls-$1.conf"; fi
@@ -74,12 +80,16 @@ write_tls() {  # $1: a host name
     : > "$(tls_file "$1")"
   fi
 }
-for name in $DOMAIN $REDIRECT; do write_tls "$name"; done
+for name in $DOMAIN $REDIRECT $PANEL; do write_tls "$name"; done
 {
   sed "s/__DOMAIN__/$DOMAIN/" "$HERE/nginx/purseshop.conf"
   for name in $REDIRECT; do
     echo
-    sed -e "s/__NAME__/$name/g" -e "s/__DOMAIN__/$DOMAIN/g" "$HERE/nginx/purseshop-redirect.conf"
+    sed -e "s|__NAME__|$name|g" -e "s|__TARGET__|$DOMAIN|g" "$HERE/nginx/purseshop-redirect.conf"
+  done
+  for name in $PANEL; do
+    echo
+    sed -e "s|__NAME__|$name|g" -e "s|__TARGET__|$DOMAIN/panel|g" "$HERE/nginx/purseshop-redirect.conf"
   done
 } > /etc/nginx/sites-available/purseshop
 ln -sf /etc/nginx/sites-available/purseshop /etc/nginx/sites-enabled/purseshop
@@ -92,7 +102,7 @@ fi
 systemctl reload nginx
 
 if [ "${CERT:-0}" = 1 ]; then
-  for name in $DOMAIN $REDIRECT; do
+  for name in $DOMAIN $REDIRECT $PANEL; do
     if [ -f "/etc/letsencrypt/live/$name/fullchain.pem" ]; then continue; fi
     echo "==> Let's Encrypt certificate for $name"
     # Checked over plain HTTP on the blocks above; the reload hook puts each renewal in use.
