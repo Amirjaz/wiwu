@@ -18,6 +18,7 @@ urlpatterns = [
     path('api/orders/', views.api_place),
     path('api/orders/<str:token>/', views.api_order),
     path('api/orders/<str:token>/claim/', views.api_claim),
+    path('api/orders/<str:token>/sheba/', views.api_sheba),
     path('api/orders/<str:token>/return/', views.api_return),
     path('api/lookup/', views.api_lookup),
     path('api/payments/cartbecart/', views.cartbecart_webhook),

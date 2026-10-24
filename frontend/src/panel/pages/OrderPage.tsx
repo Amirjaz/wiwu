@@ -61,6 +61,9 @@ export default function OrderPage() {
   const shippable = ['paid', 'preparing'].includes(order.status);
   const cancellable = ['awaiting_payment', 'needs_review', 'expired', 'paid', 'preparing'].includes(order.status);
   const address = `${order.province}، ${order.city}، ${order.address}`;
+  const amount = (rialAmount: number) => (order.pay_in_rial ? `${rial(rialAmount)} ریال` : `${toman(rialAmount)} تومان`);
+  const split = order.transfers.length > 1;
+  const looking = split ? order.transfers.map((t) => amount(t.amount_rial)).join(' و ') : amount(order.amount_rial);
 
   function ship(event: FormEvent) {
     event.preventDefault();
@@ -79,10 +82,30 @@ export default function OrderPage() {
 
       {reviewable && (
         <Box title="پرداخت">
-          <p className="text-ink-soft leading-relaxed">
-            در حساب کارت <span className="ltr font-semibold text-ink">{fa(groupCard(order.card.number))}</span> ({order.card.bank}) دنبال واریز
-            دقیق <strong className="text-ink">{toman(order.amount_rial)} تومان</strong> بگردید.
+          {order.sheba && (
+            <p className="text-ink-soft leading-relaxed">
+              خریدار <strong className="text-ink">شبا</strong> را انتخاب کرده: در حساب شبای <span className="ltr font-semibold text-ink">{order.sheba.number}</span>
+              {order.sheba.bank && ` (${order.sheba.bank})`} دنبال یک واریز دقیق <strong className="text-ink">{amount(order.amount_rial)}</strong> بگردید.
+              اگر به کارت هم واریز کرده باشد، کارت‌به‌کارت خودکار تأییدش می‌کند.
+            </p>
+          )}
+          <p className={order.sheba ? 'text-sm text-muted leading-relaxed' : 'text-ink-soft leading-relaxed'}>
+            {order.sheba && 'یا '}در حساب کارت <span className="ltr font-semibold text-ink">{fa(groupCard(order.card.number))}</span> ({order.card.bank})
+            {split
+              ? <> دنبال {fa(order.transfers.length)} واریز جدا با این مبلغ‌های دقیق بگردید: <strong className="text-ink">{looking}</strong>.</>
+              : <> دنبال واریز دقیق <strong className="text-ink">{looking}</strong> بگردید.</>}
           </p>
+          {split && (
+            <ul className="grid gap-1 text-sm">
+              {order.transfers.map((t) => (
+                <li key={t.position} className="flex flex-wrap gap-x-3">
+                  <span>واریز {fa(t.position)}: {amount(t.amount_rial)}</span>
+                  <span className={t.status === 'paid' ? 'text-accent-ink font-semibold' : 'text-muted'}>{t.status_label}{t.paid_at ? ` (${when(t.paid_at)})` : ''}</span>
+                  {t.provider_ref && <span className="ltr text-muted">{t.provider_ref}</span>}
+                </li>
+              ))}
+            </ul>
+          )}
           {order.claim.at ? (
             <div className="grid gap-2 rounded-[var(--radius-field)] bg-warn-soft text-warn p-4">
               <p className="font-semibold">خریدار اعلام پرداخت کرده ({when(order.claim.at)})</p>
@@ -102,7 +125,7 @@ export default function OrderPage() {
           {can.approve ? (
             <div className="flex flex-wrap gap-3">
               <button type="button" className="btn btn-primary" disabled={!!busy}
-                onClick={() => act('approve', {}, `واریز ${toman(order.amount_rial)} تومان را در حساب دیدید؟ سفارش پرداخت‌شده ثبت می‌شود و به خریدار پیامک می‌رود.`)}>
+                onClick={() => act('approve', {}, `${split ? `هر ${fa(order.transfers.length)} واریز (${looking})` : `واریز ${looking}`} را در حساب دیدید؟ سفارش پرداخت‌شده ثبت می‌شود و به خریدار پیامک می‌رود.`)}>
                 {busy === 'approve' ? '…' : 'تأیید پرداخت'}
               </button>
               {order.status === 'needs_review' && (
@@ -153,8 +176,19 @@ export default function OrderPage() {
           <Row label={`ارسال (${order.shipping})`}>{shippingFee(order.shipping_rial, order.shipping_on_delivery)}</Row>
           <Row label="شناسه واریز">{order.pay_in_rial ? `${fa(order.offset_rial)} ریال` : toman(order.offset_rial)}</Row>
           <Row label={order.pay_in_rial ? 'جمع (ریال)' : 'جمع (تومان)'}><span className="text-lg">{order.pay_in_rial ? rial(order.amount_rial) : toman(order.amount_rial)}</span></Row>
+          <Row label="روش پرداخت">{order.payment_label}</Row>
+          {order.payment_codes.length > 0 && (
+            <Row label={order.payment_method === 'sheba' ? 'شماره پیگیری شبا' : 'کد پرداخت (کارت‌به‌کارت)'}>
+              <span className="ltr">{order.payment_codes.join('، ')}</span>
+            </Row>
+          )}
+          {order.sheba && <Row label="شبا"><span className="ltr">{order.sheba.number}</span></Row>}
           <Row label="کارت">{order.card.bank} <span className="ltr">…{fa(order.card.number.slice(-4))}</span></Row>
-          {order.provider_ref && <Row label="کارت‌به‌کارت"><span className="ltr">{order.provider_ref}</span></Row>}
+          {split && order.transfers.map((t) => (
+            <Row key={t.position} label={`واریز ${fa(t.position)}${t.provider_ref ? ` (${t.provider_ref})` : ''}`}>
+              {amount(t.amount_rial)} · {t.status_label}
+            </Row>
+          ))}
           {order.paid_at && <Row label="پرداخت">{when(order.paid_at)}، {order.paid_via === 'auto' ? 'خودکار' : `دستی${order.confirmed_by ? ` (${order.confirmed_by})` : ''}`}</Row>}
         </Box>
       </div>

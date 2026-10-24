@@ -9,6 +9,10 @@ order's status.
 
 With cartbecart (payments.py) they choose the amount and card and report the result; without it the
 shop chooses them and staff confirm every payment.
+
+An order over the bank's cap for one card-to-card transfer is paid in several (split_amounts, Transfer),
+each with its own exact amount: it's paid once all have arrived, and goes to review if the window ends
+with only some.
 """
 import hashlib
 import hmac
@@ -24,7 +28,7 @@ from django.db.models import Q
 from django.utils import timezone
 
 from . import payments, sms
-from .models import (AuditLog, Card, Color, Order, OtpCode, PaymentEvent, ReturnRequest, StoreSettings,
+from .models import (AuditLog, Card, Color, Order, OtpCode, PaymentEvent, ReturnRequest, StoreSettings, Transfer,
                      new_order_code, new_order_token)
 from .persian import bank_of, fa_digits, money, toman
 
@@ -33,6 +37,8 @@ log = logging.getLogger(__name__)
 OPEN = (Order.Status.AWAITING, Order.Status.REVIEW)
 LATE_MATCH_HOURS = 48  # money for an expired order still finds it this long after it was placed
 OFFSET_MAX_TOMAN = 999
+SPLIT_MARGIN_RIAL = 10_000  # room under the cap for the offset: up to 999 rials with cartbecart, 999 tomans without
+SPLIT_PART_RIAL = 50_000_000  # the round transfers split off an order over the cap: 5M toman (Amir, 2026-10-24)
 
 OTP_TTL = timedelta(minutes=5)
 OTP_GAP = timedelta(seconds=60)  # between two codes to the same phone
@@ -105,24 +111,44 @@ def check_otp(phone, code):
 # ── Placing an order ────────────────────────────────────────────────────────────────────────────
 
 def _amounts_in_use():
-    """Amounts a payment could still arrive for: open orders, and recently expired ones."""
+    """Amounts a payment could still arrive for: open orders and their transfers, and recently expired ones."""
     since = timezone.now() - timedelta(hours=LATE_MATCH_HOURS)
-    return set(
-        Order.objects.filter(status__in=OPEN).values_list('amount_rial', flat=True)
-    ) | set(
-        Order.objects.filter(status=Order.Status.EXPIRED, created_at__gte=since).values_list('amount_rial', flat=True)
-    )
+    live = Q(status__in=OPEN) | Q(status=Order.Status.EXPIRED, created_at__gte=since)
+    return set(Order.objects.filter(live).values_list('amount_rial', flat=True)) | set(
+        Transfer.objects.filter(order__in=Order.objects.filter(live)).values_list('amount_rial', flat=True))
 
 
-def choose_amount(base_rial):
+def choose_amount(base_rial, also_taken=()):
     """base + a random 1…999 toman no open order has, so a bank deposit points at exactly one order.
-    The buyer pays the extra (decided 2026-10-14)."""
-    taken = _amounts_in_use()
+    The buyer pays the extra (decided 2026-10-14). also_taken: amounts just given to the same order's
+    other transfers."""
+    taken = _amounts_in_use() | set(also_taken)
     free = [t * 10 for t in range(1, OFFSET_MAX_TOMAN + 1) if base_rial + t * 10 not in taken]
     if not free:
         raise OrderError('busy')
     offset = random.choice(free)
     return offset, base_rial + offset
+
+
+def split_amounts(base_rial, limit_rial):
+    """What an order of base_rial is paid in, before each transfer's offset: one transfer when it fits under
+    the bank's cap for one card-to-card (limit_rial; 0 for none); above it the rest first, then round
+    5-million-toman transfers, as few as keep the first under the cap (Amir, 2026-10-24: 16.5M toman is
+    11.5M + 5M with a 15M cap)."""
+    room = limit_rial - SPLIT_MARGIN_RIAL
+    if not limit_rial or base_rial <= room or room < SPLIT_PART_RIAL:
+        return [base_rial]
+    count = -(-(base_rial - room) // SPLIT_PART_RIAL)  # round transfers needed, rounded up
+    return [base_rial - count * SPLIT_PART_RIAL] + [SPLIT_PART_RIAL] * count
+
+
+def amount_text(order):
+    """The amount to pay, with its unit, as SMS and the log say it: one, or each transfer's."""
+    transfers = list(order.transfers.all())
+    if not transfers:
+        return money(order.amount_rial, order.pay_in_rial)
+    in_rial = order.pay_in_rial
+    return ' و '.join(money(t.amount_rial, in_rial) for t in transfers) + f' (در {fa_digits(len(transfers))} واریز جدا)'
 
 
 def _next_card():
@@ -167,58 +193,86 @@ def place(product, data, ip=None, color=None):
         unit_price_rial=product.price_rial, shipping_rial=shipping_rial,
         shipping_on_delivery=store.shipping_on_delivery(data['shipping']), ip=ip,
     )
-    base = product.price_rial + shipping_rial
-    order = _place_cartbecart(base, fields) if payments.enabled() else _place_manual(base, fields, store)
-    amount = money(order.amount_rial, order.pay_in_rial)
-    audit('placed', order, detail=f'{amount}، کارت …{order.card_number[-4:]}'
-          + (f'، کارت‌به‌کارت {order.provider_ref}' if order.provider_ref else ''))
+    parts = split_amounts(product.price_rial + shipping_rial, store.transfer_limit_rial)
+    order = _place_cartbecart(parts, fields) if payments.enabled() else _place_manual(parts, fields, store)
+    amount = amount_text(order)
+    refs = '، '.join(t.provider_ref for t in order.transfers.all() if t.provider_ref) or order.provider_ref
+    audit('placed', order, detail=f'{amount}، کارت …{order.card_number[-4:]}' + (f'، کارت‌به‌کارت {refs}' if refs else ''))
     minutes = max(1, round((order.expires_at - timezone.now()).total_seconds() / 60))
     sms.send('order_created', order.phone, order, code=order.code, amount=amount, link=link(order),
              minutes=fa_digits(minutes))
     return order
 
 
-def _place_manual(base, fields, store):
-    """The shop picks the amount and the card (see choose_amount, _next_card)."""
+def _place_manual(parts, fields, store):
+    """The shop picks the amounts and the card (see choose_amount, _next_card); parts from split_amounts."""
     for _ in range(5):
         try:
             # IMMEDIATE transactions (settings) serialise writers, so two buyers can't get one amount.
             with transaction.atomic():
-                offset, amount = choose_amount(base)
+                picks = []
+                for part in parts:
+                    offset, amount = choose_amount(part, [a for _, a in picks])
+                    picks.append((offset, amount))
                 card = _next_card()
-                return Order.objects.create(
-                    **fields, offset_rial=offset, amount_rial=amount, card=card, card_bank=card.bank,
-                    card_number=card.number, card_holder=card.holder,
-                    expires_at=timezone.now() + timedelta(minutes=store.payment_minutes),
+                expires = timezone.now() + timedelta(minutes=store.payment_minutes)
+                order = Order.objects.create(
+                    **fields, offset_rial=sum(o for o, _ in picks), amount_rial=sum(a for _, a in picks), card=card,
+                    card_bank=card.bank, card_number=card.number, card_holder=card.holder, expires_at=expires,
                 )
+                if len(picks) > 1:
+                    Transfer.objects.bulk_create([
+                        Transfer(order=order, position=i, amount_rial=amount, offset_rial=offset, card=card,
+                                 card_bank=card.bank, card_number=card.number, card_holder=card.holder, expires_at=expires)
+                        for i, (offset, amount) in enumerate(picks, 1)])
+                return order
         except IntegrityError:  # code or token collision: try new ones
             continue
     raise OrderError('busy')
 
 
-def _place_cartbecart(base, fields):
-    """cartbecart picks the amount and the card. Its call is made outside any transaction, so a slow
-    answer doesn't hold up other buyers' writes."""
+def _registered_card(reg):
+    """The card cartbecart chose, as the order keeps it. Staff may have it in the panel, with its bank's name."""
+    card = Card.objects.filter(number=reg['card_number']).first()
+    return dict(card=card, card_bank=card.bank if card else bank_of(reg['card_number']), card_number=reg['card_number'],
+                card_holder=reg['card_holder'] or (card.holder if card else ''))
+
+
+def _place_cartbecart(parts, fields):
+    """cartbecart picks the amounts and the card, one registration per transfer (merchant_order_id the
+    order's code, or "<code>-<n>" for each of several). Their calls are made outside any transaction, so a
+    slow answer doesn't hold up other buyers' writes."""
     for _ in range(5):
         code, token = new_order_code(), new_order_token()
         if not Order.objects.filter(Q(code=code) | Q(token=token)).exists():
             break
+    regs = []
     try:
-        reg = payments.create_order(code, base, f'{settings.PUBLIC_URL}/o/{token}/', fields['name'], fields['phone'])
-    except payments.CartbecartError as exc:
+        for i, part in enumerate(parts, 1):
+            regs.append(payments.create_order(code if len(parts) == 1 else f'{code}-{i}', part,
+                                              f'{settings.PUBLIC_URL}/o/{token}/', fields['name'], fields['phone']))
+    except payments.CartbecartError as exc:  # any registered already just run out unpaid
         log.warning('cartbecart refused order %s: %s', code, exc)
         _payment_down(exc)
         raise OrderError('payment_down') from None
-    # Staff may have the same card in the panel, with its bank's name.
-    card = Card.objects.filter(number=reg['card_number']).first()
+    first = regs[0]
     try:
-        return Order.objects.create(
-            **fields, code=code, token=token, offset_rial=reg['amount_rial'] - base, amount_rial=reg['amount_rial'],
-            card=card, card_bank=card.bank if card else bank_of(reg['card_number']), card_number=reg['card_number'],
-            card_holder=reg['card_holder'] or (card.holder if card else ''), expires_at=reg['expires_at'],
-            provider_token=reg['token'], provider_ref=reg['ref'],
-        )
-    except IntegrityError:  # a code taken in the moment between: their order just runs out unpaid
+        with transaction.atomic():
+            order = Order.objects.create(
+                **fields, code=code, token=token, **_registered_card(first),
+                offset_rial=sum(r['amount_rial'] for r in regs) - sum(parts),
+                amount_rial=sum(r['amount_rial'] for r in regs), expires_at=min(r['expires_at'] for r in regs),
+                provider_token=first['token'] if len(regs) == 1 else '',
+                provider_ref=first['ref'] if len(regs) == 1 else '',
+            )
+            if len(regs) > 1:
+                Transfer.objects.bulk_create([
+                    Transfer(order=order, position=i, amount_rial=reg['amount_rial'], offset_rial=reg['amount_rial'] - part,
+                             expires_at=reg['expires_at'], provider_token=reg['token'], provider_ref=reg['ref'],
+                             **_registered_card(reg))
+                    for i, (reg, part) in enumerate(zip(regs, parts), 1)])
+            return order
+    except IntegrityError:  # a code taken in the moment between: their orders just run out unpaid
         raise OrderError('busy') from None
 
 
@@ -234,8 +288,14 @@ def _payment_down(exc):
 # ── Payment ─────────────────────────────────────────────────────────────────────────────────────
 
 def refresh(order):
-    """Expire the order if its window is over (the minute timer does this too; pages can't wait)."""
+    """Expire the order if its window is over (the minute timer does this too; pages can't wait). One paid
+    in several transfers that has only some of them goes to review instead: money came, staff sort it out
+    (the rest may still arrive and pay it, or the buyer gets a refund)."""
     if order.status == Order.Status.AWAITING and timezone.now() >= order.expires_at:
+        arrived = order.transfers.filter(status=Transfer.Status.PAID).count()
+        if arrived:
+            to_review(order, f'فقط {fa_digits(arrived)} واریز از {fa_digits(order.transfers.count())} واریز رسید')
+            return order
         updated = Order.objects.filter(pk=order.pk, status=Order.Status.AWAITING).update(status=Order.Status.EXPIRED)
         if updated:
             order.status = Order.Status.EXPIRED
@@ -245,10 +305,15 @@ def refresh(order):
 
 def mark_paid(order, via, user=None, detail=''):
     with transaction.atomic():
+        now = timezone.now()
         updated = Order.objects.filter(pk=order.pk, status__in=OPEN + (Order.Status.EXPIRED,)).update(
-            status=Order.Status.PAID, paid_at=timezone.now(), paid_via=via,
+            status=Order.Status.PAID, paid_at=now, paid_via=via,
             confirmed_by=user if user and user.is_authenticated else None,
+            # cartbecart only ever confirms card-to-card: a buyer who opened the Sheba tab paid by card after all.
+            **({'payment_method': Order.Method.CARD} if via == 'auto' else {}),
         )
+        if updated:  # staff confirming by hand saw every transfer
+            order.transfers.exclude(status=Transfer.Status.PAID).update(status=Transfer.Status.PAID, paid_at=now)
     if not updated:
         return False
     order.refresh_from_db()
@@ -328,6 +393,53 @@ def provider_result(order, status, reason=''):
     return 'ignored'
 
 
+TRANSFER_STATUS = {'paid': Transfer.Status.PAID, 'needs_review': Transfer.Status.REVIEW,
+                   'expired': Transfer.Status.EXPIRED, 'cancelled': Transfer.Status.CANCELLED}
+
+
+def transfer_result(transfer, status, reason=''):
+    """What cartbecart says about one transfer of an order paid in several. The last to arrive pays the
+    order; one arriving alone after the window, or refused while another has arrived, puts it in review.
+    Otherwise the order goes as a single one would (provider_result). Returns the outcome for the log
+    ('part' for a transfer that arrived while others are still missing)."""
+    order = refresh(transfer.order)
+    which = f'واریز {fa_digits(transfer.position)} از {fa_digits(order.transfers.count())}'
+    if status == 'paid':
+        if not Transfer.objects.filter(pk=transfer.pk).exclude(status=Transfer.Status.PAID).update(
+                status=Transfer.Status.PAID, paid_at=timezone.now()):
+            return 'noop'
+        audit('transfer_paid', order, detail=f'{which}: {money(transfer.amount_rial, order.pay_in_rial)}')
+        if not order.transfers.exclude(status=Transfer.Status.PAID).exists():
+            return provider_result(order, 'paid')
+        if order.status == Order.Status.EXPIRED:
+            to_review(order, f'کارت‌به‌کارت {which} را پس از مهلت تأیید کرد؛ واریز دیگر نرسیده')
+        elif order.status == Order.Status.CANCELLED:
+            return provider_result(order, 'paid')  # money for a cancelled order: 'late', the owner is told
+        return 'part'
+    if status not in TRANSFER_STATUS:
+        return 'ignored'
+    Transfer.objects.filter(pk=transfer.pk).exclude(status=Transfer.Status.PAID).update(status=TRANSFER_STATUS[status])
+    refused = status == 'cancelled' or (status == 'expired' and reason and reason != 'timeout')
+    if refused and order.transfers.filter(status=Transfer.Status.PAID).exists():
+        why = f'کارت‌به‌کارت {which} را رد یا لغو کرد، ولی واریز دیگری رسیده؛ برگرداندن یا تکمیل پول را پیگیری کنید'
+        return 'review' if to_review(order, why) else 'noop'
+    return provider_result(order, status, reason)
+
+
+def _find(code):
+    """The order, and the transfer if it's one of several, cartbecart means by a merchant_order_id."""
+    if not code or code.startswith('TEST-'):
+        return None, None
+    order = Order.objects.filter(code=code).first()
+    if order is None:
+        prefix, _, position = code.rpartition('-')
+        if prefix and position.isdigit():
+            transfer = Transfer.objects.select_related('order').filter(order__code=prefix, position=int(position)).first()
+            if transfer:
+                return transfer.order, transfer
+    return order, None
+
+
 def cartbecart_event(body):
     """One webhook call, its signature already checked. Returns the PaymentEvent (unsaved for a repeat)."""
     event = payments.parse_event(body)
@@ -336,18 +448,21 @@ def cartbecart_event(body):
             source='cartbecart', outcome='unparsed', payload={'raw': (body or b'')[:2000].decode('utf-8', 'replace')})
     if event['event_id'] and PaymentEvent.objects.filter(source='cartbecart', provider_ref=event['event_id']).exists():
         return PaymentEvent(source='cartbecart', outcome='repeat')  # "at least once": seen it already
-    order = Order.objects.filter(code=event['code']).first() if event['code'] else None
+    order, transfer = _find(event['code'])
+    expected = transfer or order
     record = PaymentEvent(source='cartbecart', order=order, amount_rial=event['amount_rial'],
                           provider_ref=event['event_id'], payload=event['payload'])
     if order is None:
         # manage.py cartbecart_check's test orders, or an order that isn't this site's.
         record.outcome = 'test' if event['code'].startswith('TEST-') else 'unmatched'
-    elif (event['amount_rial'] and event['amount_rial'] != order.amount_rial) or (
-            event['ref'] and order.provider_ref and event['ref'] != order.provider_ref):
+    elif (event['amount_rial'] and event['amount_rial'] != expected.amount_rial) or (
+            event['ref'] and expected.provider_ref and event['ref'] != expected.provider_ref):
         to_review(order, f'کارت‌به‌کارت درباره‌ی سفارش دیگری با همین کد خبر داد ({event["ref"]})')
         record.outcome = 'mismatch'
     elif event['status'] is None:
         record.outcome = 'ignored'
+    elif transfer:
+        record.outcome = transfer_result(transfer, event['status'], event['reason'])
     else:
         record.outcome = provider_result(order, event['status'], event['reason'])
     record.save()
@@ -358,32 +473,61 @@ def sync_cartbecart(now=None):
     """The minute timer's backup for a missed webhook: asks cartbecart about our orders whose result
     could still change (each at most every SYNC_EVERY seconds). Returns how many changed."""
     now = now or timezone.now()
-    waiting = (Order.objects.exclude(provider_token='')
+    waiting = (Order.objects.filter(~Q(provider_token='') | Q(transfers__provider_token__gt=''))
                .filter(Q(status=Order.Status.AWAITING)
                        | Q(status=Order.Status.EXPIRED, expires_at__gte=now - CARTBECART_GRACE)
                        | Q(status=Order.Status.REVIEW, created_at__gte=now - timedelta(days=7)))
-               .order_by('created_at'))
+               .distinct().order_by('created_at'))
     changed = checked = 0
     for order in waiting:
         if checked >= SYNC_MAX:
             break
         if not cache.add(f'cartbecart-sync:{order.pk}', 1, SYNC_EVERY):
             continue
-        checked += 1
-        try:
-            status = payments.order_status(order.provider_token).get('status')
-        except payments.CartbecartError as exc:
-            log.warning('cartbecart status of %s: %s', order.code, exc)
-            if exc.status in (None, 429):  # unreachable, or too many calls: try again next minute
+        # Each transfer still missing, for an order paid in several; else the order itself.
+        targets = [t for t in order.transfers.exclude(status=Transfer.Status.PAID) if t.provider_token]
+        if not targets and order.provider_token:
+            targets = [None]
+        for transfer in targets:
+            checked += 1
+            try:
+                status = payments.order_status((transfer or order).provider_token).get('status')
+            except payments.CartbecartError as exc:
+                log.warning('cartbecart status of %s: %s', transfer or order.code, exc)
+                if exc.status in (None, 429):  # unreachable, or too many calls: try again next minute
+                    return changed
+                continue
+            if status in ('paid', 'needs_review'):
+                outcome = transfer_result(transfer, status) if transfer else provider_result(order, status)
+                if outcome in ('matched', 'review', 'late', 'part'):
+                    PaymentEvent.objects.create(
+                        source='cartbecart', order=order, amount_rial=(transfer or order).amount_rial, outcome=outcome,
+                        payload={'status': status, 'via': 'status check',
+                                 **({'transfer': transfer.position} if transfer else {})})
+                    changed += 1
+            order.refresh_from_db()
+            if order.status not in OPEN + (Order.Status.EXPIRED,):
                 break
-            continue
-        if status in ('paid', 'needs_review'):
-            outcome = provider_result(order, status)
-            if outcome in ('matched', 'review', 'late'):
-                PaymentEvent.objects.create(source='cartbecart', order=order, amount_rial=order.amount_rial,
-                                            outcome=outcome, payload={'status': status, 'via': 'status check'})
-                changed += 1
     return changed
+
+
+def choose_sheba(order):
+    """The buyer pays by Sheba instead of card-to-card (Amir, 2026-10-24): the whole amount in one transfer
+    to the shop's Sheba, checked by staff, so the order waits StoreSettings.sheba_minutes from now. A
+    card-to-card payment still pays it if it comes. Only while the order awaits payment."""
+    store = StoreSettings.load()
+    refresh(order)
+    if order.status != Order.Status.AWAITING or not store.sheba:
+        raise OrderError('sheba_closed')
+    if order.payment_method != Order.Method.SHEBA:
+        until = max(order.expires_at, timezone.now() + timedelta(minutes=store.sheba_minutes))
+        Order.objects.filter(pk=order.pk, status=Order.Status.AWAITING).update(
+            payment_method=Order.Method.SHEBA, sheba_number=store.sheba, sheba_holder=store.sheba_holder,
+            sheba_bank=store.sheba_bank, expires_at=until)
+        order.refresh_from_db()
+        audit('sheba_chosen', order, detail=f'{money(order.amount_rial, order.pay_in_rial)}، تا '
+                                             f'{fa_digits(timezone.localtime(until).strftime("%H:%M"))}')
+    return order
 
 
 def claim(order, data, upload=None):
@@ -450,8 +594,10 @@ def tick(now=None):
     store = StoreSettings.load()
     done = {'reminded': 0, 'expired': 0, 'alerted': False}
 
+    # Not for Sheba: it takes longer by nature, and the buyer has said how they pay.
     due = Order.objects.filter(status=Order.Status.AWAITING, reminder_sent_at=None, expires_at__gt=now,
-                               created_at__lte=now - timedelta(minutes=store.reminder_minutes))
+                               created_at__lte=now - timedelta(minutes=store.reminder_minutes),
+                               payment_method=Order.Method.CARD)
     for order in due:
         if Order.objects.filter(pk=order.pk, reminder_sent_at=None).update(reminder_sent_at=now):
             sms.send('reminder', order.phone, order, code=order.code, link=link(order))
@@ -471,7 +617,8 @@ def _check_forwarder(store, now):
     if settings.PAYMENT_PROVIDER != 'cartbecart' or not store.owner_mobile:
         return False
     window = now - timedelta(hours=3)
-    silent = Order.objects.filter(status=Order.Status.EXPIRED, claimed_at=None, created_at__gte=window)
+    silent = Order.objects.filter(status=Order.Status.EXPIRED, claimed_at=None, created_at__gte=window,
+                                  payment_method=Order.Method.CARD)  # Sheba never reaches cartbecart
     first = silent.order_by('created_at').first()
     if silent.count() < 2 or Order.objects.filter(paid_via='auto', paid_at__gte=first.created_at).exists():
         return False

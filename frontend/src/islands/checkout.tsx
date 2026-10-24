@@ -28,6 +28,7 @@ interface Model {
   price_rial: number;
   available: boolean;
   colors: Color[]; // the colours on show; the buyer picks only when there's more than one
+  transfers: Record<string, number[]>; // per way to send: more than one when the total is over the bank's cap
 }
 
 interface Data {
@@ -370,6 +371,12 @@ function Checkout({ data }: { data: Data }) {
         <div className="flex justify-between gap-4"><span className="text-ink-soft">ارسال با {shipping.name}</span><span>{shippingFee(shipping.price_rial, shipping.on_delivery)}</span></div>
         <div className="flex justify-between gap-4 border-t border-line pt-3 text-lg font-bold"><span>جمع</span><span>{toman(total)} تومان</span></div>
         <p className="text-sm text-muted leading-relaxed">برای اینکه واریز شما بی‌اشتباه شناخته شود، چند تومان (کمتر از هزار تومان) به مبلغ پرداخت اضافه می‌شود.</p>
+        {(model.transfers[form.shipping]?.length ?? 1) > 1 && (
+          <p className="text-sm leading-relaxed">
+            این مبلغ از سقف یک کارت‌به‌کارت بیشتر است؛ آن را در {fa(model.transfers[form.shipping].length)} واریز جدا می‌فرستید:{' '}
+            {model.transfers[form.shipping].map((part) => toman(part)).join(' و ')} تومان، هر کدام با شناسه‌ی واریز خودش.
+          </p>
+        )}
       </div>
 
       {problem && <Notice tone="error">{problem}</Notice>}

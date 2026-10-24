@@ -46,6 +46,9 @@ export function OrderList({ orders }: { orders: OrderRow[] }) {
               <span className="text-sm text-muted">
                 {when(o.created)} · {o.city} · {o.shipping}{o.color && ` · ${o.color}`} · <span className="ltr">{fa(o.phone)}</span>
               </span>
+              <span className="text-sm text-muted">
+                {o.payment_label}{o.payment_codes.length > 0 && <> · <span className="ltr font-semibold text-ink-soft">{o.payment_codes.join('، ')}</span></>}
+              </span>
             </span>
             <span className="flex items-center justify-between gap-3 sm:justify-end">
               <span className="font-bold">{toman(o.amount_rial)} <span className="text-sm text-muted font-medium">تومان</span></span>

@@ -7,7 +7,7 @@ Anything in [brackets] is waiting for the client (PLAN.md §11): the site shows 
 so nobody mistakes a guess for a fact."""
 from django.core.management.base import BaseCommand
 
-from shop.models import Card, Faq, Page, Product, StoreSettings
+from shop.models import SAMPLE_CARD_NUMBER, Card, Faq, Page, Product, StoreSettings
 
 PRODUCT = {
     'slug': 'alpha',
@@ -197,6 +197,5 @@ class Command(BaseCommand):
             if created:
                 self.stdout.write(f'Page: added {slug}')
         if not Card.objects.exists():
-            Card.objects.create(bank='بانک نمونه', number=_luhn_complete('603799000000001'),
-                                holder='[نام صاحب کارت]')
+            Card.objects.create(bank='بانک نمونه', number=SAMPLE_CARD_NUMBER, holder='[نام صاحب کارت]')
             self.stdout.write('Card: added a sample card; replace it in the panel')

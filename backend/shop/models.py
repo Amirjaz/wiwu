@@ -12,6 +12,8 @@ from django.db import models
 private_storage = FileSystemStorage(location=settings.PRIVATE_ROOT)
 
 CODE_ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ'  # no 0/O, 1/I/L: read out over the phone
+# seed_store's placeholder card, until staff replace it in the panel: never offered to buyers as another card.
+SAMPLE_CARD_NUMBER = '6037990000000014'
 
 
 class StoreSettings(models.Model):
@@ -33,6 +35,15 @@ class StoreSettings(models.Model):
     post_days = models.CharField('زمان رسیدن با پست', max_length=60, default='۴ تا ۶ روز کاری')
     tipax_days = models.CharField('زمان رسیدن با تیپاکس', max_length=60, default='۴ تا ۶ روز کاری')
     payment_minutes = models.PositiveSmallIntegerField('مهلت پرداخت (دقیقه)', default=30)
+    # Banks cap a single card-to-card transfer (Amir, 2026-10-24: 16.5M toman won't go in one, 14.1M will).
+    # An order above it is paid in several transfers (orders.split_amounts, Transfer). 0: always one.
+    transfer_limit_rial = models.PositiveBigIntegerField('سقف هر کارت‌به‌کارت (ریال)', default=150_000_000)
+    # Sheba (an account transfer, Paya) as a second way to pay, checked by staff, so it waits longer (Amir,
+    # 2026-10-24: one shop Sheba, 3 hours). Offered on the order page once the number is set.
+    sheba = models.CharField('شبای فروشگاه', max_length=26, blank=True)
+    sheba_holder = models.CharField('نام صاحب حساب شبا', max_length=80, blank=True)
+    sheba_bank = models.CharField('بانک حساب شبا', max_length=40, blank=True)
+    sheba_minutes = models.PositiveSmallIntegerField('مهلت پرداخت با شبا (دقیقه)', default=180)
     reminder_minutes = models.PositiveSmallIntegerField('یادآوری پرداخت پس از (دقیقه)', default=15)
     return_days = models.PositiveSmallIntegerField('مهلت بازگشت کالا (روز کاری)', default=7)
     enamad_html = models.TextField('کد نماد اعتماد (همان‌طور که اینماد می‌دهد)', blank=True)
@@ -116,6 +127,9 @@ class Card(models.Model):
     number = models.CharField('شماره کارت', max_length=16)
     holder = models.CharField('نام صاحب کارت', max_length=80)
     active = models.BooleanField('فعال', default=True)
+    # The buyer sees every active card and may pay into any (Amir, 2026-10-24). With cartbecart, one whose bank
+    # SMS reach their forwarder is confirmed at once; staff check payments to the others.
+    auto = models.BooleanField('تأیید خودکار با کارت‌به‌کارت', default=False)
     last_used_at = models.DateTimeField(null=True, blank=True)
     position = models.PositiveSmallIntegerField(default=0)
 
@@ -150,6 +164,10 @@ class Order(models.Model):
     class Shipping(models.TextChoices):
         POST = 'post', 'پست پیشتاز'
         TIPAX = 'tipax', 'تیپاکس'
+
+    class Method(models.TextChoices):
+        CARD = 'card', 'کارت‌به‌کارت'  # confirmed at once by cartbecart (or staff, without it)
+        SHEBA = 'sheba', 'شبا'  # the buyer chose it on the order page; staff check it (orders.choose_sheba)
 
     code = models.CharField('کد سفارش', max_length=8, unique=True, default=new_order_code)
     token = models.CharField(max_length=24, unique=True, default=new_order_token)  # the buyer's link
@@ -189,6 +207,11 @@ class Order(models.Model):
     # see the order's pay page, so it's never shown) and their short code (CBC-…, for their dashboard).
     provider_token = models.CharField(max_length=64, blank=True, db_index=True)
     provider_ref = models.CharField(max_length=80, blank=True)
+    payment_method = models.CharField('روش پرداخت', max_length=8, choices=Method.choices, default=Method.CARD)
+    # The shop's Sheba as it was when the buyer chose to pay by Sheba.
+    sheba_number = models.CharField(max_length=26, blank=True)
+    sheba_holder = models.CharField(max_length=80, blank=True)
+    sheba_bank = models.CharField(max_length=40, blank=True)
 
     # "I've paid": what the buyer tells us when the automatic match didn't happen.
     claim_reference = models.CharField('شماره پیگیری واریز', max_length=40, blank=True)
@@ -218,7 +241,57 @@ class Order(models.Model):
     @property
     def pay_in_rial(self):
         """cartbecart's amounts are unique to the rial, so they're shown (and copied) in rials."""
-        return bool(self.provider_token) or self.amount_rial % 10 != 0
+        return (bool(self.provider_token) or self.amount_rial % 10 != 0
+                or self.transfers.exclude(provider_token='').exists())
+
+    @property
+    def payment_codes(self):
+        """What tells this payment apart in the panel: cartbecart's CBC- codes (one per transfer), or for a
+        Sheba payment the reference the buyer gave."""
+        if self.payment_method == self.Method.SHEBA:
+            return [self.claim_reference] if self.claim_reference else []
+        return [t.provider_ref for t in self.transfers.all() if t.provider_ref] or (
+            [self.provider_ref] if self.provider_ref else [])
+
+
+class Transfer(models.Model):
+    """One of the card-to-card transfers an order is paid in when its total is over the bank's cap
+    (StoreSettings.transfer_limit_rial). Each has its own exact amount and card and, with cartbecart, its
+    own registration there (merchant_order_id "<order code>-<position>"); the order is paid once every
+    one has arrived. An order paid in one transfer has none: its amount and card are on the order."""
+
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'در انتظار'
+        PAID = 'paid', 'رسید'
+        REVIEW = 'needs_review', 'بررسی'
+        EXPIRED = 'expired', 'منقضی'
+        CANCELLED = 'cancelled', 'لغو'
+
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='transfers')
+    position = models.PositiveSmallIntegerField()  # 1, 2, …
+    amount_rial = models.PositiveBigIntegerField(db_index=True)
+    offset_rial = models.PositiveBigIntegerField()
+    card = models.ForeignKey(Card, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+    card_bank = models.CharField(max_length=40)
+    card_number = models.CharField(max_length=16)
+    card_holder = models.CharField(max_length=80)
+    expires_at = models.DateTimeField()
+    provider_token = models.CharField(max_length=64, blank=True, db_index=True)
+    provider_ref = models.CharField(max_length=80, blank=True)
+    status = models.CharField(max_length=14, choices=Status.choices, default=Status.PENDING)
+    paid_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['position']
+        constraints = [models.UniqueConstraint(fields=['order', 'position'], name='transfer_position')]
+
+    def __str__(self):
+        return self.merchant_code
+
+    @property
+    def merchant_code(self):
+        """What cartbecart knows it by: the order's code and its number."""
+        return f'{self.order.code}-{self.position}'
 
 
 class ReturnRequest(models.Model):

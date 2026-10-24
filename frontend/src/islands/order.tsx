@@ -1,13 +1,14 @@
-import { StrictMode, useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { StrictMode, useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import clsx from 'clsx';
-import { CheckCircle, Clock, Fingerprint, Package, Truck, HouseLine, ArrowUUpLeft } from '@phosphor-icons/react';
+import { Bank, CheckCircle, Clock, Fingerprint, Package, Truck, HouseLine, ArrowUUpLeft } from '@phosphor-icons/react';
 import { get, islandData, isApiError, post, postForm } from '../lib/api';
 import { clock, fa, groupCard, latin, money, rial, shippingFee, toman, tomanPlain, when } from '../lib/format';
 import { message } from '../lib/messages';
 import { CopyButton, Field, Notice, useCountdown } from '../lib/ui';
 
 type Status = 'awaiting_payment' | 'needs_review' | 'paid' | 'preparing' | 'shipped' | 'delivered' | 'expired' | 'cancelled';
+type Card = { bank: string; number: string; holder: string };
 
 interface Order {
   code: string;
@@ -28,7 +29,16 @@ interface Order {
   is_gift: boolean;
   name: string;
   city: string;
-  card: { bank: string; number: string; holder: string } | null;
+  card: Card | null;
+  // Every card the buyer may pay into, the order's own first; instant: confirmed at once by cartbecart.
+  cards: (Card & { instant: boolean })[];
+  // More than one when the total is over the bank's cap for one card-to-card: each to send on its own.
+  transfers: { position: number; amount_rial: number; offset_rial: number; paid: boolean; card: Card | null }[];
+  // Sheba, the second way to pay: offered while awaiting payment; its number once chosen.
+  payment_method: 'card' | 'sheba';
+  sheba_offered: boolean;
+  sheba_minutes: number;
+  sheba: { number: string; holder: string; bank: string } | null;
   claimed: boolean;
   tracking: string;
   paid_at: string | null;
@@ -106,11 +116,190 @@ function Amount({ order }: { order: Order }) {
   );
 }
 
-function CardBox({ card }: { card: NonNullable<Order['card']> }) {
+/** What to pay, as text: the amount, or each transfer's. */
+function amounts(order: Order): string {
+  if (order.transfers.length < 2) return money(order.amount_rial, order.pay_in_rial);
+  return order.transfers.map((t) => money(t.amount_rial, order.pay_in_rial)).join(' و ');
+}
+
+/** An order over the bank's cap for one card-to-card: each transfer, its exact amount, and whether it came. */
+function Transfers({ order }: { order: Order }) {
+  const inRial = order.pay_in_rial;
+  const count = order.transfers.length;
+  const first = order.transfers[0].card;
+  const oneCard = order.transfers.every((t) => t.card?.number === first?.number);
+  return (
+    <div className="grid gap-5">
+      {oneCard && first && <CardChoice order={order} />}
+      <ol className="grid gap-4">
+        {order.transfers.map((t) => (
+          <li key={t.position} className={clsx('grid gap-3 rounded-[var(--radius-surface)] border p-5', t.paid ? 'border-accent bg-accent-soft' : 'border-line bg-raised')}>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <p className="label">واریز {fa(t.position)} از {fa(count)}{inRial && ' (به ریال)'}</p>
+              {t.paid
+                ? <span className="inline-flex items-center gap-1 font-semibold text-accent-ink"><CheckCircle size={18} aria-hidden /> رسید</span>
+                : <span className="text-sm text-muted">منتظر واریز</span>}
+            </div>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+              <p className={clsx('text-3xl sm:text-4xl font-black', t.paid && 'text-ink-soft')}>
+                {inRial ? rial(t.amount_rial) : toman(t.amount_rial)} <span className="text-lg font-bold text-muted">{inRial ? 'ریال' : 'تومان'}</span>
+              </p>
+              {!t.paid && <CopyButton text={inRial ? String(t.amount_rial) : tomanPlain(t.amount_rial)} label="کپی مبلغ" />}
+            </div>
+            {!oneCard && t.card && !t.paid && <CardBox card={t.card} />}
+          </li>
+        ))}
+      </ol>
+      <p className="text-ink-soft leading-relaxed">
+        هر واریز را جدا و دقیقاً با مبلغ خودش بفرستید و گرد نکنید. {inRial ? 'چند ریالِ' : 'چند تومانِ'} آخرِ هر مبلغ، شناسه‌ی همان واریز است تا پرداخت{inRial ? ' خودکار' : ''} به این سفارش وصل شود.
+      </p>
+      <details className="text-sm text-muted">
+        <summary className="cursor-pointer w-fit">ریز مبلغ</summary>
+        <dl className="mt-2 grid grid-cols-[1fr_auto] gap-x-6 gap-y-1">
+          <dt>{order.product}{order.color && `، ${order.color}`}</dt><dd>{toman(order.price_rial)} تومان</dd>
+          <dt>ارسال ({order.shipping})</dt><dd>{shippingFee(order.shipping_rial, order.shipping_on_delivery)}</dd>
+          <dt>شناسه‌های واریز</dt><dd>{inRial ? `${fa(order.offset_rial)} ریال` : `${toman(order.offset_rial)} تومان`}</dd>
+          <dt>جمع</dt><dd>{money(order.amount_rial, inRial)}</dd>
+        </dl>
+      </details>
+    </div>
+  );
+}
+
+/** Card-to-card (confirmed at once) or Sheba (checked by hand): which one the page shows. */
+function MethodTabs({ tab, onChange }: { tab: 'card' | 'sheba'; onChange: (tab: 'card' | 'sheba') => void }) {
+  const options: { id: 'card' | 'sheba'; label: string; note: string }[] = [
+    { id: 'card', label: 'کارت‌به‌کارت', note: 'تأیید فوری و خودکار' },
+    { id: 'sheba', label: 'شبا', note: 'بررسی دستی، تا ۲۰ تا ۳۰ دقیقه' },
+  ];
+  return (
+    <div className="grid grid-cols-2 gap-2 rounded-[var(--radius-surface)] bg-surface border border-line p-1.5" role="tablist" aria-label="روش پرداخت">
+      {options.map((o) => (
+        <button key={o.id} type="button" role="tab" aria-selected={tab === o.id} onClick={() => onChange(o.id)}
+          className={clsx('grid gap-0.5 rounded-[var(--radius-field)] px-3 py-2.5 text-center transition-colors', tab === o.id ? 'bg-raised shadow-sm border border-line-strong' : 'text-ink-soft')}>
+          <span className="font-bold">{o.label}</span>
+          <span className="text-xs text-muted">{o.note}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Paying by Sheba: the whole amount in one transfer to the shop's Sheba, checked by staff. Opening the tab
+ *  chooses it (Amir, 2026-10-24: the number must be there at once), which gives the order the longer Sheba
+ *  deadline; a card-to-card payment still pays it if the buyer goes back. */
+function ShebaPay({ order, token, onUpdate }: { order: Order; token: string; onUpdate: (o: Order) => void }) {
+  const [problem, setProblem] = useState('');
+  const inRial = order.pay_in_rial;
+  const hours = order.sheba_minutes / 60;
+  const wait = Number.isInteger(hours) ? `${fa(hours)} ساعت` : `${fa(order.sheba_minutes)} دقیقه`;
+
+  const choose = useCallback(async () => {
+    setProblem('');
+    try {
+      onUpdate(await post<Order>(`/api/orders/${token}/sheba/`));
+    } catch (err) {
+      setProblem(isApiError(err) ? message(err.error) : message('network'));
+    }
+  }, [token, onUpdate]);
+
+  const chosen = !!order.sheba;
+  useEffect(() => {
+    if (!chosen) choose();
+  }, [chosen, choose]);
+
+  if (!order.sheba) {
+    return problem ? (
+      <div className="grid gap-4">
+        <Notice tone="error">{problem}</Notice>
+        <button type="button" className="btn btn-primary justify-self-start" onClick={choose}>دوباره</button>
+      </div>
+    ) : (
+      <div className="grid gap-4 animate-pulse" aria-busy="true" aria-label="در حال آماده کردن شبا">
+        <div className="h-36 rounded-[var(--radius-surface)] bg-line" />
+        <div className="h-12 w-1/2 rounded-full bg-line" />
+      </div>
+    );
+  }
+  return (
+    <div className="grid gap-6">
+      <p className="text-ink-soft leading-relaxed">
+        مبلغ کامل را <strong className="font-bold text-ink">در یک واریز</strong> به این شبا بفرستید؛ سقف کارت‌به‌کارت را ندارد.
+        واریز شبا را همکاران ما بررسی می‌کنند و تأیید آن پس از رسیدن پول <strong className="font-bold text-ink">تا ۲۰ تا ۳۰ دقیقه</strong> طول می‌کشد.
+        مهلت پرداخت با شبا {wait} است.
+      </p>
+      <div className="grid gap-4 rounded-[var(--radius-surface)] bg-ink text-raised p-6 sm:p-7">
+        <div className="flex items-center justify-between gap-4 text-raised/75">
+          <span>{order.sheba.bank || 'شبا'}</span>
+          <Bank size={26} aria-hidden />
+        </div>
+        <p className="ltr text-lg sm:text-2xl font-bold text-start tracking-wide break-all" dir="ltr">{fa(groupSheba(order.sheba.number))}</p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p>به نام <strong className="font-bold">{order.sheba.holder}</strong></p>
+          <CopyButton text={order.sheba.number} label="کپی شبا" className="!border-raised/30 !text-raised" />
+        </div>
+      </div>
+      <div className="grid gap-3">
+        <p className="label">مبلغ دقیق واریز{inRial && ' (به ریال)'}</p>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+          <p className="text-4xl sm:text-5xl font-black">
+            {inRial ? rial(order.amount_rial) : toman(order.amount_rial)} <span className="text-xl font-bold text-muted">{inRial ? 'ریال' : 'تومان'}</span>
+          </p>
+          <CopyButton text={inRial ? String(order.amount_rial) : tomanPlain(order.amount_rial)} label="کپی مبلغ" />
+        </div>
+        <p className="text-ink-soft leading-relaxed">
+          دقیقاً همین مبلغ را در یک واریز شبا (پایا یا پل) بفرستید و گرد نکنید. پس از تأیید، همین صفحه عوض می‌شود و پیامک می‌گیرید.
+        </p>
+      </div>
+      <ClaimForm token={token} onDone={onUpdate} title="پس از واریز، شماره پیگیری را بفرستید" />
+    </div>
+  );
+}
+
+/** IR + 24 digits, in groups of four as on a bank's receipt. */
+function groupSheba(sheba: string): string {
+  return sheba.replace(/(.{4})(?=.)/g, '$1 ');
+}
+
+/** The cards the buyer may pay into: the order's own large, the shop's others below, each labelled when
+ *  only some are confirmed at once (the rest are checked by staff). */
+function CardChoice({ order }: { order: Order }) {
+  const cards = order.cards.length ? order.cards : order.card ? [{ ...order.card, instant: false }] : [];
+  if (!cards.length) return null;
+  const [first, ...others] = cards;
+  const labelled = cards.some((c) => c.instant) && cards.some((c) => !c.instant);
+  const badge = (instant: boolean) => (labelled
+    ? <span className={clsx('rounded-full px-2.5 py-0.5 text-xs font-semibold', instant ? 'bg-accent-soft text-accent-ink' : 'bg-warn-soft text-warn')}>{instant ? 'تأیید فوری' : 'بررسی دستی'}</span>
+    : null);
+  return (
+    <div className="grid gap-4">
+      <CardBox card={first} badge={badge(first.instant)} />
+      {others.length > 0 && (
+        <div className="grid gap-3">
+          <p className="label">یا به یکی از کارت‌های دیگر فروشگاه</p>
+          <ul className="grid gap-2">
+            {others.map((c) => (
+              <li key={c.number} className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-field)] border border-line bg-raised p-4">
+                <span className="grid gap-1">
+                  <span className="flex flex-wrap items-center gap-2 text-sm text-ink-soft">{c.bank} · {c.holder} {badge(c.instant)}</span>
+                  <span className="ltr text-lg font-bold tracking-wide" dir="ltr">{fa(groupCard(c.number))}</span>
+                </span>
+                <CopyButton text={c.number} label="کپی شماره کارت" />
+              </li>
+            ))}
+          </ul>
+          {labelled && <p className="text-sm text-muted leading-relaxed">واریز به کارتی با برچسب «بررسی دستی» را همکاران ما بررسی می‌کنند؛ پس از واریز، «پرداخت کرده‌ام» را بزنید.</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CardBox({ card, badge }: { card: Card; badge?: ReactNode }) {
   return (
     <div className="grid gap-4 rounded-[var(--radius-surface)] bg-ink text-raised p-6 sm:p-7">
       <div className="flex items-center justify-between gap-4 text-raised/75">
-        <span>{card.bank}</span>
+        <span className="flex flex-wrap items-center gap-2">{card.bank} {badge}</span>
         <Fingerprint size={26} aria-hidden />
       </div>
       <p className="ltr text-[1.6rem] sm:text-3xl font-bold text-start tracking-wide" dir="ltr">{fa(groupCard(card.number))}</p>
@@ -122,7 +311,7 @@ function CardBox({ card }: { card: NonNullable<Order['card']> }) {
   );
 }
 
-function ClaimForm({ token, onDone }: { token: string; onDone: (o: Order) => void }) {
+function ClaimForm({ token, onDone, title = 'اعلام پرداخت' }: { token: string; onDone: (o: Order) => void; title?: string }) {
   const [reference, setReference] = useState('');
   const [last4, setLast4] = useState('');
   const [time, setTime] = useState('');
@@ -156,7 +345,7 @@ function ClaimForm({ token, onDone }: { token: string; onDone: (o: Order) => voi
 
   return (
     <form onSubmit={submit} className="grid gap-5 rounded-[var(--radius-surface)] border border-line bg-surface p-5 sm:p-6" noValidate>
-      <p className="font-bold text-lg">اعلام پرداخت</p>
+      <p className="font-bold text-lg">{title}</p>
       <p className="text-ink-soft leading-relaxed -mt-2">اطلاعات واریز را از رسید اپ بانک بنویسید یا تصویر رسید را بفرستید. همکاران ما بررسی و سفارش را تأیید می‌کنند.</p>
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label="شماره پیگیری واریز">
@@ -184,18 +373,30 @@ function ClaimForm({ token, onDone }: { token: string; onDone: (o: Order) => voi
 function Awaiting({ order, token, onUpdate }: { order: Order; token: string; onUpdate: (o: Order) => void }) {
   const left = useCountdown(order.expires, order.now);
   const [claiming, setClaiming] = useState(false);
-  const overLimit = order.amount_rial > CARD_TO_CARD_ATM_LIMIT_RIAL;
+  const split = order.transfers.length > 1;
+  const arrived = order.transfers.filter((t) => t.paid).length;
+  const largest = split ? Math.max(...order.transfers.filter((t) => !t.paid).map((t) => t.amount_rial), 0) : order.amount_rial;
+  const overLimit = largest > CARD_TO_CARD_ATM_LIMIT_RIAL;
+  // Sheba as the second way to pay, once the shop has one; the page opens on the buyer's choice.
+  const offersSheba = order.sheba_offered || order.payment_method === 'sheba';
+  const [tab, setTab] = useState<'card' | 'sheba'>(order.payment_method);
+  useEffect(() => {
+    if (order.payment_method === 'sheba') setTab('sheba');
+  }, [order.payment_method]);
+  const sheba = offersSheba && tab === 'sheba';
   return (
     <div className="grid gap-8">
       <div className="grid gap-2">
-        <h1 className="page-title">مبلغ را کارت‌به‌کارت کنید.</h1>
+        <h1 className="page-title">{sheba ? 'مبلغ را با شبا واریز کنید.' : split ? `مبلغ را در ${fa(order.transfers.length)} کارت‌به‌کارت جدا بفرستید.` : 'مبلغ را کارت‌به‌کارت کنید.'}</h1>
+        {!sheba && split && <p className="text-ink-soft leading-relaxed">مبلغ این سفارش از سقف یک کارت‌به‌کارت بیشتر است، پس در {fa(order.transfers.length)} واریز پرداخت می‌شود.</p>}
         <p className="text-ink-soft flex flex-wrap items-center gap-x-2">
           <Clock size={18} aria-hidden className="text-muted" />
           {left > 0 ? <>مهلت پرداخت: <span className="font-bold text-ink tabular-nums" aria-live="off">{clock(left)}</span></> : 'مهلت پرداخت تمام شد؛ اگر واریز کرده‌اید، اعلام پرداخت کنید.'}
         </p>
       </div>
-      {order.card && <CardBox card={order.card} />}
-      <Amount order={order} />
+      {offersSheba && <MethodTabs tab={tab} onChange={setTab} />}
+      {sheba ? <ShebaPay order={order} token={token} onUpdate={onUpdate} /> : <>
+      {split ? <Transfers order={order} /> : <><CardChoice order={order} /><Amount order={order} /></>}
       {overLimit && (
         <Notice tone="warn">با اپ بانک خود واریز کنید. بعضی خودپردازها و اپ‌ها کارت‌به‌کارت بیش از ۱۰ میلیون تومان را در یک تراکنش قبول نمی‌کنند.</Notice>
       )}
@@ -204,7 +405,9 @@ function Awaiting({ order, token, onUpdate }: { order: Order; token: string; onU
           <span className="absolute inline-flex size-full rounded-full bg-accent opacity-60 motion-safe:animate-ping" />
           <span className="relative inline-flex size-2.5 rounded-full bg-accent" />
         </span>
-        منتظر واریز شما هستیم. پس از تأیید، همین صفحه عوض می‌شود و پیامک می‌گیرید.
+        {split && arrived > 0
+          ? `واریز ${fa(arrived)} از ${fa(order.transfers.length)} رسید. منتظر ${order.transfers.length - arrived === 1 ? 'واریز دیگر' : 'بقیه‌ی واریزها'} هستیم؛ پس از آن، همین صفحه عوض می‌شود و پیامک می‌گیرید.`
+          : 'منتظر واریز شما هستیم. پس از تأیید، همین صفحه عوض می‌شود و پیامک می‌گیرید.'}
       </div>
       {claiming ? (
         <ClaimForm token={token} onDone={onUpdate} />
@@ -213,6 +416,7 @@ function Awaiting({ order, token, onUpdate }: { order: Order; token: string; onU
           پرداخت کرده‌ام ولی تأیید نشده
         </button>
       )}
+      </>}
     </div>
   );
 }
@@ -223,7 +427,7 @@ function Expired({ order, token, onUpdate }: { order: Order; token: string; onUp
       <h1 className="page-title">مهلت پرداخت تمام شد.</h1>
       <p className="text-ink-soft leading-relaxed">اگر هنوز واریز نکرده‌اید، واریز نکنید و سفارش تازه‌ای ثبت کنید. اگر واریز کرده‌اید، نگران نباشید: اعلام پرداخت کنید تا سفارش‌تان تأیید شود.</p>
       <a href="/checkout/" className="btn btn-primary justify-self-start">ثبت سفارش تازه</a>
-      {order.card && <p className="text-sm text-muted">کارت این سفارش: <span className="ltr">{fa(groupCard(order.card.number))}</span>، مبلغ {money(order.amount_rial, order.pay_in_rial)}.</p>}
+      {order.card && <p className="text-sm text-muted">کارت این سفارش: <span className="ltr">{fa(groupCard(order.card.number))}</span>، {order.transfers.length > 1 ? 'مبلغ‌ها' : 'مبلغ'} {amounts(order)}.</p>}
       <ClaimForm token={token} onDone={onUpdate} />
     </div>
   );
@@ -354,7 +558,9 @@ function OrderView({ token }: { token: string }) {
         <div className="grid gap-5">
           <h1 className="page-title">پرداخت شما در حال بررسی است.</h1>
           <p className="text-ink-soft leading-relaxed">همکاران ما واریز را با حساب بانکی تطبیق می‌دهند. نتیجه را پیامک می‌کنیم و همین صفحه هم به‌روز می‌شود.</p>
-          {order.card && <p className="text-sm text-muted">مبلغ {money(order.amount_rial, order.pay_in_rial)} به کارت <span className="ltr">{fa(groupCard(order.card.number))}</span></p>}
+          {order.sheba
+            ? <p className="text-sm text-muted">مبلغ {money(order.amount_rial, order.pay_in_rial)} با شبا به <span className="ltr">{fa(groupSheba(order.sheba.number))}</span></p>
+            : order.card && <p className="text-sm text-muted">{order.transfers.length > 1 ? 'مبلغ‌ها' : 'مبلغ'} {amounts(order)} به کارت <span className="ltr">{fa(groupCard(order.card.number))}</span></p>}
         </div>
       </>
     );

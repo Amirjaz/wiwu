@@ -296,6 +296,128 @@ class PaymentTests(Base):
         self.assertTrue(SmsLog.objects.filter(kind='payment_not_found').exists())
 
 
+class SplitTests(Base):
+    """Over the bank's cap for one card-to-card (15M toman by default) an order is paid in several transfers."""
+
+    def test_split_amounts(self):
+        split, cap = orders.split_amounts, 150_000_000
+        self.assertEqual(split(141_000_000, cap), [141_000_000])  # the Alpha: one transfer
+        self.assertEqual(split(165_000_000, cap), [115_000_000, 50_000_000])  # 16.5M: 11.5M + 5M (Amir)
+        self.assertEqual(split(150_000_000, cap), [100_000_000, 50_000_000])  # the offset would take it over
+        self.assertEqual(split(220_000_000, cap), [120_000_000, 50_000_000, 50_000_000])
+        self.assertEqual(split(165_000_000, 0), [165_000_000])  # splitting off
+
+    def test_order_over_the_cap_has_round_transfers_with_their_own_amounts(self):
+        self.product.price_rial = 165_000_000
+        self.product.save()
+        order = self.place()
+        first, second = order.transfers.all()
+        self.assertEqual((first.amount_rial - first.offset_rial, second.amount_rial - second.offset_rial), (115_000_000, 50_000_000))
+        self.assertNotEqual(first.offset_rial, 0)
+        self.assertEqual(order.amount_rial, first.amount_rial + second.amount_rial)
+        self.assertEqual(first.card_number, order.card_number)
+        self.assertFalse(order.pay_in_rial)  # the shop's own amounts are whole tomans
+        self.assertIn(f'{persian.toman(first.amount_rial)} تومان و {persian.toman(second.amount_rial)} تومان',
+                      SmsLog.objects.get(kind='order_created').text)
+        # Another order can't be given an amount either of these has.
+        self.assertTrue({first.amount_rial, second.amount_rial} <= orders._amounts_in_use())
+
+    def test_under_the_cap_or_with_splitting_off_one_transfer(self):
+        self.assertFalse(self.place().transfers.exists())  # 14.1M
+        self.product.price_rial = 165_000_000
+        self.product.save()
+        self.store.transfer_limit_rial = 0
+        self.store.save()
+        self.assertFalse(self.place().transfers.exists())
+
+    def test_staff_approval_marks_every_transfer_paid(self):
+        self.product.price_rial = 165_000_000
+        self.product.save()
+        order = self.place()
+        self.assertTrue(orders.mark_paid(order, 'manual'))
+        self.assertEqual(set(order.transfers.values_list('status', flat=True)), {'paid'})
+
+    def test_checkout_tells_the_buyer(self):
+        self.product.price_rial = 165_000_000
+        self.product.save()
+        page = self.client.get('/checkout/').content.decode()
+        data = json.loads(re.search(r'<script id="island-data" type="application/json">(.*?)</script>', page, re.S).group(1))
+        self.assertEqual(data['models'][0]['transfers']['post'], [115_000_000, 50_000_000])
+
+
+class ShebaTests(Base):
+    """Sheba as a second way to pay (Amir, 2026-10-24): chosen on the order page, checked by staff."""
+
+    def setUp(self):
+        super().setUp()
+        self.store.sheba, self.store.sheba_holder, self.store.sheba_bank = valid_sheba(), 'محمدسالار کبیری', 'بانک ملت'
+        self.store.save()
+
+    def choose(self, order):
+        return self.client.post(f'/api/orders/{order.token}/sheba/', {}, content_type='application/json').json()
+
+    def test_offered_only_when_the_shop_has_a_sheba(self):
+        order = self.place()
+        data = self.client.get(f'/api/orders/{order.token}/').json()
+        self.assertEqual((data['payment_method'], data['sheba_offered'], data['sheba']), ('card', True, None))
+        self.store.sheba = ''
+        self.store.save()
+        self.assertFalse(self.client.get(f'/api/orders/{order.token}/').json()['sheba_offered'])
+        self.assertEqual(self.choose(order)['error'], 'sheba_closed')
+
+    def test_choosing_it_waits_longer_and_shows_the_shop_sheba(self):
+        order = self.place()
+        data = self.choose(order)
+        self.assertEqual(data['payment_method'], 'sheba')
+        self.assertEqual(data['sheba'], {'number': valid_sheba(), 'holder': 'محمدسالار کبیری', 'bank': 'بانک ملت'})
+        order.refresh_from_db()
+        self.assertAlmostEqual((order.expires_at - timezone.now()).total_seconds(), 180 * 60, delta=60)
+        self.assertTrue(AuditLog.objects.filter(order=order, action='sheba_chosen').exists())
+        self.assertEqual(self.choose(order)['payment_method'], 'sheba')  # again: no change
+        self.assertEqual(AuditLog.objects.filter(order=order, action='sheba_chosen').count(), 1)
+
+    def test_not_after_the_window(self):
+        order = self.place()
+        Order.objects.filter(pk=order.pk).update(expires_at=timezone.now() - timedelta(seconds=1))
+        self.assertEqual(self.choose(order)['error'], 'sheba_closed')
+
+    def test_no_card_reminder_for_a_sheba_order(self):
+        order = self.place()
+        self.choose(order)
+        Order.objects.filter(pk=order.pk).update(created_at=timezone.now() - timedelta(minutes=16))
+        self.assertEqual(orders.tick()['reminded'], 0)
+
+    def test_staff_see_it_and_its_reference(self):
+        card, sheba = self.place(), self.place()
+        self.choose(sheba)
+        orders.claim(sheba, {'reference': '۹۸۷۶۵۴', 'last4': '', 'time': '', 'note': ''})
+        Order.objects.filter(pk=card.pk).update(provider_ref='CBC-AB12')
+        owner = User.objects.create_user('owner', password='pw-123456!')
+        owner.groups.add(Group.objects.get(name='Owners'))
+        self.client.post('/api/panel/login/', {'username': 'owner', 'password': 'pw-123456!'}, content_type='application/json')
+        rows = {r['code']: r for r in self.client.get('/api/panel/orders/?queue=all').json()['orders']}
+        self.assertEqual((rows[sheba.code]['payment_method'], rows[sheba.code]['payment_codes']), ('sheba', ['۹۸۷۶۵۴']))
+        self.assertEqual((rows[card.code]['payment_label'], rows[card.code]['payment_codes']), ('کارت‌به‌کارت', ['CBC-AB12']))
+        self.assertEqual([r['code'] for r in self.client.get('/api/panel/orders/?q=CBC-AB12').json()['orders']], [card.code])
+        # With cartbecart confirming cards, an unconfirmed Sheba order still needs staff.
+        other = self.place()
+        self.choose(other)
+        with override_settings(PAYMENT_PROVIDER='cartbecart'):
+            action = [r['code'] for r in self.client.get('/api/panel/orders/?queue=action').json()['orders']]
+        self.assertIn(other.code, action)
+        self.assertNotIn(card.code, action)
+
+    def test_the_sheba_setting_is_checked(self):
+        owner = User.objects.create_user('owner', password='pw-123456!')
+        owner.groups.add(Group.objects.get(name='Owners'))
+        self.client.post('/api/panel/login/', {'username': 'owner', 'password': 'pw-123456!'}, content_type='application/json')
+        save = lambda value: self.client.post('/api/panel/settings/', {'store': {'sheba': value}},
+                                              content_type='application/json').json()
+        self.assertEqual(save('IR12345')['fields'], {'sheba': 'sheba'})
+        self.assertEqual(save(valid_sheba()[2:])['store']['sheba'], valid_sheba())  # IR added
+        self.assertEqual(save('')['store']['sheba'], '')
+
+
 class TickTests(Base):
     def test_reminder_then_expiry(self):
         order = self.place()
@@ -393,8 +515,9 @@ class CartbecartTests(Base):
     """cartbecart's API is faked with the answers its docs show; webhooks are signed the way theirs are."""
     CARD = '6037991234567893'
 
-    def fake_api(self, *, status='pending', error=None, unique_extra=437):
-        """Patches urlopen: create order, the public pay page, an order's status and shop-config."""
+    def fake_api(self, *, status='pending', error=None, unique_extra=437, statuses=None):
+        """Patches urlopen: create order, the public pay page, an order's status and shop-config. Each order
+        registered in one call gets its own token and code (kJ8s-2Qa, kJ8s-2Qa2, …); statuses: token → status."""
         from urllib.parse import urlparse
         self.calls = []
         expires = (timezone.now() + timedelta(minutes=30)).isoformat()
@@ -406,14 +529,16 @@ class CartbecartTests(Base):
             if error is not None:
                 raise error
             if path == '/api/v1/public/orders':
-                answer = {'order_id': '3f2a9c1e', 'order_code': 'CBC-X7KQ', 'payment_token': 'kJ8s-2Qa',
-                          'payment_url': 'https://cartbecart.com/pay/kJ8s-2Qa',
-                          'unique_amount': body['amount'] + unique_extra, 'expires_at': expires}
+                n = sum(1 for c in self.calls if c['path'] == path)
+                suffix = '' if n == 1 else str(n)
+                answer = {'order_id': '3f2a9c1e', 'order_code': f'CBC-X7KQ{suffix}', 'payment_token': f'kJ8s-2Qa{suffix}',
+                          'payment_url': f'https://cartbecart.com/pay/kJ8s-2Qa{suffix}',
+                          'unique_amount': body['amount'] + unique_extra + n - 1, 'expires_at': expires}
             elif path.startswith('/api/v1/pay/'):
                 answer = {'order_code': 'CBC-X7KQ', 'card_number': self.CARD, 'card_owner': 'سارا محمدی',
                           'status': 'pending', 'expires_at': expires}
             elif path.startswith('/api/v1/public/orders/'):
-                answer = {'status': status}
+                answer = {'status': (statuses or {}).get(path.rsplit('/', 1)[1], status)}
             else:
                 answer = {'grace_minutes': 60}
             response = mock.MagicMock()
@@ -573,6 +698,127 @@ class CartbecartTests(Base):
                 self.assertEqual(orders.sync_cartbecart(), 0)
         self.assertEqual(AuditLog.objects.count(), before)
 
+    def test_paid_by_card_after_opening_the_sheba_tab_counts_as_card(self):
+        self.store.sheba = valid_sheba()
+        self.store.save()
+        order = self.placed()
+        orders.choose_sheba(order)
+        self.assertEqual(self.send(self.event(order, 'order.paid')).json()['outcome'], 'matched')
+        order.refresh_from_db()
+        self.assertEqual((order.status, order.payment_method), ('paid', 'card'))
+
+    def test_every_active_card_is_offered_the_order_own_first(self):
+        Card.objects.create(bank='بانک سامان', number='6219861477558679', holder='بهراد بختیاری', auto=True)
+        Card.objects.create(bank='بانک تجارت', number='5859831000001836', holder='امیرمحمد جزایری', active=False)
+        order = self.placed()
+        cards = self.client.get(f'/api/orders/{order.token}/').json()['cards']
+        self.assertEqual(cards[0], {'bank': 'بانک ملی', 'number': self.CARD, 'holder': 'سارا محمدی', 'instant': True})
+        Card.objects.create(bank='بانک شهر', number='5047061136794142', holder='محمدسالار کبیری')
+        cards = self.client.get(f'/api/orders/{order.token}/').json()['cards']
+        # Its bank SMS reach cartbecart, or not (checked by staff); not the inactive one, nor seed_store's sample.
+        self.assertEqual({c['number']: c['instant'] for c in cards[1:]},
+                         {'6219861477558679': True, '5047061136794142': False})
+
+    # ── Over the bank's cap: paid in several transfers ──
+
+    def split_placed(self):
+        """A 16.5M-toman order (the two-zipper bag's price): 11.5M + 5M with the 15M cap."""
+        self.product.price_rial = 165_000_000
+        self.product.save()
+        with self.fake_api():
+            return self.place()
+
+    def transfer_event(self, transfer, kind, event_id='t1', reason=None, **changes):
+        return json.dumps({
+            'event': kind, 'event_id': event_id, 'occurred_at': timezone.now().isoformat(), 'reason': reason,
+            'is_final': kind != 'order.needs_review',
+            'order': {'order_code': transfer.provider_ref, 'merchant_order_id': transfer.merchant_code,
+                      'status': kind.split('.')[1], 'base_amount': transfer.amount_rial - transfer.offset_rial,
+                      'unique_amount': transfer.amount_rial, 'paid_at': None, 'expires_at': transfer.expires_at.isoformat(),
+                      'created_at': timezone.now().isoformat(), **changes},
+        })
+
+    def test_over_the_cap_each_transfer_is_registered(self):
+        order = self.split_placed()
+        creates = [c for c in self.calls if c['path'] == '/api/v1/public/orders']
+        self.assertEqual([(c['body']['merchant_order_id'], c['body']['amount']) for c in creates],
+                         [(f'{order.code}-1', 115_000_000), (f'{order.code}-2', 50_000_000)])
+        first, second = order.transfers.all()
+        self.assertEqual((first.amount_rial, first.offset_rial, first.provider_token, first.provider_ref),
+                         (115_000_437, 437, 'kJ8s-2Qa', 'CBC-X7KQ'))
+        self.assertEqual((second.amount_rial, second.provider_token, second.provider_ref), (50_000_438, 'kJ8s-2Qa2', 'CBC-X7KQ2'))
+        self.assertEqual((order.amount_rial, order.offset_rial, order.provider_token), (165_000_875, 875, ''))
+        self.assertEqual(second.card_number, self.CARD)
+        text = SmsLog.objects.get(kind='order_created').text
+        self.assertIn(f'{persian.rial(115_000_437)} ریال و {persian.rial(50_000_438)} ریال (در ۲ واریز جدا)', text)
+        data = self.client.get(f'/api/orders/{order.token}/').json()
+        self.assertTrue(data['pay_in_rial'])
+        self.assertEqual([(t['amount_rial'], t['paid'], t['card']['number']) for t in data['transfers']],
+                         [(115_000_437, False, self.CARD), (50_000_438, False, self.CARD)])
+
+    def test_paid_once_every_transfer_has_arrived(self):
+        order = self.split_placed()
+        first, second = order.transfers.all()
+        self.assertEqual(self.send(self.transfer_event(first, 'order.paid', 't1')).json()['outcome'], 'part')
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'awaiting_payment')
+        self.assertFalse(SmsLog.objects.filter(kind='paid').exists())
+        self.assertEqual([t['paid'] for t in self.client.get(f'/api/orders/{order.token}/').json()['transfers']], [True, False])
+        self.assertEqual(self.send(self.transfer_event(first, 'order.paid', 't1')).json()['outcome'], 'repeat')
+        self.assertEqual(self.send(self.transfer_event(second, 'order.paid', 't2')).json()['outcome'], 'matched')
+        order.refresh_from_db()
+        self.assertEqual((order.status, order.paid_via), ('paid', 'auto'))
+        self.assertEqual(SmsLog.objects.filter(kind='paid').count(), 1)
+
+    def test_some_transfers_when_the_window_ends_go_to_review_and_the_rest_still_pays(self):
+        order = self.split_placed()
+        first, second = order.transfers.all()
+        self.send(self.transfer_event(first, 'order.paid', 't1'))
+        Order.objects.filter(pk=order.pk).update(expires_at=timezone.now() - timedelta(minutes=1))
+        self.assertEqual(self.client.get(f'/api/orders/{order.token}/').json()['status'], 'needs_review')
+        self.assertTrue(SmsLog.objects.filter(kind='owner_review').exists())
+        self.assertEqual(self.send(self.transfer_event(second, 'order.paid', 't2')).json()['outcome'], 'matched')
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'paid')
+
+    def test_one_arriving_alone_after_the_window_goes_to_review(self):
+        order = self.split_placed()
+        Order.objects.filter(pk=order.pk).update(expires_at=timezone.now() - timedelta(minutes=20))
+        self.assertEqual(self.send(self.transfer_event(order.transfers.last(), 'order.paid')).json()['outcome'], 'part')
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'needs_review')
+
+    def test_a_transfer_refused_after_another_arrived_goes_to_review(self):
+        order = self.split_placed()
+        first, second = order.transfers.all()
+        self.send(self.transfer_event(first, 'order.paid', 't1'))
+        outcome = self.send(self.transfer_event(second, 'order.expired', 't2', reason='rejected_by_merchant')).json()['outcome']
+        self.assertEqual(outcome, 'review')
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'needs_review')
+        self.assertFalse(SmsLog.objects.filter(kind='payment_not_found').exists())  # money came: no "not found"
+
+    def test_a_transfer_with_another_amount_is_a_mismatch(self):
+        order = self.split_placed()
+        body = self.transfer_event(order.transfers.first(), 'order.paid', unique_amount=1)
+        self.assertEqual(self.send(body).json()['outcome'], 'mismatch')
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'needs_review')
+
+    def test_status_check_asks_about_each_missing_transfer(self):
+        from django.core.cache import cache
+        order = self.split_placed()
+        with self.fake_api(statuses={'kJ8s-2Qa': 'paid'}):
+            self.assertEqual(orders.sync_cartbecart(), 1)
+        self.assertEqual([c['path'] for c in self.calls], ['/api/v1/public/orders/kJ8s-2Qa', '/api/v1/public/orders/kJ8s-2Qa2'])
+        cache.clear()  # as if SYNC_EVERY had passed
+        with self.fake_api(status='paid'):
+            self.assertEqual(orders.sync_cartbecart(), 1)
+        self.assertEqual([c['path'] for c in self.calls], ['/api/v1/public/orders/kJ8s-2Qa2'])  # the one still missing
+        order.refresh_from_db()
+        self.assertEqual((order.status, order.paid_via), ('paid', 'auto'))
+        self.assertEqual(PaymentEvent.objects.filter(order=order).count(), 2)
+
     def test_home_shows_the_sample_in_rials(self):
         from django.core.cache import cache
         cache.clear()
@@ -630,6 +876,35 @@ class PanelTests(Base):
                                     content_type='application/json')
         self.assertEqual(response.json()['product']['price_rial'], 98_000_000)
         self.assertTrue(AuditLog.objects.filter(action='price').exists())
+
+    def test_cards_are_offered_and_marked_automatic(self):
+        self.user('Owners')
+        card = Card.objects.first()
+        data = self.client.post('/api/panel/cards/', {'id': card.pk, 'bank': card.bank, 'number': card.number,
+                                                      'holder': card.holder, 'active': True, 'auto': True},
+                                content_type='application/json').json()
+        self.assertTrue(data['cards'][0]['auto'])
+        Card.objects.create(bank='بانک سامان', number='6219861477558679', holder='بهراد بختیاری')
+        order = self.place()
+        cards = self.client.get(f'/api/orders/{order.token}/').json()['cards']
+        self.assertEqual(len(cards), 2)
+        self.assertEqual({c['instant'] for c in cards}, {False})  # without cartbecart staff confirm every one
+
+    def test_transfer_cap_is_off_or_at_least_ten_million(self):
+        self.user('Owners')
+        save = lambda rial: self.client.post('/api/panel/settings/', {'store': {'transfer_limit_rial': rial}},
+                                             content_type='application/json').json()
+        self.assertEqual(save(50_000_000)['fields'], {'transfer_limit_rial': 'number'})  # 5M toman: too small
+        self.assertEqual(save(0)['store']['transfer_limit_rial'], 0)
+        self.assertEqual(save(120_000_000)['store']['transfer_limit_rial'], 120_000_000)
+
+    def test_order_with_transfers_in_the_panel(self):
+        self.product.price_rial = 165_000_000
+        self.product.save()
+        order = self.place()
+        self.user('Owners')
+        data = self.client.get(f'/api/panel/orders/{order.pk}/').json()
+        self.assertEqual([t['position'] for t in data['transfers']], [1, 2])
 
 
 @override_settings(CACHES={

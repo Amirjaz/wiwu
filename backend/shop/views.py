@@ -15,7 +15,7 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
 
 from . import jalali, orders, pagecache, payments, persian, text
-from .models import Faq, Order, Page, Product, StoreSettings
+from .models import SAMPLE_CARD_NUMBER, Card, Faq, Order, Page, Product, StoreSettings
 from .orders import OrderError
 
 log = logging.getLogger(__name__)
@@ -142,6 +142,9 @@ def _store_json(store, product, models):
         # 2026-10-23: one zipper or two), starting from the one asked for (?product=).
         'models': [{'slug': m.slug, 'name': m.name, 'short': VERSIONS.get(m.slug, m.name),
                     'price_rial': m.price_rial, 'available': m.is_available,
+                    # Over the bank's cap for one card-to-card it's paid in several: the parts, per way to send.
+                    'transfers': {o['id']: orders.split_amounts(m.price_rial + o['price_rial'], store.transfer_limit_rial)
+                                  for o in store.shipping_options()},
                     # Only asked for when more than one colour is on show.
                     'colors': [{'id': c.id, 'name': c.name, 'swatch': c.swatch, 'available': c.available}
                                for c in m.shown_colors()]}
@@ -378,10 +381,25 @@ def api_place(request):
     return JsonResponse({'token': order.token, 'url': reverse('order', args=[order.token])})
 
 
+def payment_cards(order):
+    """Every card the buyer may pay into (Amir, 2026-10-24): the order's own first (cartbecart's choice, which
+    it confirms at once), then the panel's other active cards, at once only those marked so (Card.auto: their
+    bank SMS reach cartbecart). Without cartbecart staff confirm every payment, so none is instant."""
+    auto = payments.enabled()
+    cards = [{'bank': order.card_bank, 'number': order.card_number, 'holder': order.card_holder, 'instant': auto}]
+    for card in Card.objects.filter(active=True).exclude(number__in=(order.card_number, SAMPLE_CARD_NUMBER)):
+        cards.append({'bank': card.bank, 'number': card.number, 'holder': card.holder, 'instant': auto and card.auto})
+    return cards
+
+
 def order_json(order):
     order = orders.refresh(order)
     ret = order.returns.order_by('-created_at').first()
     deadline = orders.return_deadline(order)
+    # The card is only shown while it's still worth paying into.
+    payable = order.status in (Order.Status.AWAITING, Order.Status.EXPIRED, Order.Status.REVIEW)
+    store = StoreSettings.load()
+    sheba = order.payment_method == Order.Method.SHEBA
     return {
         'code': order.code,
         'status': order.status,
@@ -401,9 +419,20 @@ def order_json(order):
         'is_gift': order.is_gift,
         'name': order.name,
         'city': f'{order.province}، {order.city}',
-        # The card is only shown while it's still worth paying into.
-        'card': {'bank': order.card_bank, 'number': order.card_number, 'holder': order.card_holder}
-        if order.status in (Order.Status.AWAITING, Order.Status.EXPIRED, Order.Status.REVIEW) else None,
+        'card': {'bank': order.card_bank, 'number': order.card_number, 'holder': order.card_holder} if payable else None,
+        'cards': payment_cards(order) if order.status == Order.Status.AWAITING else [],
+        # Over the bank's cap for one card-to-card: each transfer to make, and whether it has arrived.
+        'transfers': [{'position': t.position, 'amount_rial': t.amount_rial, 'offset_rial': t.offset_rial,
+                       'paid': t.status == t.Status.PAID,
+                       'card': {'bank': t.card_bank, 'number': t.card_number, 'holder': t.card_holder} if payable else None}
+                      for t in order.transfers.all()],
+        # Sheba, the second way to pay (orders.choose_sheba): offered while awaiting payment if the shop has
+        # one; its number only once chosen, so the order has started waiting for it.
+        'payment_method': order.payment_method,
+        'sheba_offered': bool(store.sheba) and order.status == Order.Status.AWAITING,
+        'sheba_minutes': store.sheba_minutes,
+        'sheba': {'number': order.sheba_number, 'holder': order.sheba_holder, 'bank': order.sheba_bank}
+        if sheba and payable else None,
         'claimed': bool(order.claimed_at),
         'tracking': order.tracking_code,
         'paid_at': order.paid_at.isoformat() if order.paid_at else None,
@@ -441,6 +470,17 @@ def api_claim(request, token):
         return _error('claim_empty')
     try:
         orders.claim(order, clean, upload)
+    except OrderError as exc:
+        return _error(exc.code)
+    return JsonResponse(order_json(order))
+
+
+@require_POST
+def api_sheba(request, token):
+    """The buyer pays by Sheba instead (orders.choose_sheba)."""
+    order = get_object_or_404(Order, token=token)
+    try:
+        orders.choose_sheba(order)
     except OrderError as exc:
         return _error(exc.code)
     return JsonResponse(order_json(order))

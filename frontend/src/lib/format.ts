@@ -40,11 +40,14 @@ export function groupCard(number: string): string {
 }
 
 /** 'mm:ss' in Persian digits. */
+/** A countdown: mm:ss, or h:mm:ss once it's over an hour (a Sheba order waits 3 hours). */
 export function clock(ms: number): string {
   const total = Math.max(0, Math.ceil(ms / 1000));
-  const m = Math.floor(total / 60);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
   const s = total % 60;
-  return fa(`${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`);
+  const mmss = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  return fa(h ? `${h}:${mmss}` : mmss);
 }
 
 const MONTHS = ['فروردین', 'اردیبهشت', 'خرداد', 'تیر', 'مرداد', 'شهریور', 'مهر', 'آبان', 'آذر', 'دی', 'بهمن', 'اسفند'];

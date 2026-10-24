@@ -54,7 +54,8 @@ This page is the short version, plus what isn't written down anywhere else.
     when the nameservers moved (the domain had cPanel mail at Mihanwebhost before, per the public
     certificate logs).
   - **Panel accounts:** `amir` and `salar`, both superusers (Amir set the passwords himself on
-    2026-10-19). Log in at `/panel/` (the store) or `/admin/` (Django, for the Owners/Staff groups).
+    2026-10-19). Log in at `/panel/` (the store; https://panel.penolinshop.com forwards there, 2026-10-24)
+    or `/admin/` (Django, for the Owners/Staff groups).
 - **The bag:** the WiWU Alpha fingerprint-lock clutch, sold as **«کیف دستی ویوو آلفا»** (WiWU as the
   brand in the specs and the search data), in **black and brown** (no silver: the client doesn't have
   it, 2026-10-21), both on sale at one price: **14,100,000 toman**, shipping from Dubai included (the client, 2026-10-20).
@@ -111,7 +112,12 @@ This page is the short version, plus what isn't written down anywhere else.
    still redirects it to penolinshop.com (so it works). Point it at 37.32.25.183 too, then on the new
    server `certbot renew --cert-name shop.nisatech.org --dry-run`.
 7. **The new server's root password** was posted in the chat on 2026-10-24; change it in Arvan's panel.
-   Logins are by key, so nothing here needs it.
+   Logins are by key, so nothing here needs it. `amir` has full passwordless sudo there since 2026-10-24
+   (`/etc/sudoers.d/amir-full`, added by Amir as root, as on the old server); its password is locked.
+8. **The panel's cards and Sheba** (live since 3eb9ed9, 2026-10-24): in panel → فروشگاه, add the real cards
+   (Pasargad …8502 and Blu …8679 of Behrad Bakhtiari, Shahr …4142 of Mohammad Salar Kabiri, Tejarat …1836
+   of Amirmohammad Jazayeri, as in cartbecart's dashboard) and delete the sample card; and set the shop's
+   Sheba, its holder and bank. Until the Sheba is set, the Sheba tab doesn't show.
 
 ## Waiting on the client
 
@@ -179,15 +185,16 @@ business address), the `.ir` domain under their national ID.
 
 1. **Re-run the load test** (LOADTEST.md, *Running it again*) now the page has no 3D model to download
    (2026-10-23); the Arvan rule for `/models/*` it waited for isn't needed while the 3D bag is off.
-2. **The launch server is bought and running** (2026-10-24, 37.32.25.183, 4 cores / 4 GB, behind Arvan;
-   resize to 8 cores if needed). Still to do: gunicorn is on 3 workers from the 1-core server; give it
-   about 2 workers per core × 4 threads (`--worker-class gthread`, `deploy/systemd/purseshop.service`) so
-   SMS and payment calls don't hold up pages, then re-run the load test (LOADTEST.md) on it. The old
-   shared server (1 core, 1 GB, three other sites) topped out around 18 visits a second.
+2. **The launch server is bought, running and load-tested** (2026-10-24, 37.32.25.183, 4 cores / 4 GB,
+   behind Arvan; resize to 8 cores if needed). gunicorn is on 9 plain workers, so slow cartbecart or SMS
+   calls don't hold up pages; threads were half as fast (LOADTEST.md, *The shop's own server*). gunicorn
+   keeps no access log of its own (nginx logs every request, `/var/log/nginx/access.log`; errors and the
+   app's messages stay in `journalctl -u purseshop`). It serves the home page ~850/s and checkout ~190/s
+   with no errors, against an expected spike of 6–12 views a second.
 3. **On staging:** a real order end to end (the code now comes by SMS; pay cartbecart's rial amount to
-   its card), then refund and cancel it. cartbecart's own test order **TEST-1857E4** (100,017 rials,
-   created 2026-10-24 08:33 server time) was handed to Amir to pay; whether its webhook arrived wasn't
-   checked: look for a «سفارش آزمایشی» row in the panel's payments log.
+   its card), then refund and cancel it. cartbecart's test orders are proven (see 7): **TEST-6378D1**
+   (500,976 rials) was paid at 17:23 on 2026-10-24 and its signed `order.paid` reached the new server
+   (200), logged as a test in the panel's payments log.
 4. **Client answers:** the domain must belong to whoever applies for Enamad; with the shop named WiWU, the
    client needs a domain they can register (risk R5). Fill the card holder's name and the contact details
    before applying for Enamad.
@@ -202,8 +209,35 @@ business address), the `.ir` domain under their national ID.
    card, and signed webhooks confirm. Their account (the client's, «فروشگاه محمدسالار کبیری»): Max plan,
    API access, an active default card (…4142, Bank Shahr), no monthly limit, orders last 30 minutes plus
    their 60-minute grace. Webhook address in their dashboard: `https://penolinshop.com/api/payments/cartbecart/`.
-   The signing key was made again after the first deploy; local and server `.env` hold the new one.
    Their API refuses an empty `customer_phone` (fixed in 5c91b10). Check with `manage.py cartbecart_check`.
+   **Tested end to end on 2026-10-24** (`cartbecart_check --test`, paid by Amir): the default card is now
+   Behrad Bakhtiari's Pasargad card (…8502; his Blu card …8679 was tried and turned off again). What it
+   took: (a) **their forwarder app** on the card owner's Android phone, which wasn't running at first, so
+   every payment stayed `pending`; (b) **50,000 toman, not 10,000**: the 10,000-toman tests were never
+   matched while 50,000 ones were within minutes (Amir's finding; the cause is on their side); (c) **the
+   signing key**: Amir made new ones twice in their dashboard, and each time every webhook got
+   `401 signature` until the key in the server's `.env` was replaced. `~/set-cartbecart-keys.sh` on the
+   new server (and the old) asks for the signing key and optionally the API key without echoing them,
+   writes `.env` (backup in `~/purseshop.env.bak-*`) and restarts the shop; run it with
+   `ssh -t amir@37.32.25.183 bash set-cartbecart-keys.sh`. A 401 only shows in nginx's log
+   (`sudo grep cartbecart-webhook /var/log/nginx/access.log`), never in the database. They retry a
+   refused webhook at growing gaps (about 4, then 6 minutes). Final key set 2026-10-24 17:20.
+   **Orders over the card-to-card cap are paid in several transfers** (built 2026-10-24, migration 0009;
+   README → *How an order works*, step 2): the cap is per transfer, **15M toman** (Amir), a panel setting
+   («سقف هر کارت‌به‌کارت»); above it the rest first, then round 5M transfers (Amir's choice: 16.5M is
+   11.5M + 5M), each its own cartbecart order (`<code>-1`, `<code>-2`). Paid when all arrive; review if the
+   countdown ends with only some. Tested with faked cartbecart answers and on a local dev server (order
+   page on phone and desktop, panel). **Deployed 2026-10-24 (8aa0277)**; the live checkout shows the
+   two-zipper bag as 11,500,000 + 5,000,000. Not yet tried with a real two-transfer payment through
+   cartbecart: the first real 16.5M order is that test.
+   **Every card, Sheba, payment codes** (Amir, 2026-10-24; migration 0010; README → *How an order works*,
+   step 3): the order page lists every active panel card (the order's own first), offers **Sheba** as a
+   second tab (one shop Sheba, 3 hours, checked by staff), and the panel shows each order's payment
+   method and code (CBC- codes, or the Sheba reference). **Test that decided the card labels**
+   (TEST-F289CF, 50,000 toman, default card Pasargad …8502, paid to Behrad's Blu …8679 instead):
+   cartbecart saw it but marked it `needs_review`, not paid. So only the default card is instant; the
+   others are labelled «بررسی دستی» and are approved in cartbecart's dashboard (then `order.paid` follows).
+   seed_store's sample card (…0014, still the only card in the live panel on 2026-10-24) is never offered.
 8. **Kavenegar:** Amir's account (2026-10-24), identity verified, Advanced plan until 1406-08-01, about
    205,000 toman credit. **The account has no line it may send from**: `2000660110` (from their sample
    code) answers 427 "needs an access level", and with no line named, 412; so everything goes through
@@ -432,6 +466,11 @@ another project's (Finance).
 
 | Date | Commit | What |
 | --- | --- | --- |
+| 2026-10-24 | 3eb9ed9 | **Every active card on the payment page, Sheba as a second way to pay, payment method and code in the panel** (migration 0010: `Card.auto`, the shop's Sheba and `sheba_minutes` on `StoreSettings`, `payment_method` and the chosen Sheba on `Order`); backup `db-20261024-151916.sqlite3` (server time). Checked through Arvan: home, checkout, orders, panel 200; the latest order's panel row shows `کارت‌به‌کارت` and `CBC-6V7F`; Sheba not offered until the panel has one. Waiting on Amir: the real cards and the Sheba in the panel (Waiting on Amir, 8) |
+| 2026-10-24 | 48db3f0 | Server only: **panel.penolinshop.com** forwards to penolinshop.com/panel/, keeping the path (`server-setup.sh` takes `PANEL` names; Amir added the A record `panel` → 37.32.25.183, cloud on), with its own certificate (until 2027-01-22, renewal dry run passed through Arvan). Re-run with `REDIRECT="www.penolinshop.com shop.nisatech.org" PANEL="panel.penolinshop.com"`; nginx config before it at `/root/purseshop.nginx.bak-20261024-panel`. Checked: https and http through Arvan and straight to the server, the other names unchanged |
+| 2026-10-24 | 8aa0277 | **Orders over the card-to-card cap paid in several transfers** (migration 0009: `Transfer`, `StoreSettings.transfer_limit_rial` = 150,000,000 rials), on the new server; backup `db-20261024-142320.sqlite3` (server time). No content changed, so the page cache was left. Checked through Arvan: home, checkout, orders, panel, sitemap 200; the live checkout shows the two-zipper bag as 11,500,000 + 5,000,000 toman and the Alpha as one transfer |
+| 2026-10-24 | 62a6ce3 | gunicorn's own access log off (nginx keeps one): the unit re-installed with `server-setup.sh` (same names), then the deploy (no migration; backup `db-20261024-134342.sqlite3`, server time). Live: home ~830–860/s, checkout ~178–199/s (were ~690–760 and ~157–166 with the log), no errors, pages 200 through Arvan |
+| 2026-10-24 | 5247585 | gunicorn on 9 plain workers (was 3), after benchmarking sync and threaded setups on the new server (LOADTEST.md; `tools/loadtest/bench.sh`); units re-installed with `server-setup.sh` (same names), then the deploy (no migration; backup `db-20261024-133815.sqlite3`, server time). The Kavenegar/cartbecart chat's `.env` on the new server untouched. Checked: 9 workers, ~450 MB, no errors, pages 200 through Arvan |
 | 2026-10-24 | 4e1a48e (no deploy) | **Real SMS on the new server**: its `.env` got `SMS_BACKEND=kavenegar`, `KAVENEGAR_API_KEY` and `KAVENEGAR_TEMPLATES=all` (old one at `.env.bak-before-kavenegar`), then a restart. Checked from the server: the key works and a `ps-otp` code reached Amir's phone. (The same edit first went to the old, stopped server by mistake and was undone there.) |
 | 2026-10-24 | 4e1a48e | **The shop moves to its own server, 37.32.25.183** (Amir bought it): packages, swap, user `amir`, the three certificates and their renewal account copied from the old server, `server-setup.sh` with the same names, the old server's `.env`, a sqlite snapshot of the database and `private/` copied, then the deploy (no migration; backup `db-20261024-115607.sqlite3`, server time). Checked on the new IP before the DNS change (pages, redirects, the cartbecart webhook's 401, checkout in a browser on desktop and phone), Amir pointed the records, a marked request reached the new server, the data was identical on both, the old copy stopped, disabled and masked, renewal dry runs for penolinshop.com and `www` passed through Arvan, and a browser pass through Arvan. shop.nisatech.org still reaches the old server (Waiting on Amir) |
 | 2026-10-24 | a7fc54a | The shop moves to **penolinshop.com** on the same server: `server-setup.sh DOMAIN=penolinshop.com REDIRECT="www.penolinshop.com shop.nisatech.org" CERT=1` (certificates for the two new names; nginx config and TLS lines backed up as `~/purseshop.nginx.bak-20261024` and `~/purseshop-tls.bak-20261024`), `.env` set to `DJANGO_ALLOWED_HOSTS=penolinshop.com,localhost` and `PUBLIC_URL=https://penolinshop.com` (old one at `~/purseshop.env.bak-20261024`), then the deploy (no migration; backup `db-20261024-082250.sqlite3`, server time) and the page cache emptied. Checked: every page 200 on the new name, http and `www` and shop.nisatech.org 301 to it with the path kept, no old address left on the pages or sitemap, still noindex |
