@@ -148,7 +148,7 @@ def summary(request):
     return JsonResponse({
         'counts': counts,
         'returns_open': ReturnRequest.objects.filter(status__in=('requested', 'received')).count(),
-        'unmatched': PaymentEvent.objects.filter(outcome__in=('unmatched', 'unparsed', 'unverified'),
+        'unmatched': PaymentEvent.objects.filter(outcome__in=('unmatched', 'unparsed', 'mismatch'),
                                                  created_at__gte=timezone.now() - timedelta(days=7)).count(),
         'paid_today': {'count': paid_today.count(), 'rial': paid_today.aggregate(s=Sum('amount_rial'))['s'] or 0},
         'last_auto_match': last_auto.isoformat() if last_auto else None,
@@ -170,7 +170,7 @@ def order_list(request):
     if q:
         digits = persian.latin_digits(q)
         found = found.filter(Q(code__iexact=digits) | Q(phone__contains=digits) | Q(name__icontains=q)
-                             | Q(tracking_code__iexact=digits))
+                             | Q(tracking_code__iexact=digits) | Q(provider_ref__iexact=digits))
     try:
         page = max(1, int(request.GET.get('page', 1)))
     except ValueError:
@@ -186,7 +186,8 @@ def _detail(order):
         'token': order.token, 'province': order.province, 'address': order.address,
         'postal_code': order.postal_code, 'product': order.product_name,
         'price_rial': order.unit_price_rial, 'shipping_rial': order.shipping_rial, 'offset_rial': order.offset_rial,
-        'shipping_on_delivery': order.shipping_on_delivery,
+        'shipping_on_delivery': order.shipping_on_delivery, 'pay_in_rial': order.pay_in_rial,
+        'provider_ref': order.provider_ref,  # cartbecart's CBC-… code, to find it in their dashboard
         'card': {'bank': order.card_bank, 'number': order.card_number, 'holder': order.card_holder},
         'expires': order.expires_at.isoformat(), 'paid_via': order.paid_via,
         'confirmed_by': order.confirmed_by.get_full_name() or order.confirmed_by.username if order.confirmed_by else None,

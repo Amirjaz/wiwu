@@ -2,7 +2,7 @@ import { useState, type FormEvent, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowRight, Printer, Phone, Gift, Paperclip } from '@phosphor-icons/react';
 import { isApiError, post } from '../../lib/api';
-import { fa, groupCard, shippingFee, toman, when } from '../../lib/format';
+import { fa, groupCard, rial, shippingFee, toman, when } from '../../lib/format';
 import { message } from '../../lib/messages';
 import { CopyButton, Field, Notice } from '../../lib/ui';
 import { useLoad, useSession } from '../session';
@@ -151,9 +151,10 @@ export default function OrderPage() {
         <Box title="مبلغ">
           <Row label={order.color ? `${order.product}، ${order.color}` : order.product}>{toman(order.price_rial)}</Row>
           <Row label={`ارسال (${order.shipping})`}>{shippingFee(order.shipping_rial, order.shipping_on_delivery)}</Row>
-          <Row label="شناسه واریز">{toman(order.offset_rial)}</Row>
-          <Row label="جمع (تومان)"><span className="text-lg">{toman(order.amount_rial)}</span></Row>
+          <Row label="شناسه واریز">{order.pay_in_rial ? `${fa(order.offset_rial)} ریال` : toman(order.offset_rial)}</Row>
+          <Row label={order.pay_in_rial ? 'جمع (ریال)' : 'جمع (تومان)'}><span className="text-lg">{order.pay_in_rial ? rial(order.amount_rial) : toman(order.amount_rial)}</span></Row>
           <Row label="کارت">{order.card.bank} <span className="ltr">…{fa(order.card.number.slice(-4))}</span></Row>
+          {order.provider_ref && <Row label="کارت‌به‌کارت"><span className="ltr">{order.provider_ref}</span></Row>}
           {order.paid_at && <Row label="پرداخت">{when(order.paid_at)}، {order.paid_via === 'auto' ? 'خودکار' : `دستی${order.confirmed_by ? ` (${order.confirmed_by})` : ''}`}</Row>}
         </Box>
       </div>

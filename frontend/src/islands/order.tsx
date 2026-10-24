@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import clsx from 'clsx';
 import { CheckCircle, Clock, Fingerprint, Package, Truck, HouseLine, ArrowUUpLeft } from '@phosphor-icons/react';
 import { get, islandData, isApiError, post, postForm } from '../lib/api';
-import { clock, fa, groupCard, latin, shippingFee, toman, tomanPlain, when } from '../lib/format';
+import { clock, fa, groupCard, latin, money, rial, shippingFee, toman, tomanPlain, when } from '../lib/format';
 import { message } from '../lib/messages';
 import { CopyButton, Field, Notice, useCountdown } from '../lib/ui';
 
@@ -17,6 +17,7 @@ interface Order {
   expires: string;
   now: string;
   amount_rial: number;
+  pay_in_rial: boolean; // cartbecart's amounts are unique to the rial
   price_rial: number;
   shipping_rial: number;
   shipping_on_delivery: boolean;
@@ -78,22 +79,27 @@ function useOrder(token: string) {
 }
 
 function Amount({ order }: { order: Order }) {
+  const inRial = order.pay_in_rial;
   return (
     <div className="grid gap-3">
-      <p className="label">مبلغ دقیق واریز</p>
+      <p className="label">مبلغ دقیق واریز{inRial && ' (به ریال)'}</p>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-        <p className="text-4xl sm:text-5xl font-black">{toman(order.amount_rial)} <span className="text-xl font-bold text-muted">تومان</span></p>
-        <CopyButton text={tomanPlain(order.amount_rial)} label="کپی مبلغ" />
+        <p className="text-4xl sm:text-5xl font-black">
+          {inRial ? rial(order.amount_rial) : toman(order.amount_rial)} <span className="text-xl font-bold text-muted">{inRial ? 'ریال' : 'تومان'}</span>
+        </p>
+        <CopyButton text={inRial ? String(order.amount_rial) : tomanPlain(order.amount_rial)} label="کپی مبلغ" />
       </div>
       <p className="text-ink-soft leading-relaxed">
-        دقیقاً همین مبلغ را بفرستید و گرد نکنید. {fa(Math.round(order.offset_rial / 10))} تومانِ آخر، شناسه واریز شماست تا پرداخت بی‌اشتباه به همین سفارش وصل شود.
+        {inRial
+          ? <>دقیقاً همین مبلغ را به <strong className="font-bold text-ink">ریال</strong> بفرستید و گرد نکنید. {fa(order.offset_rial)} ریالِ آخر، شناسه واریز شماست تا پرداخت خودکار به همین سفارش وصل شود.</>
+          : <>دقیقاً همین مبلغ را بفرستید و گرد نکنید. {fa(Math.round(order.offset_rial / 10))} تومانِ آخر، شناسه واریز شماست تا پرداخت بی‌اشتباه به همین سفارش وصل شود.</>}
       </p>
       <details className="text-sm text-muted">
         <summary className="cursor-pointer w-fit">ریز مبلغ</summary>
         <dl className="mt-2 grid grid-cols-[1fr_auto] gap-x-6 gap-y-1">
-          <dt>{order.product}{order.color && `، ${order.color}`}</dt><dd>{toman(order.price_rial)}</dd>
+          <dt>{order.product}{order.color && `، ${order.color}`}</dt><dd>{toman(order.price_rial)} تومان</dd>
           <dt>ارسال ({order.shipping})</dt><dd>{shippingFee(order.shipping_rial, order.shipping_on_delivery)}</dd>
-          <dt>شناسه واریز</dt><dd>{toman(order.offset_rial)}</dd>
+          <dt>شناسه واریز</dt><dd>{inRial ? `${fa(order.offset_rial)} ریال` : `${toman(order.offset_rial)} تومان`}</dd>
         </dl>
       </details>
     </div>
@@ -217,7 +223,7 @@ function Expired({ order, token, onUpdate }: { order: Order; token: string; onUp
       <h1 className="page-title">مهلت پرداخت تمام شد.</h1>
       <p className="text-ink-soft leading-relaxed">اگر هنوز واریز نکرده‌اید، واریز نکنید و سفارش تازه‌ای ثبت کنید. اگر واریز کرده‌اید، نگران نباشید: اعلام پرداخت کنید تا سفارش‌تان تأیید شود.</p>
       <a href="/checkout/" className="btn btn-primary justify-self-start">ثبت سفارش تازه</a>
-      {order.card && <p className="text-sm text-muted">کارت این سفارش: <span className="ltr">{fa(groupCard(order.card.number))}</span>، مبلغ {toman(order.amount_rial)} تومان.</p>}
+      {order.card && <p className="text-sm text-muted">کارت این سفارش: <span className="ltr">{fa(groupCard(order.card.number))}</span>، مبلغ {money(order.amount_rial, order.pay_in_rial)}.</p>}
       <ClaimForm token={token} onDone={onUpdate} />
     </div>
   );
@@ -348,7 +354,7 @@ function OrderView({ token }: { token: string }) {
         <div className="grid gap-5">
           <h1 className="page-title">پرداخت شما در حال بررسی است.</h1>
           <p className="text-ink-soft leading-relaxed">همکاران ما واریز را با حساب بانکی تطبیق می‌دهند. نتیجه را پیامک می‌کنیم و همین صفحه هم به‌روز می‌شود.</p>
-          {order.card && <p className="text-sm text-muted">مبلغ {toman(order.amount_rial)} تومان به کارت <span className="ltr">{fa(groupCard(order.card.number))}</span></p>}
+          {order.card && <p className="text-sm text-muted">مبلغ {money(order.amount_rial, order.pay_in_rial)} به کارت <span className="ltr">{fa(groupCard(order.card.number))}</span></p>}
         </div>
       </>
     );

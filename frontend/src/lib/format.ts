@@ -24,6 +24,17 @@ export function tomanPlain(rial: number): string {
   return String(Math.floor(rial / 10));
 }
 
+/** '۱۴۱٬۰۰۰٬۴۳۷' for 141000437 rials. */
+export function rial(amount: number): string {
+  return fa(amount.toLocaleString('en-US')).replace(/,/g, '٬');
+}
+
+/** An amount to pay, with its unit. cartbecart's amounts are unique to the rial, so they stay in rials
+ * (inRial, from the order); the rest read in tomans. */
+export function money(amount: number, inRial: boolean): string {
+  return inRial ? `${rial(amount)} ریال` : `${toman(amount)} تومان`;
+}
+
 export function groupCard(number: string): string {
   return number.replace(/(\d{4})(?=\d)/g, '$1 ');
 }

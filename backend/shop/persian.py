@@ -69,3 +69,31 @@ def card_number(text):
 def toman(rial):
     """'۱۰٬۰۰۰٬۳۶۰' for 100003600 rials (no unit)."""
     return fa_digits(f'{int(rial) // 10:,}').replace(',', '٬')
+
+
+def rial(amount):
+    """'۱۴۱٬۰۰۰٬۴۳۷' for 141000437 rials (no unit)."""
+    return fa_digits(f'{int(amount):,}').replace(',', '٬')
+
+
+def money(amount_rial, in_rial):
+    """An amount to pay, with its unit: rials when it doesn't end in a whole toman (cartbecart's are
+    unique to the rial), tomans otherwise."""
+    return f'{rial(amount_rial)} ریال' if in_rial else f'{toman(amount_rial)} تومان'
+
+
+# The first six digits of a card name its bank, for the label over a card that isn't in the panel.
+BANKS = {
+    '603799': 'ملی', '589210': 'سپه', '627648': 'توسعه صادرات', '627961': 'صنعت و معدن', '603770': 'کشاورزی',
+    '639217': 'کشاورزی', '628023': 'مسکن', '627760': 'پست بانک', '502908': 'توسعه تعاون',
+    '627412': 'اقتصاد نوین', '622106': 'پارسیان', '639194': 'پارسیان', '627884': 'پارسیان',
+    '502229': 'پاسارگاد', '639347': 'پاسارگاد', '627488': 'کارآفرین', '502910': 'کارآفرین', '621986': 'سامان',
+    '639346': 'سینا', '639607': 'سرمایه', '502806': 'شهر', '504706': 'شهر', '502938': 'دی', '603769': 'صادرات',
+    '610433': 'ملت', '991975': 'ملت', '627353': 'تجارت', '585983': 'تجارت', '589463': 'رفاه',
+    '505785': 'ایران زمین', '636214': 'آینده', '504172': 'رسالت', '505416': 'گردشگری', '606373': 'مهر ایران',
+}
+
+
+def bank_of(card):
+    name = BANKS.get(str(card)[:6])
+    return f'بانک {name}' if name else ''

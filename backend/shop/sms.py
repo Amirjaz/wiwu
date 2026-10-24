@@ -30,8 +30,8 @@ log = logging.getLogger(__name__)
 # kind: (text, tokens in order: token, token2, token3, then token10)
 MESSAGES = {
     'otp': ('کد تأیید {store}: {code}', ['code']),
-    'order_created': (
-        'سفارش {code} ثبت شد. مبلغ {amount} تومان را تا {minutes} دقیقه کارت‌به‌کارت کنید: {link}',
+    'order_created': (  # amount carries its unit: tomans, or rials for cartbecart's amounts
+        'سفارش {code} ثبت شد. مبلغ {amount} را تا {minutes} دقیقه کارت‌به‌کارت کنید: {link}',
         ['code', 'amount', 'link', 'minutes'],
     ),
     'reminder': ('سفارش {code} هنوز پرداخت نشده. ادامه پرداخت: {link}', ['code', 'link']),
@@ -48,6 +48,10 @@ MESSAGES = {
     'owner_forwarder': (
         'پرداخت‌ها خودکار تأیید نمی‌شوند ({count} سفارش بی‌پاسخ). گوشی پیامک‌های بانک روشن و متصل است؟',
         ['count'],
+    ),
+    'owner_payment_down': (
+        'سفارش‌ها ثبت نمی‌شوند: کارت‌به‌کارت خطای {status} داد. کارت پیش‌فرض، اشتراک و سهمیه را در داشبورد آن ببینید.',
+        ['status'],
     ),
 }
 

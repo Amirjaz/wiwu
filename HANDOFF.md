@@ -153,9 +153,14 @@ business address), the `.ir` domain under their national ID.
    would be better: run them through `tools/hero_slides.py` or add them as they are.
 6. **The two-zipper bag's photos:** its pictures are a reseller's tan render recoloured
    (`tools/phantom_photos.py`); photos of the client's own bags would be better.
-7. **cartbecart:** once the client's Max account opens their API docs, finish `backend/shop/payments.py`
-   (`TODO(cartbecart docs)`): field names and unit, checking each deposit, whether orders must be
-   registered first. Until then `PAYMENT_PROVIDER=manual`.
+7. **cartbecart:** built to their real API (2026-10-24, from their setup guide Amir sent and the docs page
+   in their site's public code; README → *cartbecart*). Orders are registered with them, they choose the
+   amount (1–999 rials on top, so cartbecart orders show amounts in rials) and the card, and signed
+   webhooks confirm. Tested against their documented answers, not their live API (no key yet). To turn it
+   on: their Pro or Max plan, a card active and default there, the forwarder app on that card's phone;
+   then `CARTBECART_API_KEY`, `CARTBECART_WEBHOOK_SECRET` and `PAYMENT_PROVIDER=cartbecart` in `.env`,
+   the webhook address in their dashboard, `manage.py cartbecart_check --test 10000`, pay it, and see
+   it in the panel's payments log. Staging stays `manual` until then.
 8. **Kavenegar:** Amir has an account (2026-10-24, line `2000660110`). Plain-text SMS from that line
    are in the code (`KAVENEGAR_SENDER`), so they work with just the key; templates per kind once approved
    (`KAVENEGAR_TEMPLATES`, README → *SMS*), at least `otp` before launch. Staging still prints SMS to the

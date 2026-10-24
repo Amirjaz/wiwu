@@ -1,5 +1,6 @@
 """Settings for the purse store. Secrets, hosts and providers come from backend/.env (see .env.example)."""
 import os
+import sys
 from pathlib import Path
 
 from django.core.exceptions import ImproperlyConfigured
@@ -157,11 +158,18 @@ KAVENEGAR_SENDER = os.getenv('KAVENEGAR_SENDER', '').strip()
 KAVENEGAR_TEMPLATES = [k.strip().lower().replace('-', '_') for k in os.getenv('KAVENEGAR_TEMPLATES', '').split(',') if k.strip()]
 
 # Payment confirmation: 'manual' (staff confirm in the panel) or 'cartbecart' (automatic, from the
-# bank's deposit SMS). Card-to-card either way; see shop/payments.py.
+# bank's deposit SMS). Card-to-card either way; see shop/payments.py. The API key (cb_…) and the
+# webhook's signing key both come from cartbecart's dashboard → Settings.
 PAYMENT_PROVIDER = os.getenv('PAYMENT_PROVIDER', 'manual')
-CARTBECART_API_URL = os.getenv('CARTBECART_API_URL', '').rstrip('/')
+CARTBECART_API_URL = os.getenv('CARTBECART_API_URL', 'https://api.cartbecart.com').rstrip('/')
 CARTBECART_API_KEY = os.getenv('CARTBECART_API_KEY', '')
 CARTBECART_WEBHOOK_SECRET = os.getenv('CARTBECART_WEBHOOK_SECRET', '')
+
+# Tests never text anyone or register orders with cartbecart, whatever .env holds: the tests that check
+# those calls fake them. (A .env with the real Kavenegar key once made the suite send for real.)
+if sys.argv[1:2] == ['test']:
+    SMS_BACKEND, KAVENEGAR_API_KEY, KAVENEGAR_TEMPLATES = 'console', '', []
+    PAYMENT_PROVIDER, CARTBECART_API_KEY, CARTBECART_WEBHOOK_SECRET = 'manual', '', ''
 
 LOGGING = {
     'version': 1,

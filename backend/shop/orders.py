@@ -2,10 +2,13 @@
 What happens to an order, in one place. Views and the panel call these; nothing else changes an
 order's status.
 
-    awaiting_payment ──(amount matched)──────────────► paid ─► preparing ─► shipped ─► delivered
+    awaiting_payment ──(cartbecart: paid)───────────► paid ─► preparing ─► shipped ─► delivered
           │      └──(buyer: "I've paid")──► needs_review ─(staff approve)─┘    │
           │                                       └─(staff reject)─► cancelled  │
-          └──(window over)──► expired ──(late money / claim)──► needs_review    └─► return request
+          └──(window over)──► expired ──(paid in their grace hour / claim)──►   └─► return request
+
+With cartbecart (payments.py) they choose the amount and card and report the result; without it the
+shop chooses them and staff confirm every payment.
 """
 import hashlib
 import hmac
@@ -17,11 +20,13 @@ from datetime import timedelta
 from django.conf import settings
 from django.core.cache import cache
 from django.db import IntegrityError, transaction
+from django.db.models import Q
 from django.utils import timezone
 
-from . import sms
-from .models import AuditLog, Card, Color, Order, OtpCode, PaymentEvent, ReturnRequest, StoreSettings
-from .persian import fa_digits, toman
+from . import payments, sms
+from .models import (AuditLog, Card, Color, Order, OtpCode, PaymentEvent, ReturnRequest, StoreSettings,
+                     new_order_code, new_order_token)
+from .persian import bank_of, fa_digits, money, toman
 
 log = logging.getLogger(__name__)
 
@@ -76,8 +81,14 @@ def send_otp(phone, ip):
     return int(OTP_GAP.total_seconds()), code
 
 
+def release_otp(otp_id):
+    """Gives a used code back when the order couldn't be placed for a reason that isn't the buyer's,
+    so pressing the button again works without a new SMS."""
+    OtpCode.objects.filter(pk=otp_id).update(used_at=None)
+
+
 def check_otp(phone, code):
-    """Uses up the phone's latest live code if it matches; raises otherwise."""
+    """Uses up the phone's latest live code if it matches (returns its id); raises otherwise."""
     otp = (OtpCode.objects.filter(phone=phone, used_at=None, created_at__gte=timezone.now() - OTP_TTL)
            .order_by('-created_at').first())
     if not otp:
@@ -88,6 +99,7 @@ def check_otp(phone, code):
         OtpCode.objects.filter(pk=otp.pk).update(attempts=otp.attempts + 1)
         raise OrderError('otp_wrong')
     OtpCode.objects.filter(pk=otp.pk).update(used_at=timezone.now())
+    return otp.pk
 
 
 # ── Placing an order ────────────────────────────────────────────────────────────────────────────
@@ -147,32 +159,76 @@ def place(product, data, ip=None, color=None):
     if color is None and product.shown_colors():
         color = pick_color(product, None)
     shipping_rial = store.shipping_fee(data['shipping'])
+    fields = dict(
+        phone=data['phone'], name=data['name'], province=data['province'], city=data['city'],
+        address=data['address'], postal_code=data['postal_code'], shipping=data['shipping'],
+        is_gift=data['is_gift'], product=product, product_name=product.name,
+        color=color, color_name=color.name if color else '',
+        unit_price_rial=product.price_rial, shipping_rial=shipping_rial,
+        shipping_on_delivery=store.shipping_on_delivery(data['shipping']), ip=ip,
+    )
+    base = product.price_rial + shipping_rial
+    order = _place_cartbecart(base, fields) if payments.enabled() else _place_manual(base, fields, store)
+    amount = money(order.amount_rial, order.pay_in_rial)
+    audit('placed', order, detail=f'{amount}، کارت …{order.card_number[-4:]}'
+          + (f'، کارت‌به‌کارت {order.provider_ref}' if order.provider_ref else ''))
+    minutes = max(1, round((order.expires_at - timezone.now()).total_seconds() / 60))
+    sms.send('order_created', order.phone, order, code=order.code, amount=amount, link=link(order),
+             minutes=fa_digits(minutes))
+    return order
+
+
+def _place_manual(base, fields, store):
+    """The shop picks the amount and the card (see choose_amount, _next_card)."""
     for _ in range(5):
         try:
             # IMMEDIATE transactions (settings) serialise writers, so two buyers can't get one amount.
             with transaction.atomic():
-                offset, amount = choose_amount(product.price_rial + shipping_rial)
+                offset, amount = choose_amount(base)
                 card = _next_card()
-                order = Order.objects.create(
-                    phone=data['phone'], name=data['name'], province=data['province'], city=data['city'],
-                    address=data['address'], postal_code=data['postal_code'], shipping=data['shipping'],
-                    is_gift=data['is_gift'], product=product, product_name=product.name,
-                    color=color, color_name=color.name if color else '',
-                    unit_price_rial=product.price_rial, shipping_rial=shipping_rial,
-                    shipping_on_delivery=store.shipping_on_delivery(data['shipping']), offset_rial=offset,
-                    amount_rial=amount, card=card, card_bank=card.bank, card_number=card.number,
-                    card_holder=card.holder, expires_at=timezone.now() + timedelta(minutes=store.payment_minutes),
-                    ip=ip,
+                return Order.objects.create(
+                    **fields, offset_rial=offset, amount_rial=amount, card=card, card_bank=card.bank,
+                    card_number=card.number, card_holder=card.holder,
+                    expires_at=timezone.now() + timedelta(minutes=store.payment_minutes),
                 )
-            break
         except IntegrityError:  # code or token collision: try new ones
             continue
-    else:
-        raise OrderError('busy')
-    audit('placed', order, detail=f'{toman(amount)} تومان، کارت …{card.number[-4:]}')
-    sms.send('order_created', order.phone, order, code=order.code, amount=toman(order.amount_rial),
-             link=link(order), minutes=fa_digits(store.payment_minutes))
-    return order
+    raise OrderError('busy')
+
+
+def _place_cartbecart(base, fields):
+    """cartbecart picks the amount and the card. Its call is made outside any transaction, so a slow
+    answer doesn't hold up other buyers' writes."""
+    for _ in range(5):
+        code, token = new_order_code(), new_order_token()
+        if not Order.objects.filter(Q(code=code) | Q(token=token)).exists():
+            break
+    try:
+        reg = payments.create_order(code, base, f'{settings.PUBLIC_URL}/o/{token}/', fields['name'], fields['phone'])
+    except payments.CartbecartError as exc:
+        log.warning('cartbecart refused order %s: %s', code, exc)
+        _payment_down(exc)
+        raise OrderError('payment_down') from None
+    # Staff may have the same card in the panel, with its bank's name.
+    card = Card.objects.filter(number=reg['card_number']).first()
+    try:
+        return Order.objects.create(
+            **fields, code=code, token=token, offset_rial=reg['amount_rial'] - base, amount_rial=reg['amount_rial'],
+            card=card, card_bank=card.bank if card else bank_of(reg['card_number']), card_number=reg['card_number'],
+            card_holder=reg['card_holder'] or (card.holder if card else ''), expires_at=reg['expires_at'],
+            provider_token=reg['token'], provider_ref=reg['ref'],
+        )
+    except IntegrityError:  # a code taken in the moment between: their order just runs out unpaid
+        raise OrderError('busy') from None
+
+
+def _payment_down(exc):
+    """No order can be placed until the owner fixes it on cartbecart's side (no default card, plan,
+    monthly quota, key), so tell them, once an hour."""
+    audit('payment_down', detail=str(exc)[:300])
+    owner = StoreSettings.load().owner_mobile
+    if owner and cache.add('payment-down-alert', 1, 3600):
+        sms.send('owner_payment_down', owner, status=str(exc.status or 'ارتباط'))
 
 
 # ── Payment ─────────────────────────────────────────────────────────────────────────────────────
@@ -225,32 +281,109 @@ def reject_payment(order, user, reason=''):
     return bool(updated)
 
 
-def deposit(amount_rial, source, payload, provider_ref=''):
-    """A deposit the provider saw (bank SMS). Finds the one order with that amount:
-    awaiting or in review → paid; expired → needs review (late money); already paid → logged as a
-    second deposit; no order → logged unmatched (the panel lists those)."""
-    since = timezone.now() - timedelta(hours=LATE_MATCH_HOURS)
-    order = (Order.objects.filter(amount_rial=amount_rial, created_at__gte=since)
-             .exclude(status=Order.Status.CANCELLED).order_by('-created_at').first())
-    event = PaymentEvent(source=source, amount_rial=amount_rial, payload=payload, order=order, provider_ref=provider_ref)
-    if provider_ref and PaymentEvent.objects.filter(source=source, provider_ref=provider_ref).exists():
-        event.outcome = 'repeat'  # the provider told us about this deposit before
-    elif order is None:
-        event.outcome = 'unmatched'
+# ── cartbecart's results (payments.py) ──────────────────────────────────────────────────────────
+
+CARTBECART_GRACE = timedelta(minutes=90)  # after expires_at they still match late bank SMS (60 min, with margin)
+SYNC_EVERY = 120  # seconds between two status checks of one order
+SYNC_MAX = 20  # status checks per minute
+
+
+def provider_result(order, status, reason=''):
+    """What cartbecart says about one of our orders, from a webhook or a status check. Returns the
+    outcome for the payments log."""
+    refresh(order)
+    if status == 'paid':
+        if mark_paid(order, 'auto'):
+            return 'matched'
+        if order.status == Order.Status.CANCELLED:
+            # Money matched to an order staff had cancelled: refund it, or reopen the order.
+            audit('paid_after_cancel', order, detail='کارت‌به‌کارت واریز این سفارش لغوشده را تأیید کرد')
+            owner = StoreSettings.load().owner_mobile
+            if owner:
+                sms.send('owner_review', owner, order, code=order.code)
+            return 'late'
+        return 'noop'
+    if status == 'needs_review':
+        if order.status not in (Order.Status.AWAITING, Order.Status.EXPIRED):
+            return 'noop'  # already in review (or settled): the status check would say so every 2 minutes
+        why = 'کارت‌به‌کارت: واریزی رسید که دقیقاً با مبلغ نمی‌خواند؛ در داشبورد کارت‌به‌کارت تأیید یا رد کنید'
+        return 'review' if to_review(order, why) else 'noop'
+    if status == 'expired' and reason and reason != 'timeout':
+        # rejected_by_merchant / rejected_by_operator: money came and was refused in their dashboard.
+        if Order.objects.filter(pk=order.pk, status__in=OPEN + (Order.Status.EXPIRED,)).update(
+                status=Order.Status.CANCELLED):
+            order.refresh_from_db()
+            audit('payment_rejected', order, detail=f'رد در کارت‌به‌کارت ({reason})')
+            sms.send('payment_not_found', order.phone, order, code=order.code, link=link(order))
+            return 'rejected'
+        return 'noop'
+    if status == 'expired':
+        return 'expired' if order.status == Order.Status.EXPIRED else 'noop'  # refresh() has expired it if due
+    if status == 'cancelled':
+        if Order.objects.filter(pk=order.pk, status__in=OPEN + (Order.Status.EXPIRED,)).update(
+                status=Order.Status.CANCELLED):
+            audit('cancelled', order, detail='لغو در داشبورد کارت‌به‌کارت')
+            return 'cancelled'
+        return 'noop'
+    return 'ignored'
+
+
+def cartbecart_event(body):
+    """One webhook call, its signature already checked. Returns the PaymentEvent (unsaved for a repeat)."""
+    event = payments.parse_event(body)
+    if event is None:
+        return PaymentEvent.objects.create(
+            source='cartbecart', outcome='unparsed', payload={'raw': (body or b'')[:2000].decode('utf-8', 'replace')})
+    if event['event_id'] and PaymentEvent.objects.filter(source='cartbecart', provider_ref=event['event_id']).exists():
+        return PaymentEvent(source='cartbecart', outcome='repeat')  # "at least once": seen it already
+    order = Order.objects.filter(code=event['code']).first() if event['code'] else None
+    record = PaymentEvent(source='cartbecart', order=order, amount_rial=event['amount_rial'],
+                          provider_ref=event['event_id'], payload=event['payload'])
+    if order is None:
+        # manage.py cartbecart_check's test orders, or an order that isn't this site's.
+        record.outcome = 'test' if event['code'].startswith('TEST-') else 'unmatched'
+    elif (event['amount_rial'] and event['amount_rial'] != order.amount_rial) or (
+            event['ref'] and order.provider_ref and event['ref'] != order.provider_ref):
+        to_review(order, f'کارت‌به‌کارت درباره‌ی سفارش دیگری با همین کد خبر داد ({event["ref"]})')
+        record.outcome = 'mismatch'
+    elif event['status'] is None:
+        record.outcome = 'ignored'
     else:
-        refresh(order)
-        if order.status in OPEN:
-            Order.objects.filter(pk=order.pk).update(provider_ref=provider_ref)
-            mark_paid(order, 'auto')
-            event.outcome = 'matched'
-        elif order.status == Order.Status.EXPIRED:
-            to_review(order, 'واریز پس از پایان مهلت پرداخت رسید')
-            event.outcome = 'late'
-        else:
-            audit('second_deposit', order, detail=f'{toman(amount_rial)} تومان دوباره واریز شد')
-            event.outcome = 'second'
-    event.save()
-    return event
+        record.outcome = provider_result(order, event['status'], event['reason'])
+    record.save()
+    return record
+
+
+def sync_cartbecart(now=None):
+    """The minute timer's backup for a missed webhook: asks cartbecart about our orders whose result
+    could still change (each at most every SYNC_EVERY seconds). Returns how many changed."""
+    now = now or timezone.now()
+    waiting = (Order.objects.exclude(provider_token='')
+               .filter(Q(status=Order.Status.AWAITING)
+                       | Q(status=Order.Status.EXPIRED, expires_at__gte=now - CARTBECART_GRACE)
+                       | Q(status=Order.Status.REVIEW, created_at__gte=now - timedelta(days=7)))
+               .order_by('created_at'))
+    changed = checked = 0
+    for order in waiting:
+        if checked >= SYNC_MAX:
+            break
+        if not cache.add(f'cartbecart-sync:{order.pk}', 1, SYNC_EVERY):
+            continue
+        checked += 1
+        try:
+            status = payments.order_status(order.provider_token).get('status')
+        except payments.CartbecartError as exc:
+            log.warning('cartbecart status of %s: %s', order.code, exc)
+            if exc.status in (None, 429):  # unreachable, or too many calls: try again next minute
+                break
+            continue
+        if status in ('paid', 'needs_review'):
+            outcome = provider_result(order, status)
+            if outcome in ('matched', 'review', 'late'):
+                PaymentEvent.objects.create(source='cartbecart', order=order, amount_rial=order.amount_rial,
+                                            outcome=outcome, payload={'status': status, 'via': 'status check'})
+                changed += 1
+    return changed
 
 
 def claim(order, data, upload=None):

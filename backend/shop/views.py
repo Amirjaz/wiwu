@@ -169,11 +169,13 @@ def home(request):
     shipping = store.shipping_options()
     models = lineup(product)
     dims, spec_cells = _specs(product)
-    # The sample bill's total: price, the first shipping option and 437 toman of the per-order offset.
-    example = product.price_rial + (shipping[0]['price_rial'] if shipping else 0) + 4370
+    # The sample bill's total: price, the first shipping option and 437 of the per-order offset, which is
+    # rials with cartbecart (they make amounts unique to the rial) and tomans without.
+    in_rial = payments.enabled()
+    example = product.price_rial + (shipping[0]['price_rial'] if shipping else 0) + (437 if in_rial else 4370)
     return render(request, 'shop/home.html', {
         'product': product, 'faqs': faqs, 'price': persian.toman(product.price_rial),
-        'shipping': shipping, 'example_total': persian.toman(example),
+        'shipping': shipping, 'example_total': persian.rial(example) if in_rial else persian.toman(example),
         'look': LOOK, 'parts': PARTS, 'colors': product.shown_colors(), 'models': models,
         'bags': bag_pictures(product, models), 'cards': colour_cards(product, models),
         'dims': dims, 'spec_cells': spec_cells,
@@ -365,9 +367,13 @@ def api_place(request):
             return _error('unavailable')
     try:
         color = orders.pick_color(product, data.get('color'))
-        orders.check_otp(clean['phone'], persian.latin_digits(data.get('code', '')))
+        otp_id = orders.check_otp(clean['phone'], persian.latin_digits(data.get('code', '')))
+    except OrderError as exc:
+        return _error(exc.code, **exc.extra)
+    try:
         order = orders.place(product, clean, _ip(request), color=color)
     except OrderError as exc:
+        orders.release_otp(otp_id)  # not the buyer's fault: the same code works when they try again
         return _error(exc.code, **exc.extra)
     return JsonResponse({'token': order.token, 'url': reverse('order', args=[order.token])})
 
@@ -384,6 +390,7 @@ def order_json(order):
         'expires': order.expires_at.isoformat(),
         'now': timezone.now().isoformat(),
         'amount_rial': order.amount_rial,
+        'pay_in_rial': order.pay_in_rial,
         'price_rial': order.unit_price_rial,
         'shipping_rial': order.shipping_rial,
         'shipping_on_delivery': order.shipping_on_delivery,
@@ -486,10 +493,15 @@ def api_lookup(request):
 
 @csrf_exempt
 @require_POST
-def cartbecart_webhook(request, secret):
-    if settings.PAYMENT_PROVIDER != 'cartbecart' or not payments.secret_ok(secret):
+def cartbecart_webhook(request):
+    """cartbecart's events (payments.py). 2xx tells them it arrived; anything else and they send it
+    again (30 s, 2 min, 10 min, 1 h, 6 h later)."""
+    if not payments.enabled():
         raise Http404
-    event = payments.webhook(request.body)
+    if not payments.signature_ok(request.body, request.headers.get('X-CBC-Timestamp'),
+                                 request.headers.get('X-CBC-Signature')):
+        return JsonResponse({'error': 'signature'}, status=401)
+    event = orders.cartbecart_event(request.body)
     return JsonResponse({'ok': True, 'outcome': event.outcome})
 
 

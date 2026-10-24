@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import clsx from 'clsx';
-import { fa, toman, when } from '../../lib/format';
+import { fa, money, when } from '../../lib/format';
 import { message } from '../../lib/messages';
 import { Notice } from '../../lib/ui';
 import { useLoad } from '../session';
@@ -13,12 +13,21 @@ interface Sms { phone: string; kind: string; text: string; status: string; error
 interface Activity { action: string; detail: string; at: string; user: string | null; order: { id: number; code: string } | null }
 
 const OUTCOMES: Record<string, string> = {
-  matched: 'به سفارش خورد',
-  late: 'دیر رسید، بررسی شود',
-  second: 'واریز دوم برای سفارش پرداخت‌شده',
+  matched: 'پرداخت شد',
+  review: 'مبلغ نخواند؛ در داشبورد کارت‌به‌کارت تصمیم بگیرید',
+  rejected: 'در کارت‌به‌کارت رد شد',
+  expired: 'مهلت تمام شد',
+  cancelled: 'در کارت‌به‌کارت لغو شد',
+  late: 'پرداخت سفارش لغوشده، بررسی شود',
+  mismatch: 'با سفارش ما نمی‌خواند، بررسی شود',
+  noop: 'چیزی عوض نشد',
+  ignored: 'رویداد ناشناخته',
+  test: 'سفارش آزمایشی',
   repeat: 'تکراری از سرویس',
-  unmatched: 'به هیچ سفارشی نخورد',
+  unmatched: 'سفارشش در این سایت نیست',
   unparsed: 'قابل خواندن نبود',
+  // from before cartbecart's API (raw deposits)
+  second: 'واریز دوم برای سفارش پرداخت‌شده',
   unverified: 'تأیید نشد',
 };
 
@@ -30,10 +39,10 @@ function Payments() {
   return (
     <ul className="grid gap-2">
       {data.events.map((e) => (
-        <li key={e.id} className={clsx('rounded-[var(--radius-field)] border bg-raised p-4 grid gap-1', ['unmatched', 'unparsed', 'unverified', 'late', 'second'].includes(e.outcome) ? 'border-warn' : 'border-line')}>
-          <span className="font-semibold">{e.amount_rial ? `${toman(e.amount_rial)} تومان` : 'بدون مبلغ'} · {OUTCOMES[e.outcome] ?? e.outcome}</span>
+        <li key={e.id} className={clsx('rounded-[var(--radius-field)] border bg-raised p-4 grid gap-1', ['unmatched', 'unparsed', 'unverified', 'late', 'second', 'mismatch', 'review'].includes(e.outcome) ? 'border-warn' : 'border-line')}>
+          <span className="font-semibold">{e.amount_rial ? money(e.amount_rial, e.amount_rial % 10 !== 0) : 'بدون مبلغ'} · {OUTCOMES[e.outcome] ?? e.outcome}</span>
           <span className="text-sm text-muted">{when(e.at)}{e.order && <> · <Link to={`/orders/${e.order.id}`} className="underline ltr">{e.order.code}</Link></>}</span>
-          {['unparsed', 'unmatched'].includes(e.outcome) && (
+          {['unparsed', 'unmatched', 'mismatch', 'ignored', 'test'].includes(e.outcome) && (
             <details className="text-sm"><summary className="cursor-pointer text-ink-soft">داده خام</summary><pre className="ltr mt-2 overflow-x-auto rounded bg-surface p-3 text-xs">{JSON.stringify(e.payload, null, 2)}</pre></details>
           )}
         </li>
