@@ -185,42 +185,49 @@ function MethodTabs({ tab, onChange }: { tab: 'card' | 'sheba'; onChange: (tab: 
   );
 }
 
-/** Paying by Sheba: the whole amount in one transfer to the shop's Sheba, checked by staff. The number
- *  shows once the buyer chooses it (which gives the order the longer Sheba deadline). */
+/** Paying by Sheba: the whole amount in one transfer to the shop's Sheba, checked by staff. Opening the tab
+ *  chooses it (Amir, 2026-10-24: the number must be there at once), which gives the order the longer Sheba
+ *  deadline; a card-to-card payment still pays it if the buyer goes back. */
 function ShebaPay({ order, token, onUpdate }: { order: Order; token: string; onUpdate: (o: Order) => void }) {
-  const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState('');
   const inRial = order.pay_in_rial;
   const hours = order.sheba_minutes / 60;
   const wait = Number.isInteger(hours) ? `${fa(hours)} ساعت` : `${fa(order.sheba_minutes)} دقیقه`;
 
-  async function choose() {
-    setBusy(true);
+  const choose = useCallback(async () => {
     setProblem('');
     try {
       onUpdate(await post<Order>(`/api/orders/${token}/sheba/`));
     } catch (err) {
-      setProblem(isApiError(err) ? message(err.error) : message('unknown'));
-    } finally {
-      setBusy(false);
+      setProblem(isApiError(err) ? message(err.error) : message('network'));
     }
-  }
+  }, [token, onUpdate]);
+
+  const chosen = !!order.sheba;
+  useEffect(() => {
+    if (!chosen) choose();
+  }, [chosen, choose]);
 
   if (!order.sheba) {
-    return (
+    return problem ? (
       <div className="grid gap-4">
-        <p className="text-ink-soft leading-relaxed">
-          مبلغ کامل را <strong className="font-bold text-ink">در یک واریز</strong> به شبای فروشگاه بفرستید؛ سقف کارت‌به‌کارت را ندارد.
-          واریز شبا را همکاران ما بررسی می‌کنند و تأیید آن پس از رسیدن پول <strong className="font-bold text-ink">تا ۲۰ تا ۳۰ دقیقه</strong> طول می‌کشد.
-          با انتخاب شبا، مهلت پرداخت این سفارش {wait} می‌شود.
-        </p>
-        {problem && <Notice tone="error">{problem}</Notice>}
-        <button type="button" className="btn btn-primary justify-self-start" disabled={busy} onClick={choose}>{busy ? '…' : 'پرداخت با شبا'}</button>
+        <Notice tone="error">{problem}</Notice>
+        <button type="button" className="btn btn-primary justify-self-start" onClick={choose}>دوباره</button>
+      </div>
+    ) : (
+      <div className="grid gap-4 animate-pulse" aria-busy="true" aria-label="در حال آماده کردن شبا">
+        <div className="h-36 rounded-[var(--radius-surface)] bg-line" />
+        <div className="h-12 w-1/2 rounded-full bg-line" />
       </div>
     );
   }
   return (
     <div className="grid gap-6">
+      <p className="text-ink-soft leading-relaxed">
+        مبلغ کامل را <strong className="font-bold text-ink">در یک واریز</strong> به این شبا بفرستید؛ سقف کارت‌به‌کارت را ندارد.
+        واریز شبا را همکاران ما بررسی می‌کنند و تأیید آن پس از رسیدن پول <strong className="font-bold text-ink">تا ۲۰ تا ۳۰ دقیقه</strong> طول می‌کشد.
+        مهلت پرداخت با شبا {wait} است.
+      </p>
       <div className="grid gap-4 rounded-[var(--radius-surface)] bg-ink text-raised p-6 sm:p-7">
         <div className="flex items-center justify-between gap-4 text-raised/75">
           <span>{order.sheba.bank || 'شبا'}</span>
@@ -241,7 +248,7 @@ function ShebaPay({ order, token, onUpdate }: { order: Order; token: string; onU
           <CopyButton text={inRial ? String(order.amount_rial) : tomanPlain(order.amount_rial)} label="کپی مبلغ" />
         </div>
         <p className="text-ink-soft leading-relaxed">
-          همه‌ی مبلغ را در یک واریز شبا (پایا یا پل) بفرستید، دقیقاً همین مبلغ. همکاران ما واریز را بررسی می‌کنند؛ تأیید پس از رسیدن پول تا ۲۰ تا ۳۰ دقیقه طول می‌کشد و پیامک می‌گیرید.
+          دقیقاً همین مبلغ را در یک واریز شبا (پایا یا پل) بفرستید و گرد نکنید. پس از تأیید، همین صفحه عوض می‌شود و پیامک می‌گیرید.
         </p>
       </div>
       <ClaimForm token={token} onDone={onUpdate} title="پس از واریز، شماره پیگیری را بفرستید" />

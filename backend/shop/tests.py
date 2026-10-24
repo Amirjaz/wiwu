@@ -698,6 +698,15 @@ class CartbecartTests(Base):
                 self.assertEqual(orders.sync_cartbecart(), 0)
         self.assertEqual(AuditLog.objects.count(), before)
 
+    def test_paid_by_card_after_opening_the_sheba_tab_counts_as_card(self):
+        self.store.sheba = valid_sheba()
+        self.store.save()
+        order = self.placed()
+        orders.choose_sheba(order)
+        self.assertEqual(self.send(self.event(order, 'order.paid')).json()['outcome'], 'matched')
+        order.refresh_from_db()
+        self.assertEqual((order.status, order.payment_method), ('paid', 'card'))
+
     def test_every_active_card_is_offered_the_order_own_first(self):
         Card.objects.create(bank='بانک سامان', number='6219861477558679', holder='بهراد بختیاری', auto=True)
         Card.objects.create(bank='بانک تجارت', number='5859831000001836', holder='امیرمحمد جزایری', active=False)

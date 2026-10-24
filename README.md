@@ -62,10 +62,11 @@ too) and logged in the panel. Panel users for local testing are in `backend/dev-
    «بررسی دستی» unless a card is marked «تأیید خودکار» in the panel (`Card.auto`, off by default).
    **Sheba** is the second way to pay (tabs on the order page; `orders.choose_sheba`), once the shop's
    Sheba is set in the panel: the whole amount in one transfer, no card-to-card cap, checked by staff
-   («تا ۲۰ تا ۳۰ دقیقه»). Choosing it shows the Sheba (copied onto the order), gives the order
-   `sheba_minutes` (3 hours) from then, skips the minute-15 reminder and puts it in the panel's "needs
-   action" until confirmed; the buyer sends the transfer reference with the same form as «پرداخت کرده‌ام».
-   A card-to-card payment still pays it if it comes. The panel shows each order's **payment method** and
+   («تا ۲۰ تا ۳۰ دقیقه»). Opening the Sheba tab chooses it (Amir wanted the number there at once): it
+   shows the Sheba (copied onto the order), gives the order `sheba_minutes` (3 hours) from then, skips the
+   minute-15 reminder and puts it in the panel's "needs action" until confirmed; the buyer sends the
+   transfer reference with the same form as «پرداخت کرده‌ام». A card-to-card payment still pays it if it
+   comes, and the order is then labelled card-to-card again. The panel shows each order's **payment method** and
    **payment code**: cartbecart's CBC- codes (one per transfer), or the buyer's Sheba reference; search
    finds an order by either.
 4. **Confirmation**: cartbecart sees the deposit SMS and sends a signed event → the order is paid (SMS

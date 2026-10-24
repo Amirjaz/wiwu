@@ -309,6 +309,8 @@ def mark_paid(order, via, user=None, detail=''):
         updated = Order.objects.filter(pk=order.pk, status__in=OPEN + (Order.Status.EXPIRED,)).update(
             status=Order.Status.PAID, paid_at=now, paid_via=via,
             confirmed_by=user if user and user.is_authenticated else None,
+            # cartbecart only ever confirms card-to-card: a buyer who opened the Sheba tab paid by card after all.
+            **({'payment_method': Order.Method.CARD} if via == 'auto' else {}),
         )
         if updated:  # staff confirming by hand saw every transfer
             order.transfers.exclude(status=Transfer.Status.PAID).update(status=Transfer.Status.PAID, paid_at=now)
