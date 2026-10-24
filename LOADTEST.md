@@ -1,8 +1,9 @@
 # PurseShop: load test, 2026-10-18 (and the shop's own server, 2026-10-24)
 
 **The shop's own server, 2026-10-24** (its section below): on 4 cores the page cache serves the home page
-about 900 times a second and checkout renders about 200 times a second, with no errors up to 128
-simultaneous clients, on 9 plain gunicorn workers. That is far beyond the campaign estimates further
+about 700–900 times a second and checkout renders about 160–200 times a second, with no errors up to 128
+simultaneous clients, on 9 plain gunicorn workers (the lower figures with gunicorn's access log on, as
+live). That is far beyond the campaign estimates further
 down (6–12 views a second at a spike). The 2026-10-18 test of the old shared server follows.
 
 **Question:** can the store take about 500 buyers a day, around 50,000 page views or more, and on what
@@ -104,21 +105,29 @@ service was measured as it was; each other setup ran as a second gunicorn on por
 service's user, so the site wasn't touched until the choice was made. ab itself takes part of a core, so
 these are a floor. Peaks over 1–128 simultaneous clients, and the 95th percentile at 64:
 
-| gunicorn | Home (page cache), req/s | p95 at 64 | Checkout (rendered), req/s | p95 at 64 | Memory |
-| --- | --- | --- | --- | --- | --- |
-| 3 sync workers (as it was) | ~800 | 109 ms | ~170 | 445 ms | ~170 MB |
-| 5 sync | ~1,070 | 72 ms | ~228 | 328 ms | ~270 MB |
-| **9 sync (chosen)** | ~880–920 | 90 ms | ~180–210 | 375 ms | ~440 MB |
-| 4 workers × 4 threads (gthread) | ~510 | 407 ms | ~122 | 1,006 ms | ~230 MB |
-| 8 workers × 4 threads (gthread) | ~530 | 265 ms | ~141 | 1,204 ms | ~450 MB |
+| gunicorn | Access log | Home (page cache), req/s | p95 at 64 | Checkout (rendered), req/s | p95 at 64 | Memory |
+| --- | --- | --- | --- | --- | --- | --- |
+| 3 sync workers (as it was, live) | on | ~800 | 109 ms | ~170 | 445 ms | ~170 MB |
+| **9 sync (installed, live)** | on | ~690–760 | 96 ms | ~157–166 | 425 ms | ~450 MB |
+| 5 sync (beside it) | off | ~1,070 | 72 ms | ~228 | 328 ms | ~270 MB |
+| 9 sync (beside it) | off | ~880–920 | 90 ms | ~180–210 | 375 ms | ~440 MB |
+| 4 workers × 4 threads, gthread (beside it) | off | ~510 | 407 ms | ~122 | 1,006 ms | ~230 MB |
+| 8 workers × 4 threads, gthread (beside it) | off | ~530 | 265 ms | ~141 | 1,204 ms | ~450 MB |
+
+**Mind the access log:** the live service writes every request to the journal (`--access-logfile -`); the
+setups run beside it didn't. At full CPU that log costs about 20% (journald's share), so compare rows
+with the same log setting. Like for like, 9 workers serve about as many requests at full CPU as 3 did:
+the CPU, not the number of workers, is the limit there. nginx already logs every request, so dropping
+gunicorn's own access log would win that 20% back.
 
 - **No errors** in any run; the CPU was full (90–100%) from 8 clients up with 5 or more workers.
 - **Threads are slower here:** a page is rendered in Python start to finish, and Python's threads queue for
   one lock, so 4 or 8 threaded workers did about half the work of 5 plain ones, with much worse waits.
-- **Why 9 and not 5:** 5 was the fastest at full CPU, but a checkout can wait up to 20 s on cartbecart
-  (`payments.TIMEOUT`, two calls) and an OTP up to 10 s on Kavenegar. With 5 workers, five such waits at
-  once would hold up every page; with 9 it takes nine. The price is about 15% at full CPU, which no
-  expected spike comes near.
+- **Why 9 workers:** not for speed at full CPU (see above) but for waiting. A checkout can wait up to
+  20 s on cartbecart (`payments.TIMEOUT`, two calls) and an OTP up to 10 s on Kavenegar, and a plain worker
+  does nothing else meanwhile: with 3, three buyers waiting on cartbecart held up every page; with 9 it
+  takes nine. 5 was the fastest beside it, about 15% ahead of 9 at full CPU, a margin no expected spike
+  comes near.
 - **Per visit** the home page now costs about 1 ms of CPU from the cache and checkout about 5 ms (4 cores
   at ~200/s). Through Arvan, images are cached at the edge and the 3D model is gone (2026-10-23).
 
