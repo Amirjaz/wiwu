@@ -111,7 +111,7 @@ This page is the short version, plus what isn't written down anywhere else.
 7. **The new server's root password** was posted in the chat on 2026-10-24; change it in Arvan's panel.
    Logins are by key, so nothing here needs it. `amir` has full passwordless sudo there since 2026-10-24
    (`/etc/sudoers.d/amir-full`, added by Amir as root, as on the old server); its password is locked.
-8. **The panel's cards and Sheba** (for the cards/Sheba release): in panel → فروشگاه, add the real cards
+8. **The panel's cards and Sheba** (live since 3eb9ed9, 2026-10-24): in panel → فروشگاه, add the real cards
    (Pasargad …8502 and Blu …8679 of Behrad Bakhtiari, Shahr …4142 of Mohammad Salar Kabiri, Tejarat …1836
    of Amirmohammad Jazayeri, as in cartbecart's dashboard) and delete the sample card; and set the shop's
    Sheba, its holder and bank. Until the Sheba is set, the Sheba tab doesn't show.
@@ -457,6 +457,7 @@ another project's (Finance).
 
 | Date | Commit | What |
 | --- | --- | --- |
+| 2026-10-24 | 3eb9ed9 | **Every active card on the payment page, Sheba as a second way to pay, payment method and code in the panel** (migration 0010: `Card.auto`, the shop's Sheba and `sheba_minutes` on `StoreSettings`, `payment_method` and the chosen Sheba on `Order`); backup `db-20261024-151916.sqlite3` (server time). Checked through Arvan: home, checkout, orders, panel 200; the latest order's panel row shows `کارت‌به‌کارت` and `CBC-6V7F`; Sheba not offered until the panel has one. Waiting on Amir: the real cards and the Sheba in the panel (Waiting on Amir, 8) |
 | 2026-10-24 | 48db3f0 | Server only: **panel.penolinshop.com** forwards to penolinshop.com/panel/, keeping the path (`server-setup.sh` takes `PANEL` names; Amir added the A record `panel` → 37.32.25.183, cloud on), with its own certificate (until 2027-01-22, renewal dry run passed through Arvan). Re-run with `REDIRECT="www.penolinshop.com shop.nisatech.org" PANEL="panel.penolinshop.com"`; nginx config before it at `/root/purseshop.nginx.bak-20261024-panel`. Checked: https and http through Arvan and straight to the server, the other names unchanged |
 | 2026-10-24 | 8aa0277 | **Orders over the card-to-card cap paid in several transfers** (migration 0009: `Transfer`, `StoreSettings.transfer_limit_rial` = 150,000,000 rials), on the new server; backup `db-20261024-142320.sqlite3` (server time). No content changed, so the page cache was left. Checked through Arvan: home, checkout, orders, panel, sitemap 200; the live checkout shows the two-zipper bag as 11,500,000 + 5,000,000 toman and the Alpha as one transfer |
 | 2026-10-24 | 62a6ce3 | gunicorn's own access log off (nginx keeps one): the unit re-installed with `server-setup.sh` (same names), then the deploy (no migration; backup `db-20261024-134342.sqlite3`, server time). Live: home ~830–860/s, checkout ~178–199/s (were ~690–760 and ~157–166 with the log), no errors, pages 200 through Arvan |
