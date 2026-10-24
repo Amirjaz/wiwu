@@ -219,7 +219,9 @@ business address), the `.ir` domain under their national ID.
    («سقف هر کارت‌به‌کارت»); above it the rest first, then round 5M transfers (Amir's choice: 16.5M is
    11.5M + 5M), each its own cartbecart order (`<code>-1`, `<code>-2`). Paid when all arrive; review if the
    countdown ends with only some. Tested with faked cartbecart answers and on a local dev server (order
-   page on phone and desktop, panel), not yet on cartbecart's live API.
+   page on phone and desktop, panel). **Deployed 2026-10-24 (8aa0277)**; the live checkout shows the
+   two-zipper bag as 11,500,000 + 5,000,000. Not yet tried with a real two-transfer payment through
+   cartbecart: the first real 16.5M order is that test.
 8. **Kavenegar:** Amir's account (2026-10-24), identity verified, Advanced plan until 1406-08-01, about
    205,000 toman credit. **The account has no line it may send from**: `2000660110` (from their sample
    code) answers 427 "needs an access level", and with no line named, 412; so everything goes through
@@ -442,6 +444,7 @@ another project's (Finance).
 
 | Date | Commit | What |
 | --- | --- | --- |
+| 2026-10-24 | 8aa0277 | **Orders over the card-to-card cap paid in several transfers** (migration 0009: `Transfer`, `StoreSettings.transfer_limit_rial` = 150,000,000 rials), on the new server; backup `db-20261024-142320.sqlite3` (server time). No content changed, so the page cache was left. Checked through Arvan: home, checkout, orders, panel, sitemap 200; the live checkout shows the two-zipper bag as 11,500,000 + 5,000,000 toman and the Alpha as one transfer |
 | 2026-10-24 | 62a6ce3 | gunicorn's own access log off (nginx keeps one): the unit re-installed with `server-setup.sh` (same names), then the deploy (no migration; backup `db-20261024-134342.sqlite3`, server time). Live: home ~830–860/s, checkout ~178–199/s (were ~690–760 and ~157–166 with the log), no errors, pages 200 through Arvan |
 | 2026-10-24 | 5247585 | gunicorn on 9 plain workers (was 3), after benchmarking sync and threaded setups on the new server (LOADTEST.md; `tools/loadtest/bench.sh`); units re-installed with `server-setup.sh` (same names), then the deploy (no migration; backup `db-20261024-133815.sqlite3`, server time). The Kavenegar/cartbecart chat's `.env` on the new server untouched. Checked: 9 workers, ~450 MB, no errors, pages 200 through Arvan |
 | 2026-10-24 | 4e1a48e (no deploy) | **Real SMS on the new server**: its `.env` got `SMS_BACKEND=kavenegar`, `KAVENEGAR_API_KEY` and `KAVENEGAR_TEMPLATES=all` (old one at `.env.bak-before-kavenegar`), then a restart. Checked from the server: the key works and a `ps-otp` code reached Amir's phone. (The same edit first went to the old, stopped server by mistake and was undone there.) |
