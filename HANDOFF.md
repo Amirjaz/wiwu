@@ -32,8 +32,19 @@ This page is the short version, plus what isn't written down anywhere else.
     2026-10-21 (the shop resolves to Arvan again, `server: ArvanCloud`).
   - **penolinshop.com** (2026-10-24): `penolinshop.com` and `www.penolinshop.com` each have their own
     certificate (until 2027-01-22), and shop.nisatech.org keeps its own for its redirect (renewal
-    dry-runs passed for all three, the old one through its redirect block) (`server-setup.sh REDIRECT=…`, README → *Deploying*). Arvan's proxy is **off** for both
-    new records (they resolve to the server), so there is no CDN in front yet.
+    dry-runs passed for all three, the old one through its redirect block; `server-setup.sh REDIRECT=…`,
+    README → *Deploying*).
+  - **Arvan for penolinshop.com** (2026-10-24): Arvan's edge has its own managed certificate
+    (Let's Encrypt, `penolinshop.com` and `*.penolinshop.com`, 90 days, renewed by Arvan). Amir turned
+    the cloud on at about 12:12 before that certificate reached the edge, and for some 10 minutes every
+    https visit failed with `ERR_SSL_VERSION_OR_CIPHER_MISMATCH`; he turned it off, the certificate
+    showed as معتبر, and through Arvan everything checked out: pages 200, http and `www` 301 to the shop,
+    an unsigned POST to `/api/payments/cartbecart/` gets the app's own `401 signature` (no Arvan
+    challenge in the way), images cached (`x-cache: HIT`), HTML not (`BYPASS`). Arvan reaches the server
+    over HTTP; nginx logs the visitor's IP for the shop (the redirect blocks log Arvan's).
+  - **Email:** Arvan's zone has no MX records, so any mail at @penolinshop.com from the old host stopped
+    when the nameservers moved (the domain had cPanel mail at Mihanwebhost before, per the public
+    certificate logs).
   - **Panel accounts:** `amir` and `salar`, both superusers (Amir set the passwords himself on
     2026-10-19). Log in at `/panel/` (the store) or `/admin/` (Django, for the Owners/Staff groups).
 - **The bag:** the WiWU Alpha fingerprint-lock clutch, sold as **«کیف دستی ویوو آلفا»** (WiWU as the
@@ -81,10 +92,10 @@ This page is the short version, plus what isn't written down anywhere else.
    server; it only redirects to penolinshop.com now and works either way). Told him the other records (nisatech.org, contech, pd, ops) need it
    on too: they have no HTTPS of their own on the server, so without it their https addresses show
    nisatak.com's site behind a certificate warning.
-4. **Arvan's proxy for penolinshop.com** (2026-10-24): off for `@` and `www`. Before turning it on, in
-   Arvan's panel for penolinshop.com, switch on HTTPS with Arvan's free certificate and wait until it
-   shows as issued; otherwise https visitors get a certificate error at Arvan. The server works with
-   either origin protocol.
+4. **Arvan's proxy for penolinshop.com** (2026-10-24): back on for `@` and `www` at 12:27 once Arvan's
+   certificate showed as معتبر, and checked through it (see *Where it stands*). For any new domain on Arvan: switch on HTTPS and wait until
+   the edge actually serves the certificate (`openssl s_client -connect <Arvan IP>:443 -servername <host>`)
+   before turning the cloud on. The server works with either origin protocol.
 5. **Whose name penolinshop.com is in:** asked, not answered. Enamad is issued to the domain's owner
    (PLAN.md), so if it isn't the client's, the launch still needs the client's own domain.
 
