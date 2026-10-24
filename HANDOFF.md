@@ -211,8 +211,8 @@ business address), the `.ir` domain under their national ID.
    `401 signature` until the key in the server's `.env` was replaced. `~/set-cartbecart-keys.sh` on the
    new server (and the old) asks for the signing key and optionally the API key without echoing them,
    writes `.env` (backup in `~/purseshop.env.bak-*`) and restarts the shop; run it with
-   `ssh -t amir@37.32.25.183 bash set-cartbecart-keys.sh`. A 401 only shows in the logs
-   (`sudo journalctl -u purseshop | grep payments/cartbecart`), never in the database. They retry a
+   `ssh -t amir@37.32.25.183 bash set-cartbecart-keys.sh`. A 401 only shows in nginx's log
+   (`sudo grep cartbecart-webhook /var/log/nginx/access.log`), never in the database. They retry a
    refused webhook at growing gaps (about 4, then 6 minutes). Final key set 2026-10-24 17:20.
    **Open: paying 16,500,000 toman in one transfer** goes over the card-to-card limit (Amir, 2026-10-24),
    so the two-zipper bag needs two transfers; each order is one cartbecart order with one exact amount,
