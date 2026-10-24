@@ -69,11 +69,21 @@ Without cartbecart (`PAYMENT_PROVIDER=manual`) unpaid orders show under "needs a
 
 ## SMS (`backend/shop/sms.py`)
 
-`SMS_BACKEND=kavenegar` uses Kavenegar's verify/lookup templates, which must be created in the
-client's Kavenegar panel first: `ps-otp`, `ps-order-created`, `ps-reminder`, `ps-paid`,
-`ps-payment-not-found`, `ps-shipped`, `ps-return-received`, `ps-refunded`, `ps-owner-new-order`,
-`ps-owner-review`, `ps-owner-forwarder` (wording and tokens in `MESSAGES`). Every SMS is logged
-(panel → Logs), OTP codes hidden.
+`SMS_BACKEND=kavenegar` with `KAVENEGAR_API_KEY` sends each message one of two ways (Kavenegar's REST
+API over plain HTTPS; their Node SDK is the same calls, so no package is needed):
+
+- **Plain text** (`sms/send`) from the line `KAVENEGAR_SENDER` (`2000660110`, empty for the account's
+  default line), with the texts in `MESSAGES`. Works as soon as the account has credit.
+- **Templates** (`verify/lookup`) for the kinds listed in `KAVENEGAR_TEMPLATES` (`otp,paid`, or `all`).
+  They must be created and approved in the Kavenegar panel first (the Advanced plan): `ps-otp`,
+  `ps-order-created`, `ps-reminder`, `ps-paid`, `ps-payment-not-found`, `ps-shipped`,
+  `ps-return-received`, `ps-refunded`, `ps-owner-new-order`, `ps-owner-review`, `ps-owner-forwarder`
+  (wording and tokens in `MESSAGES`). They also reach numbers that block advertising SMS, so move at
+  least `otp` to a template before launch.
+
+`manage.py sms_check` shows the key's credit and which messages go how, sending nothing;
+`manage.py sms_check 09xxxxxxxxx` also texts that number a test code (12345). Every SMS is logged
+(panel → Logs), OTP codes hidden; a refusal is logged with Kavenegar's reason (no credit, bad key…).
 
 ## Staff panel (`/panel`)
 

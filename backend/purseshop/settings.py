@@ -150,6 +150,11 @@ VITE_ASSETS_URL = os.getenv('VITE_ASSETS_URL', '/')  # where the build's assets/
 # SMS: 'console' (development: printed and logged in the panel only) or 'kavenegar'.
 SMS_BACKEND = os.getenv('SMS_BACKEND', 'console' if DEVELOPMENT else 'kavenegar')
 KAVENEGAR_API_KEY = os.getenv('KAVENEGAR_API_KEY', '')
+# Plain messages go from this line (empty: the account's default line). The kinds listed in
+# KAVENEGAR_TEMPLATES (comma-separated, e.g. 'otp,paid', or 'all') use templates approved in the
+# Kavenegar panel instead. See shop/sms.py.
+KAVENEGAR_SENDER = os.getenv('KAVENEGAR_SENDER', '').strip()
+KAVENEGAR_TEMPLATES = [k.strip().lower().replace('-', '_') for k in os.getenv('KAVENEGAR_TEMPLATES', '').split(',') if k.strip()]
 
 # Payment confirmation: 'manual' (staff confirm in the panel) or 'cartbecart' (automatic, from the
 # bank's deposit SMS). Card-to-card either way; see shop/payments.py.

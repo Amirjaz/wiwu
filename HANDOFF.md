@@ -156,7 +156,11 @@ business address), the `.ir` domain under their national ID.
 7. **cartbecart:** once the client's Max account opens their API docs, finish `backend/shop/payments.py`
    (`TODO(cartbecart docs)`): field names and unit, checking each deposit, whether orders must be
    registered first. Until then `PAYMENT_PROVIDER=manual`.
-8. **Kavenegar:** the client's account and API key, with the 11 templates in README → *SMS*.
+8. **Kavenegar:** Amir has an account (2026-10-24, line `2000660110`). Plain-text SMS from that line
+   are in the code (`KAVENEGAR_SENDER`), so they work with just the key; templates per kind once approved
+   (`KAVENEGAR_TEMPLATES`, README → *SMS*), at least `otp` before launch. Staging still prints SMS to the
+   log: to turn them on, put the key in its `.env` with `SMS_BACKEND=kavenegar` and
+   `KAVENEGAR_SENDER=2000660110`, restart, and run `manage.py sms_check 09…`. The key never goes in git.
 9. **Go live, then Enamad:** PLAN.md §8 and phase 2 in §9. One real 14.1M payment end to end, then refund it.
 10. **3D, if wanted back:** see *The 3D model* below and README (it's off the page since 2026-10-23).
 

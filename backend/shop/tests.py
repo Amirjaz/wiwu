@@ -173,6 +173,99 @@ class OtpTests(Base):
         self.assertEqual(ctx.exception.code, 'otp_limit')
 
 
+@override_settings(SMS_BACKEND='kavenegar', KAVENEGAR_API_KEY='KEY', KAVENEGAR_SENDER='2000660110',
+                   KAVENEGAR_TEMPLATES=[])
+class KavenegarTests(Base):
+    """Kavenegar's API is faked: each test sees what would have been posted to it."""
+
+    def fake_api(self, *answers):
+        """Patches urlopen to answer with these bodies (dicts, or HTTPError for a refusal) in turn."""
+        import urllib.error
+        from urllib.parse import parse_qs
+        self.calls = []
+        answers = list(answers) or [{'return': {'status': 200, 'message': 'تایید شد'}, 'entries': []}]
+
+        def urlopen(request, timeout):
+            self.calls.append((request.full_url, {k: v[0] for k, v in parse_qs(request.data.decode()).items()}))
+            answer = answers.pop(0) if len(answers) > 1 else answers[0]
+            if isinstance(answer, urllib.error.HTTPError):
+                raise answer
+            response = mock.MagicMock()
+            response.__enter__.return_value.read.return_value = json.dumps(answer).encode()
+            return response
+        return mock.patch('shop.sms.urllib.request.urlopen', side_effect=urlopen)
+
+    def test_plain_text_from_the_sender_line(self):
+        with self.fake_api(), mock.patch('shop.orders.secrets.randbelow', return_value=12345):
+            orders.send_otp('09121234567', None)
+        url, params = self.calls[0]
+        self.assertEqual(url, 'https://api.kavenegar.com/v1/KEY/sms/send.json')
+        self.assertEqual(params['receptor'], '09121234567')
+        self.assertEqual(params['sender'], '2000660110')
+        self.assertIn('22345', params['message'])
+        self.assertEqual(SmsLog.objects.get(kind='otp').status, 'sent')
+
+    @override_settings(KAVENEGAR_SENDER='')
+    def test_no_sender_uses_the_default_line(self):
+        from . import sms
+        with self.fake_api():
+            sms.send('owner_review', '09350000000', code='A1')
+        self.assertNotIn('sender', self.calls[0][1])
+
+    @override_settings(KAVENEGAR_TEMPLATES=['otp'])
+    def test_listed_kinds_use_their_template(self):
+        from . import sms
+        with self.fake_api():
+            sms.send('otp', '09121234567', code='12345')
+            sms.send('paid', '09121234567', code='A1B2', link='https://x.ir/o/1')
+        (otp_url, otp), (paid_url, paid) = self.calls
+        self.assertEqual(otp_url, 'https://api.kavenegar.com/v1/KEY/verify/lookup.json')
+        self.assertEqual(otp, {'receptor': '09121234567', 'template': 'ps-otp', 'token': '12345'})
+        self.assertTrue(paid_url.endswith('/sms/send.json'))
+
+    @override_settings(KAVENEGAR_TEMPLATES=['all'])
+    def test_all_templates(self):
+        from . import sms
+        with self.fake_api():
+            sms.send('shipped', '09121234567', code='A1', tracking='T 9', link='https://x.ir/o/1', carrier='پست پیشتاز')
+        url, params = self.calls[0]
+        self.assertTrue(url.endswith('/verify/lookup.json'))
+        self.assertEqual(params['template'], 'ps-shipped')
+        self.assertEqual(params['token2'], 'T‌9')  # no spaces in token..token3
+        self.assertEqual(params['token10'], 'پست پیشتاز')
+
+    def test_refusal_is_logged_with_kavenegars_reason(self):
+        import urllib.error
+        body = json.dumps({'return': {'status': 418, 'message': 'اعتبار حساب شما کافی نیست'}, 'entries': None})
+        refusal = urllib.error.HTTPError('https://api.kavenegar.com/', 418, 'x', {}, io.BytesIO(body.encode()))
+        with self.fake_api(refusal), self.assertRaises(OrderError) as ctx:
+            orders.send_otp('09121234567', None)
+        self.assertEqual(ctx.exception.code, 'sms_failed')
+        entry = SmsLog.objects.get(kind='otp')
+        self.assertEqual(entry.status, 'failed')
+        self.assertIn('418', entry.error)
+        self.assertIn('اعتبار', entry.error)
+        self.assertNotIn('KEY', entry.error)
+
+    def test_sms_check(self):
+        info = {'return': {'status': 200, 'message': 'تایید شد'},
+                'entries': {'remaincredit': 1250000, 'expiredate': 1798761600, 'type': 'master'}}
+        sent = {'return': {'status': 200, 'message': 'تایید شد'}, 'entries': []}
+        out = io.StringIO()
+        with self.fake_api(info, sent):
+            call_command('sms_check', '۰۹۱۲۱۲۳۴۵۶۷', stdout=out)
+        self.assertIn('125,000 toman', out.getvalue())
+        self.assertIn('Test code sent to 09121234567', out.getvalue())
+        self.assertEqual([url.rsplit('/v1/KEY/')[1] for url, _ in self.calls], ['account/info.json', 'sms/send.json'])
+
+    @override_settings(KAVENEGAR_TEMPLATES=['otpp'])
+    def test_sms_check_catches_a_misspelt_kind(self):
+        from django.core.management.base import CommandError
+        with self.fake_api(), self.assertRaises(CommandError):
+            call_command('sms_check', stdout=io.StringIO())
+        self.assertEqual(self.calls, [])
+
+
 class PaymentTests(Base):
     def test_deposit_matches_and_notifies(self):
         order = self.place()

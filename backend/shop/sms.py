@@ -3,16 +3,21 @@ Transactional SMS. Every message is logged (SmsLog) and shown in the panel.
 
 Backends (settings.SMS_BACKEND):
 - 'console': development; prints the text and logs it, sends nothing.
-- 'kavenegar': Kavenegar's verify/lookup API. Each kind below is a template created in the Kavenegar
-  panel (name: SMS_TEMPLATE_<KIND> in .env, default 'ps-<kind>'), whose placeholders %token, %token2,
-  %token3 (no spaces allowed) and %token10 (spaces allowed) get the values listed for that kind.
-  Template messages aren't blocked as advertising and arrive fast. The texts here are what we log
-  and the wording to use when creating the templates.
+- 'kavenegar': Kavenegar's REST API (https://kavenegar.com/rest.html), each kind one of two ways:
+  - plain text (sms/send) from the line KAVENEGAR_SENDER (empty: the account's default line). Works as
+    soon as the account has credit; the text is the one below.
+  - a template (verify/lookup), for the kinds listed in KAVENEGAR_TEMPLATES ('all' for every kind).
+    Each is created in the Kavenegar panel and approved by Kavenegar first (name: SMS_TEMPLATE_<KIND>
+    in .env, default 'ps-<kind>'); its placeholders %token, %token2, %token3 (no spaces allowed) and
+    %token10 (spaces allowed) get the values listed for that kind. Template messages aren't blocked as
+    advertising and arrive fast; the service needs Kavenegar's Advanced plan.
+  The texts here are what plain messages say, what we log, and the wording to use for the templates.
 """
 import json
 import logging
 import os
 import sys
+import urllib.error
 import urllib.parse
 import urllib.request
 
@@ -20,7 +25,7 @@ from django.conf import settings
 
 from .models import SmsLog, StoreSettings
 
-log =logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 # kind: (text, tokens in order: token, token2, token3, then token10)
 MESSAGES = {
@@ -51,6 +56,17 @@ def template_name(kind):
     return os.getenv(f'SMS_TEMPLATE_{kind.upper()}', f'ps-{kind.replace("_", "-")}')
 
 
+def uses_template(kind):
+    """Whether Kavenegar sends this kind from an approved template rather than as plain text."""
+    return 'all' in settings.KAVENEGAR_TEMPLATES or kind in settings.KAVENEGAR_TEMPLATES
+
+
+def printable(text):
+    """A Windows terminal that isn't UTF-8 can't print Persian: escape it rather than fail."""
+    encoding = getattr(sys.stdout, 'encoding', None) or 'utf-8'
+    return text.encode(encoding, 'backslashreplace').decode(encoding)
+
+
 def render(kind, values):
     """The message text. Numbers for reading (amounts, minutes, counts) arrive already in Persian
     digits; codes, links and tracking numbers stay Latin so they can be copied and tapped."""
@@ -64,12 +80,16 @@ def send(kind, phone, order=None, **values):
     entry = SmsLog(phone=phone, kind=kind, text=text, order=order)
     try:
         if settings.SMS_BACKEND == 'console':
-            # A Windows terminal that isn't UTF-8 can't print Persian: escape it rather than fail the send.
-            encoding = getattr(sys.stdout, 'encoding', None) or 'utf-8'
-            print(f'[SMS → {phone}] {text}'.encode(encoding, 'backslashreplace').decode(encoding), flush=True)
+            print(printable(f'[SMS → {phone}] {text}'), flush=True)
             entry.status = 'console'
         elif settings.SMS_BACKEND == 'kavenegar':
-            _kavenegar(phone, kind, values)
+            if uses_template(kind):
+                _lookup(phone, kind, values)
+            else:
+                params = {'receptor': phone, 'message': text}
+                if settings.KAVENEGAR_SENDER:
+                    params['sender'] = settings.KAVENEGAR_SENDER
+                kavenegar('sms/send', **params)
             entry.status = 'sent'
         else:
             raise RuntimeError(f'unknown SMS_BACKEND {settings.SMS_BACKEND!r}')
@@ -80,21 +100,37 @@ def send(kind, phone, order=None, **values):
     return entry.status != 'failed'
 
 
-def _kavenegar(phone, kind, values):
-    if not settings.KAVENEGAR_API_KEY:
-        raise RuntimeError('KAVENEGAR_API_KEY is not set')
+def _lookup(phone, kind, values):
     _, tokens = MESSAGES[kind]
     names = ['token', 'token2', 'token3']
     params = {'receptor': phone, 'template': template_name(kind)}
     for i, key in enumerate(tokens):
         value = str(values[key])
         if i < 3:
-            params[names[i]] = value.replace(' ', '‌')  # no spaces allowed in these
+            params[names[i]] = value.replace(' ', '‌')  # no spaces allowed in these: a zero-width non-joiner
         else:
             params['token10'] = value
-    url = f'https://api.kavenegar.com/v1/{settings.KAVENEGAR_API_KEY}/verify/lookup.json?{urllib.parse.urlencode(params)}'
-    with urllib.request.urlopen(url, timeout=10) as response:
-        body = json.loads(response.read().decode())
-    status = body.get('return', {}).get('status')
-    if status != 200:
-        raise RuntimeError(f'kavenegar {status}: {body.get("return", {}).get("message")}')
+    kavenegar('verify/lookup', **params)
+
+
+def kavenegar(method, **params):
+    """Calls one Kavenegar API method (e.g. 'sms/send', 'account/info') and returns its entries.
+    Raises with Kavenegar's own reason (in Persian) when it refuses."""
+    if not settings.KAVENEGAR_API_KEY:
+        raise RuntimeError('KAVENEGAR_API_KEY is not set')
+    url = f'https://api.kavenegar.com/v1/{settings.KAVENEGAR_API_KEY}/{method}.json'
+    # POST, as their SDKs do: no length limit, and the message stays out of URLs and server logs.
+    request = urllib.request.Request(url, data=urllib.parse.urlencode(params).encode())
+    try:
+        with urllib.request.urlopen(request, timeout=10) as response:
+            body = json.loads(response.read().decode())
+    except urllib.error.HTTPError as exc:
+        # A refusal comes with the same HTTP status and a JSON body that says why (no credit, bad key…).
+        try:
+            body = json.loads(exc.read().decode())
+        except Exception:  # noqa: BLE001 — not Kavenegar's JSON, e.g. a proxy's error page
+            raise RuntimeError(f'kavenegar HTTP {exc.code}') from None
+    result = body.get('return') or {}
+    if result.get('status') != 200:
+        raise RuntimeError(f'kavenegar {result.get("status")}: {result.get("message")}')
+    return body.get('entries')
