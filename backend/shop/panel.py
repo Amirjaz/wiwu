@@ -133,6 +133,9 @@ def _row(order):
         'shipping': order.get_shipping_display(), 'is_gift': order.is_gift, 'color': order.color_name,
         'created': order.created_at.isoformat(), 'paid_at': order.paid_at.isoformat() if order.paid_at else None,
         'claimed': bool(order.claimed_at),
+        # How it's paid, and what tells the payment apart: cartbecart's CBC- codes, or the Sheba reference.
+        'payment_method': order.payment_method, 'payment_label': order.get_payment_method_display(),
+        'payment_codes': order.payment_codes,
     }
 
 
@@ -165,19 +168,22 @@ def order_list(request):
         statuses = QUEUES[queue]
         if queue == 'action' and settings.PAYMENT_PROVIDER == 'manual':
             statuses += (S.AWAITING,)  # nothing confirms them automatically: staff must look
-        found = found.filter(status__in=statuses)
+        shown = Q(status__in=statuses)
+        if queue == 'action':  # nothing confirms a Sheba payment automatically either
+            shown |= Q(status=S.AWAITING, payment_method=Order.Method.SHEBA)
+        found = found.filter(shown)
     q = persian.clean_text(request.GET.get('q', ''))
     if q:
         digits = persian.latin_digits(q)
         found = found.filter(Q(code__iexact=digits) | Q(phone__contains=digits) | Q(name__icontains=q)
                              | Q(tracking_code__iexact=digits) | Q(provider_ref__iexact=digits)
-                             | Q(transfers__provider_ref__iexact=digits)).distinct()
+                             | Q(transfers__provider_ref__iexact=digits) | Q(claim_reference__iexact=digits)).distinct()
     try:
         page = max(1, int(request.GET.get('page', 1)))
     except ValueError:
         page = 1
     total = found.count()
-    rows = found[(page - 1) * PAGE_SIZE: page * PAGE_SIZE]
+    rows = found.prefetch_related('transfers')[(page - 1) * PAGE_SIZE: page * PAGE_SIZE]
     return JsonResponse({'orders': [_row(o) for o in rows], 'total': total, 'page': page, 'page_size': PAGE_SIZE})
 
 
@@ -190,6 +196,8 @@ def _detail(order):
         'shipping_on_delivery': order.shipping_on_delivery, 'pay_in_rial': order.pay_in_rial,
         'provider_ref': order.provider_ref,  # cartbecart's CBC-… code, to find it in their dashboard
         'card': {'bank': order.card_bank, 'number': order.card_number, 'holder': order.card_holder},
+        'sheba': {'number': order.sheba_number, 'holder': order.sheba_holder, 'bank': order.sheba_bank}
+        if order.payment_method == Order.Method.SHEBA else None,
         # Paid in several card-to-card transfers (over the bank's cap): each one, its own CBC-… code.
         'transfers': [{'position': t.position, 'amount_rial': t.amount_rial, 'offset_rial': t.offset_rial,
                        'card': {'bank': t.card_bank, 'number': t.card_number}, 'provider_ref': t.provider_ref,
@@ -356,7 +364,8 @@ def sms_log(request):
 
 STORE_FIELDS = ('store_name', 'tagline', 'phone', 'email', 'address', 'postal_code', 'hours', 'instagram',
                 'owner_mobile', 'shipping_post_rial', 'shipping_tipax_rial', 'tipax_on_delivery', 'post_days', 'tipax_days',
-                'payment_minutes', 'reminder_minutes', 'return_days', 'transfer_limit_rial', 'enamad_html')
+                'payment_minutes', 'reminder_minutes', 'return_days', 'transfer_limit_rial',
+                'sheba', 'sheba_holder', 'sheba_bank', 'sheba_minutes', 'enamad_html')
 # The cap for one card-to-card: 0 (never split) or at least 10M toman, so an order splits into a few round
 # 5M transfers at most (orders.split_amounts).
 TRANSFER_LIMIT_MIN_RIAL = 100_000_000
@@ -408,6 +417,11 @@ def store_settings(request):
                 errors[field] = 'phone'
                 continue
             value = persian.phone(value) if value else ''
+        elif field == 'sheba':
+            if value and not persian.sheba(value):
+                errors[field] = 'sheba'
+                continue
+            value = persian.sheba(value) if value else ''
         elif field != 'enamad_html':
             value = persian.clean_text(value, model_field.max_length)
         setattr(store, field, value)
@@ -451,6 +465,7 @@ def store_settings(request):
 
 def _card_json(card):
     return {'id': card.id, 'bank': card.bank, 'number': card.number, 'holder': card.holder, 'active': card.active,
+            'auto': card.auto,
             'last_used_at': card.last_used_at.isoformat() if card.last_used_at else None, 'position': card.position}
 
 
@@ -476,6 +491,7 @@ def cards(request):
                 return _error('fields', fields=errors)
             card.bank, card.number, card.holder = bank, number, holder
             card.active = bool(data.get('active', True))
+            card.auto = bool(data.get('auto', card.auto))
             card.save()
         orders.audit('cards', None, request.user)
     return JsonResponse({'cards': [_card_json(c) for c in Card.objects.all()]})

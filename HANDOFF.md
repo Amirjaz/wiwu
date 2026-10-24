@@ -111,6 +111,10 @@ This page is the short version, plus what isn't written down anywhere else.
 7. **The new server's root password** was posted in the chat on 2026-10-24; change it in Arvan's panel.
    Logins are by key, so nothing here needs it. `amir` has full passwordless sudo there since 2026-10-24
    (`/etc/sudoers.d/amir-full`, added by Amir as root, as on the old server); its password is locked.
+8. **The panel's cards and Sheba** (for the cards/Sheba release): in panel → فروشگاه, add the real cards
+   (Pasargad …8502 and Blu …8679 of Behrad Bakhtiari, Shahr …4142 of Mohammad Salar Kabiri, Tejarat …1836
+   of Amirmohammad Jazayeri, as in cartbecart's dashboard) and delete the sample card; and set the shop's
+   Sheba, its holder and bank. Until the Sheba is set, the Sheba tab doesn't show.
 
 ## Waiting on the client
 
@@ -223,6 +227,14 @@ business address), the `.ir` domain under their national ID.
    page on phone and desktop, panel). **Deployed 2026-10-24 (8aa0277)**; the live checkout shows the
    two-zipper bag as 11,500,000 + 5,000,000. Not yet tried with a real two-transfer payment through
    cartbecart: the first real 16.5M order is that test.
+   **Every card, Sheba, payment codes** (Amir, 2026-10-24; migration 0010; README → *How an order works*,
+   step 3): the order page lists every active panel card (the order's own first), offers **Sheba** as a
+   second tab (one shop Sheba, 3 hours, checked by staff), and the panel shows each order's payment
+   method and code (CBC- codes, or the Sheba reference). **Test that decided the card labels**
+   (TEST-F289CF, 50,000 toman, default card Pasargad …8502, paid to Behrad's Blu …8679 instead):
+   cartbecart saw it but marked it `needs_review`, not paid. So only the default card is instant; the
+   others are labelled «بررسی دستی» and are approved in cartbecart's dashboard (then `order.paid` follows).
+   seed_store's sample card (…0014, still the only card in the live panel on 2026-10-24) is never offered.
 8. **Kavenegar:** Amir's account (2026-10-24), identity verified, Advanced plan until 1406-08-01, about
    205,000 toman credit. **The account has no line it may send from**: `2000660110` (from their sample
    code) answers 427 "needs an access level", and with no line named, 412; so everything goes through

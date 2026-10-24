@@ -44,7 +44,7 @@ export default function Orders() {
         }}
       >
         <label htmlFor="order-search" className="sr-only">جستجو</label>
-        <input id="order-search" className="input pe-12" placeholder="کد سفارش، موبایل، نام یا کد رهگیری" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <input id="order-search" className="input pe-12" placeholder="کد سفارش، موبایل، نام، کد رهگیری یا کد پرداخت" value={search} onChange={(e) => setSearch(e.target.value)} />
         <button type="submit" className="absolute inset-y-0 end-0 px-4 text-muted" aria-label="جستجو"><MagnifyingGlass size={20} /></button>
       </form>
       <div className="flex gap-2 overflow-x-auto pb-2 mb-4 -mx-4 px-4 snap-x" role="tablist" aria-label="صف سفارش‌ها">

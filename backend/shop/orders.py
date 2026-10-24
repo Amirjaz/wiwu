@@ -509,6 +509,25 @@ def sync_cartbecart(now=None):
     return changed
 
 
+def choose_sheba(order):
+    """The buyer pays by Sheba instead of card-to-card (Amir, 2026-10-24): the whole amount in one transfer
+    to the shop's Sheba, checked by staff, so the order waits StoreSettings.sheba_minutes from now. A
+    card-to-card payment still pays it if it comes. Only while the order awaits payment."""
+    store = StoreSettings.load()
+    refresh(order)
+    if order.status != Order.Status.AWAITING or not store.sheba:
+        raise OrderError('sheba_closed')
+    if order.payment_method != Order.Method.SHEBA:
+        until = max(order.expires_at, timezone.now() + timedelta(minutes=store.sheba_minutes))
+        Order.objects.filter(pk=order.pk, status=Order.Status.AWAITING).update(
+            payment_method=Order.Method.SHEBA, sheba_number=store.sheba, sheba_holder=store.sheba_holder,
+            sheba_bank=store.sheba_bank, expires_at=until)
+        order.refresh_from_db()
+        audit('sheba_chosen', order, detail=f'{money(order.amount_rial, order.pay_in_rial)}، تا '
+                                             f'{fa_digits(timezone.localtime(until).strftime("%H:%M"))}')
+    return order
+
+
 def claim(order, data, upload=None):
     """The buyer says they paid. Allowed while awaiting, and for a while after the window."""
     refresh(order)
@@ -573,8 +592,10 @@ def tick(now=None):
     store = StoreSettings.load()
     done = {'reminded': 0, 'expired': 0, 'alerted': False}
 
+    # Not for Sheba: it takes longer by nature, and the buyer has said how they pay.
     due = Order.objects.filter(status=Order.Status.AWAITING, reminder_sent_at=None, expires_at__gt=now,
-                               created_at__lte=now - timedelta(minutes=store.reminder_minutes))
+                               created_at__lte=now - timedelta(minutes=store.reminder_minutes),
+                               payment_method=Order.Method.CARD)
     for order in due:
         if Order.objects.filter(pk=order.pk, reminder_sent_at=None).update(reminder_sent_at=now):
             sms.send('reminder', order.phone, order, code=order.code, link=link(order))
@@ -594,7 +615,8 @@ def _check_forwarder(store, now):
     if settings.PAYMENT_PROVIDER != 'cartbecart' or not store.owner_mobile:
         return False
     window = now - timedelta(hours=3)
-    silent = Order.objects.filter(status=Order.Status.EXPIRED, claimed_at=None, created_at__gte=window)
+    silent = Order.objects.filter(status=Order.Status.EXPIRED, claimed_at=None, created_at__gte=window,
+                                  payment_method=Order.Method.CARD)  # Sheba never reaches cartbecart
     first = silent.order_by('created_at').first()
     if silent.count() < 2 or Order.objects.filter(paid_via='auto', paid_at__gte=first.created_at).exists():
         return False

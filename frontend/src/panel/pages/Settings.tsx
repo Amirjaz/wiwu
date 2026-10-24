@@ -12,6 +12,7 @@ interface Store {
   instagram: string; owner_mobile: string; shipping_post_rial: number; shipping_tipax_rial: number; tipax_on_delivery: boolean; post_days: string;
   tipax_days: string; payment_minutes: number; reminder_minutes: number; return_days: number; enamad_html: string;
   transfer_limit_rial: number; // the bank's cap for one card-to-card; orders above it are paid in several
+  sheba: string; sheba_holder: string; sheba_bank: string; sheba_minutes: number; // the second way to pay
 }
 interface Product { slug: string; name: string; subtitle: string; description: string; price_rial: number; is_available: boolean; specs: [string, string][] }
 /** A model in the list: the main bag first; another shows on the site once it has a price. */
@@ -20,7 +21,7 @@ type SettingsData = { store: Store; product: Product; products: Model[] };
 
 /** The address of a page of the API for one model (the main bag's without ?product=). */
 const forModel = (url: string, slug: string) => (slug ? `${url}?product=${encodeURIComponent(slug)}` : url);
-interface Card { id: number; bank: string; number: string; holder: string; active: boolean }
+interface Card { id: number; bank: string; number: string; holder: string; active: boolean; auto: boolean }
 interface Color { id: number; name: string; swatch: string; shown: boolean; available: boolean; orders: number }
 
 /** A toman input stored as rials. */
@@ -116,6 +117,12 @@ function StoreForm({ slug, main }: { slug: string; main: boolean }) {
             help="سفارش بالاتر از این مبلغ در چند واریز پرداخت می‌شود: باقی مبلغ، بعد واریزهای ۵ میلیون تومانی. حداقل ۱۰ میلیون؛ ۰ یعنی همیشه یک واریز.">
             {(id, d) => <TomanInput id={id} describedBy={d} rial={store.transfer_limit_rial} onChange={(v) => s('transfer_limit_rial', v)} />}
           </Field>
+          <Field label="شبای فروشگاه" error={err('sheba')} help="تا خالی است، پرداخت با شبا به خریدار پیشنهاد نمی‌شود. واریز شبا را همکاران بررسی و تأیید می‌کنند.">
+            {(id, d) => <input id={id} aria-describedby={d} className="input ltr" placeholder="IR" value={store.sheba} onChange={(e) => s('sheba', e.target.value)} />}
+          </Field>
+          <Field label="نام صاحب حساب شبا">{(id) => <input id={id} className="input" value={store.sheba_holder} onChange={(e) => s('sheba_holder', e.target.value)} />}</Field>
+          <Field label="بانک حساب شبا">{(id) => <input id={id} className="input" value={store.sheba_bank} onChange={(e) => s('sheba_bank', e.target.value)} />}</Field>
+          <Field label="مهلت پرداخت با شبا (دقیقه)" error={err('sheba_minutes')}>{(id) => <input id={id} className="input ltr text-right" inputMode="numeric" value={fa(store.sheba_minutes)} onChange={(e) => s('sheba_minutes', Number(latin(e.target.value).replace(/\D/g, '') || 0))} />}</Field>
           <Field label="مهلت بازگشت (روز کاری)" error={err('return_days')}>{(id) => <input id={id} className="input ltr text-right" inputMode="numeric" value={fa(store.return_days)} onChange={(e) => s('return_days', Number(latin(e.target.value).replace(/\D/g, '') || 0))} />}</Field>
           <Field label="موبایل مدیر (پیامک سفارش‌ها)" error={err('owner_mobile')}>{(id) => <input id={id} className="input ltr text-right" inputMode="tel" value={store.owner_mobile} onChange={(e) => s('owner_mobile', e.target.value)} />}</Field>
         </div>
@@ -170,7 +177,11 @@ function Cards() {
   return (
     <section className="grid gap-4">
       <h2 className="text-lg font-bold">کارت‌های مقصد</h2>
-      <p className="text-ink-soft leading-relaxed -mt-2">هر سفارش به کارتی می‌رود که مدت بیشتری از آخرین استفاده‌اش گذشته. همه کارت‌ها باید به نام صاحب فروشگاه باشند و پیامک واریزشان به گوشی تأیید خودکار برسد.</p>
+      <p className="text-ink-soft leading-relaxed -mt-2">
+        خریدار در صفحه پرداخت همه‌ی کارت‌های فعال را می‌بیند و به هر کدام خواست واریز می‌کند؛ کارت خود سفارش (پیش‌فرض کارت‌به‌کارت) اول می‌آید.
+        کارت‌به‌کارت فقط واریز به کارت پیش‌فرض خودش را خودکار تأیید می‌کند؛ واریز به کارت‌های دیگر را «نیاز به بررسی» می‌کند (آزمایش ۲ آبان با کارت بلو) و با تأیید شما در داشبوردش، سفارش خودکار پرداخت‌شده می‌شود.
+        «تأیید خودکار» را فقط برای کارتی بزنید که دیده‌اید خودکار تأیید می‌شود.
+      </p>
       {error && <Notice tone="error">{message(error.error)}</Notice>}
       <ul className="grid gap-2">
         {data?.cards.map((card) => (
@@ -182,6 +193,9 @@ function Cards() {
             <span className="flex items-center gap-2">
               <label className="flex items-center gap-2 text-sm">
                 <input type="checkbox" className="size-4 accent-[var(--color-ink)]" checked={card.active} onChange={(e) => save({ ...card, active: e.target.checked })} /> فعال
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" className="size-4 accent-[var(--color-ink)]" checked={card.auto} onChange={(e) => save({ ...card, auto: e.target.checked })} /> تأیید خودکار
               </label>
               <button type="button" className="btn btn-ghost btn-sm !px-3" aria-label="حذف کارت"
                 onClick={() => window.confirm('کارت حذف شود؟ (اگر سفارشی به آن خورده، فقط غیرفعال می‌شود.)') && save({ id: card.id, delete: true })}>

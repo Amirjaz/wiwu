@@ -82,8 +82,15 @@ export default function OrderPage() {
 
       {reviewable && (
         <Box title="پرداخت">
-          <p className="text-ink-soft leading-relaxed">
-            در حساب کارت <span className="ltr font-semibold text-ink">{fa(groupCard(order.card.number))}</span> ({order.card.bank})
+          {order.sheba && (
+            <p className="text-ink-soft leading-relaxed">
+              خریدار <strong className="text-ink">شبا</strong> را انتخاب کرده: در حساب شبای <span className="ltr font-semibold text-ink">{order.sheba.number}</span>
+              {order.sheba.bank && ` (${order.sheba.bank})`} دنبال یک واریز دقیق <strong className="text-ink">{amount(order.amount_rial)}</strong> بگردید.
+              اگر به کارت هم واریز کرده باشد، کارت‌به‌کارت خودکار تأییدش می‌کند.
+            </p>
+          )}
+          <p className={order.sheba ? 'text-sm text-muted leading-relaxed' : 'text-ink-soft leading-relaxed'}>
+            {order.sheba && 'یا '}در حساب کارت <span className="ltr font-semibold text-ink">{fa(groupCard(order.card.number))}</span> ({order.card.bank})
             {split
               ? <> دنبال {fa(order.transfers.length)} واریز جدا با این مبلغ‌های دقیق بگردید: <strong className="text-ink">{looking}</strong>.</>
               : <> دنبال واریز دقیق <strong className="text-ink">{looking}</strong> بگردید.</>}
@@ -169,8 +176,14 @@ export default function OrderPage() {
           <Row label={`ارسال (${order.shipping})`}>{shippingFee(order.shipping_rial, order.shipping_on_delivery)}</Row>
           <Row label="شناسه واریز">{order.pay_in_rial ? `${fa(order.offset_rial)} ریال` : toman(order.offset_rial)}</Row>
           <Row label={order.pay_in_rial ? 'جمع (ریال)' : 'جمع (تومان)'}><span className="text-lg">{order.pay_in_rial ? rial(order.amount_rial) : toman(order.amount_rial)}</span></Row>
+          <Row label="روش پرداخت">{order.payment_label}</Row>
+          {order.payment_codes.length > 0 && (
+            <Row label={order.payment_method === 'sheba' ? 'شماره پیگیری شبا' : 'کد پرداخت (کارت‌به‌کارت)'}>
+              <span className="ltr">{order.payment_codes.join('، ')}</span>
+            </Row>
+          )}
+          {order.sheba && <Row label="شبا"><span className="ltr">{order.sheba.number}</span></Row>}
           <Row label="کارت">{order.card.bank} <span className="ltr">…{fa(order.card.number.slice(-4))}</span></Row>
-          {order.provider_ref && <Row label="کارت‌به‌کارت"><span className="ltr">{order.provider_ref}</span></Row>}
           {split && order.transfers.map((t) => (
             <Row key={t.position} label={`واریز ${fa(t.position)}${t.provider_ref ? ` (${t.provider_ref})` : ''}`}>
               {amount(t.amount_rial)} · {t.status_label}

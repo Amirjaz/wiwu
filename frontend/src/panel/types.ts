@@ -21,6 +21,9 @@ export interface OrderRow {
   created: string;
   paid_at: string | null;
   claimed: boolean;
+  payment_method: 'card' | 'sheba';
+  payment_label: string;
+  payment_codes: string[]; // cartbecart's CBC- codes (one per transfer), or the buyer's Sheba reference
 }
 
 export interface ReturnRow {
@@ -51,6 +54,7 @@ export interface OrderDetail extends OrderRow {
   pay_in_rial: boolean;
   provider_ref: string; // cartbecart's CBC-… code
   card: { bank: string; number: string; holder: string };
+  sheba: { number: string; holder: string; bank: string } | null; // when the buyer chose to pay by Sheba
   // Paid in several card-to-card transfers (over the bank's cap); empty for one.
   transfers: { position: number; amount_rial: number; offset_rial: number; card: { bank: string; number: string };
     provider_ref: string; status: string; status_label: string; paid_at: string | null }[];
@@ -84,6 +88,7 @@ export const ACTIONS: Record<string, string> = {
   expired: 'مهلت پرداخت تمام شد',
   paid: 'پرداخت تأیید شد',
   transfer_paid: 'یکی از واریزها رسید',
+  sheba_chosen: 'خریدار پرداخت با شبا را انتخاب کرد',
   needs_review: 'نیاز به بررسی پرداخت',
   payment_rejected: 'پرداخت رد شد',
   second_deposit: 'واریز تکراری',
