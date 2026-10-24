@@ -97,14 +97,15 @@ Without cartbecart (`PAYMENT_PROVIDER=manual`) unpaid orders show under "needs a
 `SMS_BACKEND=kavenegar` with `KAVENEGAR_API_KEY` sends each message one of two ways (Kavenegar's REST
 API over plain HTTPS; their Node SDK is the same calls, so no package is needed):
 
-- **Plain text** (`sms/send`) from the line `KAVENEGAR_SENDER` (`2000660110`, empty for the account's
-  default line), with the texts in `MESSAGES`. Works as soon as the account has credit.
-- **Templates** (`verify/lookup`) for the kinds listed in `KAVENEGAR_TEMPLATES` (`otp,paid`, or `all`).
-  They must be created and approved in the Kavenegar panel first (the Advanced plan): `ps-otp`,
+- **Templates** (`verify/lookup`) for the kinds listed in `KAVENEGAR_TEMPLATES` (`otp,paid`, or `all`;
+  staging uses `all`). They need no line, and reach numbers that block advertising SMS. Each is created
+  in the Kavenegar panel → اعتبارسنجی and approved by them first (the Advanced plan): `ps-otp`,
   `ps-order-created`, `ps-reminder`, `ps-paid`, `ps-payment-not-found`, `ps-shipped`,
   `ps-return-received`, `ps-refunded`, `ps-owner-new-order`, `ps-owner-review`, `ps-owner-forwarder`,
-  `ps-owner-payment-down` (wording and tokens in `MESSAGES`). They also reach numbers that block advertising SMS, so move at
-  least `otp` to a template before launch.
+  `ps-owner-payment-down` (wording and tokens in `MESSAGES`). One costs about 191 toman (2026-10-24).
+- **Plain text** (`sms/send`) for the other kinds, from the line `KAVENEGAR_SENDER` (empty for the
+  account's default line), with the texts in `MESSAGES`. It needs a line the account may send from:
+  Amir's has none (`2000660110` from Kavenegar's sample code answers 427, no line at all 412).
 
 `manage.py sms_check` shows the key's credit and which messages go how, sending nothing;
 `manage.py sms_check 09xxxxxxxxx` also texts that number a test code (12345). Every SMS is logged

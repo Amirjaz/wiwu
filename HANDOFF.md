@@ -23,8 +23,11 @@ This page is the short version, plus what isn't written down anywhere else.
   section and a both-versions poster per colour, a pick-a-colour closing section with both versions per
   card, checkout that asks one zipper or two, WiWU's coffee brown.
   - Open to everyone (no password, Amir's choice), but kept out of search engines (noindex).
-  - SMS codes only go to the server log and payments are manual, so people can browse but can't finish
-    an order. No orders yet.
+  - **Real SMS and automatic payments** (2026-10-24): SMS go through Kavenegar's templates
+    (`SMS_BACKEND=kavenegar`, `KAVENEGAR_TEMPLATES=all`; only `ps-otp` is approved so far, so the other
+    messages fail and show in the panel's SMS log until their templates are), and payments through
+    cartbecart (`PAYMENT_PROVIDER=cartbecart`, its key and signing key in `.env`). So checkout works end
+    to end now. No real orders yet.
   - Plain http redirects to https.
   - **HTTPS on the server itself** (2026-10-20): Arvan's proxy was off for every nisatech.org record, so
     browsers came straight to the server, and nginx answered https://shop.nisatech.org with nisatak.com
@@ -150,8 +153,10 @@ a VPN. Screenshots in `media/quotes/` (not in git): Arvan's calculator per size 
   2026-10-20: this PC's VPN exits in the US, and the staging site, 3D included, loads through it. If Iran's
   international link is cut, VPN users can't reach it, while visitors with the VPN off still can.
 - **Kavenegar:** the Advanced plan is 600,000 toman a year (their FAQ says the OTP service needs it).
-  The per-message price only shows in their panel; a Persian SMS costs about 12 to 20 toman (the
-  regulator's ceiling is 116 rial on a postpaid SIM). About 5 SMS per order.
+  The per-message price only shows in their panel; a plain Persian SMS costs about 12 to 20 toman (the
+  regulator's ceiling is 116 rial on a postpaid SIM). **A template SMS cost 1,912 rial (about 191
+  toman)**, measured on the first `ps-otp` code (2026-10-24), and the shop sends everything through
+  templates. About 5 SMS per order, so about 1,000 toman of SMS per order: redo the campaign estimate.
 - **cartbecart** (their site, 2026-10-20): Max (unlimited cards and payments) 490,000 toman a month,
   440,000 a month paid 3 months at once, 420,000 for 6; Pro (3 cards, 500 payments a month) 390,000 /
   350,000 / 330,000. No fee per sale. The page only offers 3- and 6-month payment; PLAN.md's "440k a
@@ -176,8 +181,10 @@ business address), the `.ir` domain under their national ID.
    about 2 workers per core × 4 threads (`--worker-class gthread`, `deploy/systemd/purseshop.service`) so
    SMS and payment calls don't hold up pages, then re-run the load test (LOADTEST.md) on it. The old
    shared server (1 core, 1 GB, three other sites) topped out around 18 visits a second.
-3. **On staging:** a test order end to end (the SMS code is in `journalctl -u purseshop`), then cancel it
-   in the panel. Replace the sample card once the client sends theirs.
+3. **On staging:** a real order end to end (the code now comes by SMS; pay cartbecart's rial amount to
+   its card), then refund and cancel it. cartbecart's own test order **TEST-1857E4** (100,017 rials,
+   created 2026-10-24 08:33 server time) was handed to Amir to pay; whether its webhook arrived wasn't
+   checked: look for a «سفارش آزمایشی» row in the panel's payments log.
 4. **Client answers:** the domain must belong to whoever applies for Enamad; with the shop named WiWU, the
    client needs a domain they can register (risk R5). Fill the card holder's name and the contact details
    before applying for Enamad.
@@ -187,18 +194,20 @@ business address), the `.ir` domain under their national ID.
 6. **The two-zipper bag's photos:** its pictures are a reseller's tan render recoloured
    (`tools/phantom_photos.py`); photos of the client's own bags would be better.
 7. **cartbecart:** built to their real API (2026-10-24, from their setup guide Amir sent and the docs page
-   in their site's public code; README → *cartbecart*). Orders are registered with them, they choose the
-   amount (1–999 rials on top, so cartbecart orders show amounts in rials) and the card, and signed
-   webhooks confirm. Tested against their documented answers, not their live API (no key yet). To turn it
-   on: their Pro or Max plan, a card active and default there, the forwarder app on that card's phone;
-   then `CARTBECART_API_KEY`, `CARTBECART_WEBHOOK_SECRET` and `PAYMENT_PROVIDER=cartbecart` in `.env`,
-   the webhook address in their dashboard, `manage.py cartbecart_check --test 10000`, pay it, and see
-   it in the panel's payments log. Staging stays `manual` until then.
-8. **Kavenegar:** Amir has an account (2026-10-24, line `2000660110`). Plain-text SMS from that line
-   are in the code (`KAVENEGAR_SENDER`), so they work with just the key; templates per kind once approved
-   (`KAVENEGAR_TEMPLATES`, README → *SMS*), at least `otp` before launch. Staging still prints SMS to the
-   log: to turn them on, put the key in its `.env` with `SMS_BACKEND=kavenegar` and
-   `KAVENEGAR_SENDER=2000660110`, restart, and run `manage.py sms_check 09…`. The key never goes in git.
+   in their site's public code; README → *cartbecart*) and **on in staging**. Orders are registered with
+   them, they choose the amount (1–999 rials on top, so cartbecart orders show amounts in rials) and the
+   card, and signed webhooks confirm. Their account (the client's, «فروشگاه محمدسالار کبیری»): Max plan,
+   API access, an active default card (…4142, Bank Shahr), no monthly limit, orders last 30 minutes plus
+   their 60-minute grace. Webhook address in their dashboard: `https://penolinshop.com/api/payments/cartbecart/`.
+   The signing key was made again after the first deploy; local and server `.env` hold the new one.
+   Their API refuses an empty `customer_phone` (fixed in 5c91b10). Check with `manage.py cartbecart_check`.
+8. **Kavenegar:** Amir's account (2026-10-24), identity verified, Advanced plan until 1406-08-01, about
+   205,000 toman credit. **The account has no line it may send from**: `2000660110` (from their sample
+   code) answers 427 "needs an access level", and with no line named, 412; so everything goes through
+   templates, which need none. `ps-otp` is approved («کد تأیید ویوو: %token»); create the other eleven
+   in their panel → اعتبارسنجی with the texts in `MESSAGES` (`%token`, `%token2`, `%token3` without
+   spaces, `%token10` with); each works once approved, nothing to change here. Check with
+   `manage.py sms_check [09…]`. The key never goes in git.
 9. **Go live, then Enamad:** PLAN.md §8 and phase 2 in §9. One real 14.1M payment end to end, then refund it.
 10. **3D, if wanted back:** see *The 3D model* below and README (it's off the page since 2026-10-23).
 
@@ -414,6 +423,7 @@ another project's (Finance).
 
 | Date | Commit | What |
 | --- | --- | --- |
+| 2026-10-24 | 4e1a48e (no deploy) | **Real SMS on the new server**: its `.env` got `SMS_BACKEND=kavenegar`, `KAVENEGAR_API_KEY` and `KAVENEGAR_TEMPLATES=all` (old one at `.env.bak-before-kavenegar`), then a restart. Checked from the server: the key works and a `ps-otp` code reached Amir's phone. (The same edit first went to the old, stopped server by mistake and was undone there.) |
 | 2026-10-24 | 4e1a48e | **The shop moves to its own server, 37.32.25.183** (Amir bought it): packages, swap, user `amir`, the three certificates and their renewal account copied from the old server, `server-setup.sh` with the same names, the old server's `.env`, a sqlite snapshot of the database and `private/` copied, then the deploy (no migration; backup `db-20261024-115607.sqlite3`, server time). Checked on the new IP before the DNS change (pages, redirects, the cartbecart webhook's 401, checkout in a browser on desktop and phone), Amir pointed the records, a marked request reached the new server, the data was identical on both, the old copy stopped, disabled and masked, renewal dry runs for penolinshop.com and `www` passed through Arvan, and a browser pass through Arvan. shop.nisatech.org still reaches the old server (Waiting on Amir) |
 | 2026-10-24 | a7fc54a | The shop moves to **penolinshop.com** on the same server: `server-setup.sh DOMAIN=penolinshop.com REDIRECT="www.penolinshop.com shop.nisatech.org" CERT=1` (certificates for the two new names; nginx config and TLS lines backed up as `~/purseshop.nginx.bak-20261024` and `~/purseshop-tls.bak-20261024`), `.env` set to `DJANGO_ALLOWED_HOSTS=penolinshop.com,localhost` and `PUBLIC_URL=https://penolinshop.com` (old one at `~/purseshop.env.bak-20261024`), then the deploy (no migration; backup `db-20261024-082250.sqlite3`, server time) and the page cache emptied. Checked: every page 200 on the new name, http and `www` and shop.nisatech.org 301 to it with the path kept, no old address left on the pages or sitemap, still noindex |
 | 2026-10-23 | deb2f75 | Both versions per colour: two hero posters (black, brown) with the two-zipper bag beside the Alpha, the closing cards with one picture of both and both prices; checkout asks one zipper or two and keeps the colour; the two-zipper pictures from its own cut-out (no migration; page cache emptied; backup `db-20261023-122110.sqlite3`, server time). Checked on the live site: the seven hero pictures, the closing cards, switching versions at checkout on desktop and phone |
