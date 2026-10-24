@@ -31,6 +31,11 @@ This page is the short version, plus what isn't written down anywhere else.
     day (licence «سایر», ویوو, penolinshop.com) and under review, sending with the old version meanwhile.
     `ps-paid` and `ps-shipped` are under review too; the other messages fail (panel → SMS log) until
     their templates exist. No real orders yet.
+  - **Checkout keeps its SMS code** (Amir, 2026-10-24: "it's working"), but he can switch it off himself:
+    panel → فروشگاه → «کد تأیید پیامکی هنگام سفارش» (`StoreSettings.checkout_otp`, migration 0011, on by
+    default). Off, orders go in without a code, capped at 5 per address per hour
+    (`orders.ORDERS_IP_PER_HOUR`); finding orders by phone (/lookup) still asks for a code. Takes effect on
+    the next checkout page load, no restart. Deployed 2026-10-24 (4dffe0a), left on.
   - Plain http redirects to https.
   - **HTTPS on the server itself** (2026-10-20): Arvan's proxy was off for every nisatech.org record, so
     browsers came straight to the server, and nginx answered https://shop.nisatech.org with nisatak.com
@@ -117,7 +122,7 @@ This page is the short version, plus what isn't written down anywhere else.
 8. **The panel's cards and Sheba** (live since 3eb9ed9, 2026-10-24): in panel → فروشگاه, add the real cards
    (Pasargad …8502 and Blu …8679 of Behrad Bakhtiari, Shahr …4142 of Mohammad Salar Kabiri, Tejarat …1836
    of Amirmohammad Jazayeri, as in cartbecart's dashboard) and delete the sample card. The Shebas are a
-   list now (migration 0011, 2026-10-24): it drops the one set in the store settings (Amir's own) and adds
+   list now (migration 0012, 2026-10-24): it drops the one set in the store settings (Amir's own) and adds
    Amir's two (Pasargad IR97…7001 of Hesam Mansouri, Shahr IR22…6838 of Mohammad Salar Kabiri), shown
    under «شباهای فروشگاه». With none active, the Sheba tab doesn't show.
 
@@ -234,7 +239,7 @@ business address), the `.ir` domain under their national ID.
    cartbecart: the first real 16.5M order is that test.
    **Every card, Sheba, payment codes** (Amir, 2026-10-24; migration 0010; README → *How an order works*,
    step 3): the order page lists every active panel card (the order's own first), offers **Sheba** as a
-   second tab (3 hours, checked by staff; since migration 0011 every active panel Sheba, the order's own
+   second tab (3 hours, checked by staff; since migration 0012 every active panel Sheba, the order's own
    first, as with the cards), and the panel shows each order's payment
    method and code (CBC- codes, or the Sheba reference). **Test that decided the card labels**
    (TEST-F289CF, 50,000 toman, default card Pasargad …8502, paid to Behrad's Blu …8679 instead):
@@ -469,6 +474,8 @@ another project's (Finance).
 
 | Date | Commit | What |
 | --- | --- | --- |
+| 2026-10-24 | 4dffe0a | **The checkout's SMS code as a panel switch** (فروشگاه → «کد تأیید پیامکی هنگام سفارش», migration 0012, on; off means no code and 5 orders per address per hour). Backup `db-20261024-162838.sqlite3` (server time); no content changed, page cache left. Checked: home, checkout, orders, panel, sitemap 200 through Arvan and on the server, the live checkout has `otp: true` and asks for the code (browser, no console errors), the new panel script served |
+| 2026-10-24 | 584fa5c | Opening the Sheba tab shows the Sheba at once (Amir saw only the «پرداخت با شبا» button and no number); an order cartbecart pays is labelled card-to-card again; h:mm:ss countdowns. No migration. The shop's Sheba was set in the live settings beforehand (IR83 0180 …, امیرمحمد جزایری, بانک تجارت, Amir 2026-10-24; in the activity log). Checked: the live order script has the new text, pages 200 |
 | 2026-10-24 | 3eb9ed9 | **Every active card on the payment page, Sheba as a second way to pay, payment method and code in the panel** (migration 0010: `Card.auto`, the shop's Sheba and `sheba_minutes` on `StoreSettings`, `payment_method` and the chosen Sheba on `Order`); backup `db-20261024-151916.sqlite3` (server time). Checked through Arvan: home, checkout, orders, panel 200; the latest order's panel row shows `کارت‌به‌کارت` and `CBC-6V7F`; Sheba not offered until the panel has one. Waiting on Amir: the real cards and the Sheba in the panel (Waiting on Amir, 8) |
 | 2026-10-24 | 48db3f0 | Server only: **panel.penolinshop.com** forwards to penolinshop.com/panel/, keeping the path (`server-setup.sh` takes `PANEL` names; Amir added the A record `panel` → 37.32.25.183, cloud on), with its own certificate (until 2027-01-22, renewal dry run passed through Arvan). Re-run with `REDIRECT="www.penolinshop.com shop.nisatech.org" PANEL="panel.penolinshop.com"`; nginx config before it at `/root/purseshop.nginx.bak-20261024-panel`. Checked: https and http through Arvan and straight to the server, the other names unchanged |
 | 2026-10-24 | 8aa0277 | **Orders over the card-to-card cap paid in several transfers** (migration 0009: `Transfer`, `StoreSettings.transfer_limit_rial` = 150,000,000 rials), on the new server; backup `db-20261024-142320.sqlite3` (server time). No content changed, so the page cache was left. Checked through Arvan: home, checkout, orders, panel, sitemap 200; the live checkout shows the two-zipper bag as 11,500,000 + 5,000,000 toman and the Alpha as one transfer |

@@ -26,7 +26,7 @@ class Migration(migrations.Migration):
     """Several shop Shebas, every active one offered like the cards, in place of the one in the store settings."""
 
     dependencies = [
-        ('shop', '0010_sheba'),
+        ('shop', '0011_checkout_otp'),
     ]
 
     operations = [

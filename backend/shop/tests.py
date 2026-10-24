@@ -353,7 +353,7 @@ class ShebaTests(Base):
 
     def setUp(self):
         super().setUp()
-        Sheba.objects.all().delete()  # migration 0011's
+        Sheba.objects.all().delete()  # migration 0012's
         self.sheba = Sheba.objects.create(number=valid_sheba(), holder='محمدسالار کبیری', bank='بانک ملت')
 
     def choose(self, order):
@@ -441,7 +441,7 @@ class ShebaTests(Base):
 
 
 class ShebaMigrationTests(TransactionTestCase):
-    """0011: Amir's two Shebas replace the store settings' one (his own, dropped)."""
+    """0012: Amir's two Shebas replace the store settings' one (his own, dropped)."""
 
     def migrate(self, target):
         executor = MigrationExecutor(connection)
@@ -450,10 +450,10 @@ class ShebaMigrationTests(TransactionTestCase):
         return executor.loader.project_state([('shop', target)]).apps
 
     def test_replaces_the_one_sheba(self):
-        apps = self.migrate('0010_sheba')
+        apps = self.migrate('0011_checkout_otp')
         apps.get_model('shop', 'StoreSettings').objects.update_or_create(
             pk=1, defaults={'sheba': valid_sheba(), 'sheba_holder': 'مریم', 'sheba_bank': 'بانک ملت'})
-        apps = self.migrate('0011_shebas')
+        apps = self.migrate('0012_shebas')
         rows = list(apps.get_model('shop', 'Sheba').objects.values_list('number', 'holder', 'bank'))
         self.assertEqual(rows, [('IR970570022711517635897001', 'حسام منصوری', 'بانک پاسارگاد'),
                                 ('IR220610000007001005596838', 'محمدسالار کبیری', 'بانک شهر')])
@@ -537,6 +537,16 @@ class ApiTests(Base):
         response = self.client.post('/api/orders/', {**ADDRESS, 'code': '11111'}, content_type='application/json')
         self.assertEqual(response.json()['error'], 'otp_wrong')
         self.assertFalse(Order.objects.exists())
+
+    def test_no_code_while_otp_off(self):
+        StoreSettings.objects.update(checkout_otp=False)
+        for _ in range(orders.ORDERS_IP_PER_HOUR):
+            response = self.client.post('/api/orders/', ADDRESS, content_type='application/json')
+            self.assertEqual(response.status_code, 200, response.content)
+        response = self.client.post('/api/orders/', ADDRESS, content_type='application/json')
+        self.assertEqual(response.json()['error'], 'order_limit')
+        self.assertEqual(Order.objects.count(), orders.ORDERS_IP_PER_HOUR)
+        self.assertFalse(OtpCode.objects.exists())
 
     def test_lookup(self):
         order = self.place()
@@ -740,7 +750,7 @@ class CartbecartTests(Base):
         self.assertEqual(AuditLog.objects.count(), before)
 
     def test_paid_by_card_after_opening_the_sheba_tab_counts_as_card(self):
-        order = self.placed()  # migration 0011's Shebas are there
+        order = self.placed()  # migration 0012's Shebas are there
         orders.choose_sheba(order)
         self.assertEqual(self.send(self.event(order, 'order.paid')).json()['outcome'], 'matched')
         order.refresh_from_db()

@@ -155,6 +155,7 @@ def _store_json(store, product, models):
         'payment_minutes': store.payment_minutes,
         'return_days': store.return_days,
         'dev_sms': settings.SMS_BACKEND == 'console',
+        'otp': store.checkout_otp,
     }
 
 
@@ -370,13 +371,14 @@ def api_place(request):
             return _error('unavailable')
     try:
         color = orders.pick_color(product, data.get('color'))
-        otp_id = orders.check_otp(clean['phone'], persian.latin_digits(data.get('code', '')))
+        otp_id = orders.check_otp(clean['phone'], persian.latin_digits(data.get('code', ''))) if StoreSettings.load().checkout_otp else None
     except OrderError as exc:
         return _error(exc.code, **exc.extra)
     try:
         order = orders.place(product, clean, _ip(request), color=color)
     except OrderError as exc:
-        orders.release_otp(otp_id)  # not the buyer's fault: the same code works when they try again
+        if otp_id:
+            orders.release_otp(otp_id)  # not the buyer's fault: the same code works when they try again
         return _error(exc.code, **exc.extra)
     return JsonResponse({'token': order.token, 'url': reverse('order', args=[order.token])})
 

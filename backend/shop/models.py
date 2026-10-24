@@ -43,6 +43,9 @@ class StoreSettings(models.Model):
     sheba_minutes = models.PositiveSmallIntegerField('مهلت پرداخت با شبا (دقیقه)', default=180)
     reminder_minutes = models.PositiveSmallIntegerField('یادآوری پرداخت پس از (دقیقه)', default=15)
     return_days = models.PositiveSmallIntegerField('مهلت بازگشت کالا (روز کاری)', default=7)
+    # Off: orders go in without an SMS code, capped per address instead (orders.ORDERS_IP_PER_HOUR), for
+    # when codes don't arrive (Amir, 2026-10-24: his to switch). Finding orders by phone keeps its code.
+    checkout_otp = models.BooleanField('کد تأیید پیامکی هنگام سفارش', default=True)
     enamad_html = models.TextField('کد نماد اعتماد (همان‌طور که اینماد می‌دهد)', blank=True)
     updated_at = models.DateTimeField(auto_now=True)
 

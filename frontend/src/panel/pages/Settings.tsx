@@ -13,6 +13,7 @@ interface Store {
   tipax_days: string; payment_minutes: number; reminder_minutes: number; return_days: number; enamad_html: string;
   transfer_limit_rial: number; // the bank's cap for one card-to-card; orders above it are paid in several
   sheba_minutes: number; // how long an order paid by Sheba (the second way to pay) waits
+  checkout_otp: boolean; // off: orders without an SMS code
 }
 interface Product { slug: string; name: string; subtitle: string; description: string; price_rial: number; is_available: boolean; specs: [string, string][] }
 /** A model in the list: the main bag first; another shows on the site once it has a price. */
@@ -119,6 +120,13 @@ function StoreForm({ slug, main }: { slug: string; main: boolean }) {
             {(id, d) => <TomanInput id={id} describedBy={d} rial={store.transfer_limit_rial} onChange={(v) => s('transfer_limit_rial', v)} />}
           </Field>
           <Field label="مهلت پرداخت با شبا (دقیقه)" error={err('sheba_minutes')}>{(id) => <input id={id} className="input ltr text-right" inputMode="numeric" value={fa(store.sheba_minutes)} onChange={(e) => s('sheba_minutes', Number(latin(e.target.value).replace(/\D/g, '') || 0))} />}</Field>
+          <label className="flex items-start gap-3 sm:col-span-2">
+            <input type="checkbox" className="size-5 mt-0.5 accent-[var(--color-ink)]" checked={store.checkout_otp} onChange={(e) => s('checkout_otp', e.target.checked)} />
+            <span className="grid gap-1">
+              <span className="font-semibold">کد تأیید پیامکی هنگام سفارش</span>
+              <span className="text-sm text-ink-soft">اگر خاموش باشد، سفارش بدون کد ثبت می‌شود (از هر اینترنت حداکثر ۵ سفارش در ساعت). پیگیری سفارش با شماره همچنان کد می‌خواهد.</span>
+            </span>
+          </label>
           <Field label="مهلت بازگشت (روز کاری)" error={err('return_days')}>{(id) => <input id={id} className="input ltr text-right" inputMode="numeric" value={fa(store.return_days)} onChange={(e) => s('return_days', Number(latin(e.target.value).replace(/\D/g, '') || 0))} />}</Field>
           <Field label="موبایل مدیر (پیامک سفارش‌ها)" error={err('owner_mobile')}>{(id) => <input id={id} className="input ltr text-right" inputMode="tel" value={store.owner_mobile} onChange={(e) => s('owner_mobile', e.target.value)} />}</Field>
         </div>
