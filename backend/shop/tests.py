@@ -497,6 +497,16 @@ class ApiTests(Base):
         self.assertEqual(response.json()['error'], 'otp_wrong')
         self.assertFalse(Order.objects.exists())
 
+    @override_settings(CHECKOUT_OTP=False)
+    def test_no_code_while_otp_off(self):
+        for _ in range(orders.ORDERS_IP_PER_HOUR):
+            response = self.client.post('/api/orders/', ADDRESS, content_type='application/json')
+            self.assertEqual(response.status_code, 200, response.content)
+        response = self.client.post('/api/orders/', ADDRESS, content_type='application/json')
+        self.assertEqual(response.json()['error'], 'order_limit')
+        self.assertEqual(Order.objects.count(), orders.ORDERS_IP_PER_HOUR)
+        self.assertFalse(OtpCode.objects.exists())
+
     def test_lookup(self):
         order = self.place()
         code = self.otp()

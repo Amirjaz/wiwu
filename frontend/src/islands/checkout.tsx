@@ -40,6 +40,7 @@ interface Data {
   payment_minutes: number;
   return_days: number;
   dev_sms: boolean;
+  otp: boolean; // false: orders go in without an SMS code (settings.CHECKOUT_OTP)
 }
 
 interface Form {
@@ -158,6 +159,7 @@ function Checkout({ data }: { data: Data }) {
       document.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
       return;
     }
+    if (!data.otp) return submit('');
     setBusy(true);
     try {
       const result = await post<{ wait: number; dev_code?: string }>('/api/otp/', { phone: form.phone });
@@ -183,10 +185,14 @@ function Checkout({ data }: { data: Data }) {
       setProblem(message('otp_wrong'));
       return;
     }
+    await submit(latin(code).replace(/\D/g, ''));
+  }
+
+  async function submit(otp: string) {
     setBusy(true);
     try {
       const result = await post<{ url: string }>('/api/orders/', {
-        ...form, product: model.slug, color: asksColor ? form.color : null, code: latin(code).replace(/\D/g, ''),
+        ...form, product: model.slug, color: asksColor ? form.color : null, code: otp,
       });
       try {
         localStorage.removeItem(DRAFT_KEY);
@@ -381,7 +387,7 @@ function Checkout({ data }: { data: Data }) {
 
       {problem && <Notice tone="error">{problem}</Notice>}
       <button type="submit" className="btn btn-primary min-h-14 px-8 text-lg justify-self-start" disabled={busy}>
-        {busy ? 'در حال ارسال کد…' : 'دریافت کد تأیید'}
+        {data.otp ? (busy ? 'در حال ارسال کد…' : 'دریافت کد تأیید') : busy ? 'در حال ثبت…' : 'ثبت سفارش و پرداخت'}
       </button>
     </form>
   );

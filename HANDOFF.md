@@ -31,6 +31,10 @@ This page is the short version, plus what isn't written down anywhere else.
     day (licence «سایر», ویوو, penolinshop.com) and under review, sending with the old version meanwhile.
     `ps-paid` and `ps-shipped` are under review too; the other messages fail (panel → SMS log) until
     their templates exist. No real orders yet.
+  - **Checkout takes no SMS code for now** (Amir, 2026-10-24): `CHECKOUT_OTP=False` in the server's
+    `.env`, since `ps-otp` only reaches Amir's number until Kavenegar approves it. Orders are capped at
+    5 per address per hour instead (`orders.ORDERS_IP_PER_HOUR`). Finding orders by phone (/lookup)
+    still asks for a code. Once `ps-otp` is approved, set `CHECKOUT_OTP=True` (or remove it) and restart.
   - Plain http redirects to https.
   - **HTTPS on the server itself** (2026-10-20): Arvan's proxy was off for every nisatech.org record, so
     browsers came straight to the server, and nginx answered https://shop.nisatech.org with nisatak.com
