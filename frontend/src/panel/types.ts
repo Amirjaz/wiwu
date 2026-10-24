@@ -48,6 +48,8 @@ export interface OrderDetail extends OrderRow {
   shipping_rial: number;
   shipping_on_delivery: boolean;
   offset_rial: number;
+  pay_in_rial: boolean;
+  provider_ref: string; // cartbecart's CBC-… code
   card: { bank: string; number: string; holder: string };
   expires: string;
   paid_via: string;

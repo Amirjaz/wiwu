@@ -236,11 +236,12 @@ beside them, a tab per side (views.PARTS).
       <div class="receipt print px-6 pt-7 pb-8 font-mono text-[0.84rem] leading-relaxed">
         <p class="text-center text-muted">نمونه‌ی مبلغ یک سفارش</p>
         <dl class="mt-6 space-y-2.5">
-          <div class="flex justify-between gap-4"><dt>کیف دستی ویوو آلفا</dt><dd class="whitespace-nowrap">{{ price }}</dd></div>
+          {# With cartbecart the whole bill is in rials, as the amount to pay is (unique to the rial). #}
+          <div class="flex justify-between gap-4"><dt>کیف دستی ویوو آلفا</dt><dd class="whitespace-nowrap">{% if auto_confirm %}{{ product.price_rial|rial }}{% else %}{{ price }}{% endif %}</dd></div>
           {% for option in shipping %}
-          <div class="flex justify-between gap-4 text-ink-soft"><dt>ارسال، {{ option.name }}</dt><dd class="whitespace-nowrap">{% if option.on_delivery %}پس‌کرایه{% elif option.price_rial %}{{ option.price_rial|toman }}{% else %}رایگان{% endif %}</dd></div>
+          <div class="flex justify-between gap-4 text-ink-soft"><dt>ارسال، {{ option.name }}</dt><dd class="whitespace-nowrap">{% if option.on_delivery %}پس‌کرایه{% elif option.price_rial %}{% if auto_confirm %}{{ option.price_rial|rial }}{% else %}{{ option.price_rial|toman }}{% endif %}{% else %}رایگان{% endif %}</dd></div>
           {% endfor %}
-          <div class="flex justify-between gap-4 text-ink-soft"><dt>چند تومان برای شناختن واریز</dt><dd class="whitespace-nowrap">۱ تا ۹۹۹</dd></div>
+          <div class="flex justify-between gap-4 text-ink-soft"><dt>چند {% if auto_confirm %}ریال{% else %}تومان{% endif %} برای شناختن واریز</dt><dd class="whitespace-nowrap">۱ تا ۹۹۹</dd></div>
         </dl>
         <div class="my-5 border-t border-dashed border-line-strong"></div>
         {% if shipping %}
@@ -248,10 +249,10 @@ beside them, a tab per side (views.PARTS).
           <span>مثلاً با {{ shipping.0.name }}</span>
           <span class="font-sans text-2xl font-bold whitespace-nowrap">{{ example_total }}</span>
         </div>
-        <p class="text-end text-xs text-muted">تومان</p>
+        <p class="text-end text-xs text-muted">{% if auto_confirm %}ریال{% else %}تومان{% endif %}</p>
         <div class="my-5 border-t border-dashed border-line-strong"></div>
         {% endif %}
-        <p class="font-sans text-[0.92rem] text-ink-soft leading-loose">آن چند تومان، واریز شما را از سفارش‌های دیگر جدا می‌کند{% if auto_confirm %} تا خودکار تأیید شود{% endif %}. همان مبلغ دقیق را بفرستید، بدون گرد کردن.</p>
+        <p class="font-sans text-[0.92rem] text-ink-soft leading-loose">آن چند {% if auto_confirm %}ریال{% else %}تومان{% endif %}، واریز شما را از سفارش‌های دیگر جدا می‌کند{% if auto_confirm %} تا خودکار تأیید شود{% endif %}. همان مبلغ دقیق را بفرستید، بدون گرد کردن.</p>
       </div>
     </aside>
   </div>

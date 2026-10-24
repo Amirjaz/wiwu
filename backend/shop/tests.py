@@ -43,6 +43,13 @@ class Base(TestCase):
     def place(self, **changes):
         return orders.place(self.product, {**ADDRESS, **changes})
 
+    def otp(self, phone='09121234567'):
+        """Asks for an SMS code through the API; returns it."""
+        with mock.patch('shop.orders.secrets.randbelow', return_value=12345):
+            response = self.client.post('/api/otp/', {'phone': phone}, content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        return '22345'
+
 
 class PersianInputTests(TestCase):
     def test_phone_forms(self):
@@ -173,41 +180,100 @@ class OtpTests(Base):
         self.assertEqual(ctx.exception.code, 'otp_limit')
 
 
+@override_settings(SMS_BACKEND='kavenegar', KAVENEGAR_API_KEY='KEY', KAVENEGAR_SENDER='2000660110',
+                   KAVENEGAR_TEMPLATES=[])
+class KavenegarTests(Base):
+    """Kavenegar's API is faked: each test sees what would have been posted to it."""
+
+    def fake_api(self, *answers):
+        """Patches urlopen to answer with these bodies (dicts, or HTTPError for a refusal) in turn."""
+        import urllib.error
+        from urllib.parse import parse_qs
+        self.calls = []
+        answers = list(answers) or [{'return': {'status': 200, 'message': 'تایید شد'}, 'entries': []}]
+
+        def urlopen(request, timeout):
+            self.calls.append((request.full_url, {k: v[0] for k, v in parse_qs(request.data.decode()).items()}))
+            answer = answers.pop(0) if len(answers) > 1 else answers[0]
+            if isinstance(answer, urllib.error.HTTPError):
+                raise answer
+            response = mock.MagicMock()
+            response.__enter__.return_value.read.return_value = json.dumps(answer).encode()
+            return response
+        return mock.patch('shop.sms.urllib.request.urlopen', side_effect=urlopen)
+
+    def test_plain_text_from_the_sender_line(self):
+        with self.fake_api(), mock.patch('shop.orders.secrets.randbelow', return_value=12345):
+            orders.send_otp('09121234567', None)
+        url, params = self.calls[0]
+        self.assertEqual(url, 'https://api.kavenegar.com/v1/KEY/sms/send.json')
+        self.assertEqual(params['receptor'], '09121234567')
+        self.assertEqual(params['sender'], '2000660110')
+        self.assertIn('22345', params['message'])
+        self.assertEqual(SmsLog.objects.get(kind='otp').status, 'sent')
+
+    @override_settings(KAVENEGAR_SENDER='')
+    def test_no_sender_uses_the_default_line(self):
+        from . import sms
+        with self.fake_api():
+            sms.send('owner_review', '09350000000', code='A1')
+        self.assertNotIn('sender', self.calls[0][1])
+
+    @override_settings(KAVENEGAR_TEMPLATES=['otp'])
+    def test_listed_kinds_use_their_template(self):
+        from . import sms
+        with self.fake_api():
+            sms.send('otp', '09121234567', code='12345')
+            sms.send('paid', '09121234567', code='A1B2', link='https://x.ir/o/1')
+        (otp_url, otp), (paid_url, paid) = self.calls
+        self.assertEqual(otp_url, 'https://api.kavenegar.com/v1/KEY/verify/lookup.json')
+        self.assertEqual(otp, {'receptor': '09121234567', 'template': 'ps-otp', 'token': '12345'})
+        self.assertTrue(paid_url.endswith('/sms/send.json'))
+
+    @override_settings(KAVENEGAR_TEMPLATES=['all'])
+    def test_all_templates(self):
+        from . import sms
+        with self.fake_api():
+            sms.send('shipped', '09121234567', code='A1', tracking='T 9', link='https://x.ir/o/1', carrier='پست پیشتاز')
+        url, params = self.calls[0]
+        self.assertTrue(url.endswith('/verify/lookup.json'))
+        self.assertEqual(params['template'], 'ps-shipped')
+        self.assertEqual(params['token2'], 'T‌9')  # no spaces in token..token3
+        self.assertEqual(params['token10'], 'پست پیشتاز')
+
+    def test_refusal_is_logged_with_kavenegars_reason(self):
+        import urllib.error
+        body = json.dumps({'return': {'status': 418, 'message': 'اعتبار حساب شما کافی نیست'}, 'entries': None})
+        refusal = urllib.error.HTTPError('https://api.kavenegar.com/', 418, 'x', {}, io.BytesIO(body.encode()))
+        with self.fake_api(refusal), self.assertRaises(OrderError) as ctx:
+            orders.send_otp('09121234567', None)
+        self.assertEqual(ctx.exception.code, 'sms_failed')
+        entry = SmsLog.objects.get(kind='otp')
+        self.assertEqual(entry.status, 'failed')
+        self.assertIn('418', entry.error)
+        self.assertIn('اعتبار', entry.error)
+        self.assertNotIn('KEY', entry.error)
+
+    def test_sms_check(self):
+        info = {'return': {'status': 200, 'message': 'تایید شد'},
+                'entries': {'remaincredit': 1250000, 'expiredate': 1798761600, 'type': 'master'}}
+        sent = {'return': {'status': 200, 'message': 'تایید شد'}, 'entries': []}
+        out = io.StringIO()
+        with self.fake_api(info, sent):
+            call_command('sms_check', '۰۹۱۲۱۲۳۴۵۶۷', stdout=out)
+        self.assertIn('125,000 toman', out.getvalue())
+        self.assertIn('Test code sent to 09121234567', out.getvalue())
+        self.assertEqual([url.rsplit('/v1/KEY/')[1] for url, _ in self.calls], ['account/info.json', 'sms/send.json'])
+
+    @override_settings(KAVENEGAR_TEMPLATES=['otpp'])
+    def test_sms_check_catches_a_misspelt_kind(self):
+        from django.core.management.base import CommandError
+        with self.fake_api(), self.assertRaises(CommandError):
+            call_command('sms_check', stdout=io.StringIO())
+        self.assertEqual(self.calls, [])
+
+
 class PaymentTests(Base):
-    def test_deposit_matches_and_notifies(self):
-        order = self.place()
-        event = orders.deposit(order.amount_rial, 'cartbecart', {}, 'ref-1')
-        order.refresh_from_db()
-        self.assertEqual((event.outcome, order.status, order.paid_via), ('matched', 'paid', 'auto'))
-        self.assertEqual(set(SmsLog.objects.values_list('kind', flat=True)), {'order_created', 'paid', 'owner_new_order'})
-
-    def test_same_deposit_twice(self):
-        order = self.place()
-        orders.deposit(order.amount_rial, 'cartbecart', {}, 'ref-1')
-        self.assertEqual(orders.deposit(order.amount_rial, 'cartbecart', {}, 'ref-1').outcome, 'repeat')
-        self.assertEqual(orders.deposit(order.amount_rial, 'cartbecart', {}, 'ref-2').outcome, 'second')
-
-    def test_late_money_goes_to_review(self):
-        order = self.place()
-        Order.objects.filter(pk=order.pk).update(expires_at=timezone.now() - timedelta(minutes=1))
-        event = orders.deposit(order.amount_rial, 'cartbecart', {}, 'r')
-        order.refresh_from_db()
-        self.assertEqual((event.outcome, order.status), ('late', 'needs_review'))
-        self.assertTrue(SmsLog.objects.filter(kind='owner_review').exists())
-
-    def test_unmatched_and_wrong_amount(self):
-        order = self.place()
-        self.assertEqual(orders.deposit(order.amount_rial + 10, 'cartbecart', {}, 'x').outcome, 'unmatched')
-        order.refresh_from_db()
-        self.assertEqual(order.status, 'awaiting_payment')
-
-    def test_toman_amounts_are_converted(self):
-        from . import payments
-        with mock.patch.dict('os.environ', {'CARTBECART_AMOUNT_UNIT': 'toman'}):
-            self.assertEqual(payments.parse({'amount': '10,000,360'})[0], 100_003_600)
-        self.assertEqual(payments.parse({'data': {'amount': 100_003_600, 'id': 7}}), (100_003_600, '7'))
-        self.assertEqual(payments.parse({'nothing': 1})[0], None)
-
     def test_claim_then_approve(self):
         order = self.place()
         orders.claim(order, {'reference': '123456', 'last4': '1234', 'time': 'الان', 'note': ''})
@@ -243,13 +309,13 @@ class TickTests(Base):
         order.refresh_from_db()
         self.assertEqual(order.status, 'expired')
 
-    @override_settings(PAYMENT_PROVIDER='cartbecart')
     def test_forwarder_alert_once(self):
         for _ in range(2):
             order = self.place()
             Order.objects.filter(pk=order.pk).update(status=Order.Status.EXPIRED)
-        self.assertTrue(orders.tick()['alerted'])
-        self.assertFalse(orders.tick()['alerted'])
+        with override_settings(PAYMENT_PROVIDER='cartbecart'):
+            self.assertTrue(orders.tick()['alerted'])
+            self.assertFalse(orders.tick()['alerted'])
 
 
 class ReturnTests(Base):
@@ -283,12 +349,6 @@ class ReturnTests(Base):
 
 
 class ApiTests(Base):
-    def otp(self, phone='09121234567'):
-        with mock.patch('shop.orders.secrets.randbelow', return_value=12345):
-            response = self.client.post('/api/otp/', {'phone': phone}, content_type='application/json')
-        self.assertEqual(response.status_code, 200)
-        return '22345'
-
     def test_buyer_flow(self):
         code = self.otp()
         response = self.client.post('/api/orders/', {**ADDRESS, 'phone': '۰۹۱۲۱۲۳۴۵۶۷', 'code': code},
@@ -325,16 +385,213 @@ class ApiTests(Base):
         for url in ('/', '/checkout/', '/orders/', '/p/terms/', '/robots.txt', '/sitemap.xml', '/panel/'):
             self.assertEqual(self.client.get(url).status_code, 200, url)
 
-    @override_settings(PAYMENT_PROVIDER='cartbecart', CARTBECART_WEBHOOK_SECRET='s3cret')
-    def test_webhook(self):
-        order = self.place()
-        body = json.dumps({'amount': order.amount_rial, 'id': 'abc'})
-        self.assertEqual(self.client.post('/api/payments/cartbecart/wrong/', body, content_type='application/json').status_code, 404)
-        response = self.client.post('/api/payments/cartbecart/s3cret/', body, content_type='application/json')
-        self.assertEqual(response.json()['outcome'], 'matched')
-        response = self.client.post('/api/payments/cartbecart/s3cret/', '{"hello": 1}', content_type='application/json')
-        self.assertEqual(response.json()['outcome'], 'unparsed')
-        self.assertEqual(PaymentEvent.objects.count(), 2)
+
+
+@override_settings(PAYMENT_PROVIDER='cartbecart', CARTBECART_API_URL='https://api.cartbecart.com',
+                   CARTBECART_API_KEY='cb_test', CARTBECART_WEBHOOK_SECRET='whsec_test')
+class CartbecartTests(Base):
+    """cartbecart's API is faked with the answers its docs show; webhooks are signed the way theirs are."""
+    CARD = '6037991234567893'
+
+    def fake_api(self, *, status='pending', error=None, unique_extra=437):
+        """Patches urlopen: create order, the public pay page, an order's status and shop-config."""
+        from urllib.parse import urlparse
+        self.calls = []
+        expires = (timezone.now() + timedelta(minutes=30)).isoformat()
+
+        def urlopen(request, timeout):
+            body = json.loads(request.data) if request.data else None
+            path = urlparse(request.full_url).path
+            self.calls.append({'method': request.get_method(), 'path': path, 'key': request.get_header('X-api-key'), 'body': body})
+            if error is not None:
+                raise error
+            if path == '/api/v1/public/orders':
+                answer = {'order_id': '3f2a9c1e', 'order_code': 'CBC-X7KQ', 'payment_token': 'kJ8s-2Qa',
+                          'payment_url': 'https://cartbecart.com/pay/kJ8s-2Qa',
+                          'unique_amount': body['amount'] + unique_extra, 'expires_at': expires}
+            elif path.startswith('/api/v1/pay/'):
+                answer = {'order_code': 'CBC-X7KQ', 'card_number': self.CARD, 'card_owner': 'سارا محمدی',
+                          'status': 'pending', 'expires_at': expires}
+            elif path.startswith('/api/v1/public/orders/'):
+                answer = {'status': status}
+            else:
+                answer = {'grace_minutes': 60}
+            response = mock.MagicMock()
+            response.__enter__.return_value.read.return_value = json.dumps(answer).encode()
+            return response
+        return mock.patch('shop.payments.urllib.request.urlopen', side_effect=urlopen)
+
+    def refusal(self, status, detail):
+        import urllib.error
+        return urllib.error.HTTPError('https://api.cartbecart.com/', status, 'x', {},
+                                      io.BytesIO(json.dumps({'detail': detail}).encode()))
+
+    def send(self, body, secret='whsec_test', timestamp=None):
+        import hashlib
+        import hmac
+        import time
+        body = body.encode() if isinstance(body, str) else body
+        timestamp = str(int(time.time()) if timestamp is None else timestamp)
+        signature = 'sha256=' + hmac.new(secret.encode(), f'{timestamp}.'.encode() + body, hashlib.sha256).hexdigest()
+        return self.client.post('/api/payments/cartbecart/', body, content_type='application/json',
+                                HTTP_X_CBC_TIMESTAMP=timestamp, HTTP_X_CBC_SIGNATURE=signature)
+
+    def event(self, order, kind, event_id='e1', reason=None, **changes):
+        return json.dumps({
+            'event': kind, 'event_id': event_id, 'occurred_at': timezone.now().isoformat(), 'reason': reason,
+            'is_final': kind != 'order.needs_review',
+            'order': {'order_code': order.provider_ref, 'merchant_order_id': order.code, 'status': kind.split('.')[1],
+                      'base_amount': order.amount_rial - order.offset_rial, 'unique_amount': order.amount_rial,
+                      'paid_at': None, 'expires_at': order.expires_at.isoformat(), 'created_at': order.created_at.isoformat(),
+                      **changes},
+        })
+
+    def placed(self):
+        with self.fake_api():
+            return self.place()
+
+    def test_checkout_registers_the_order_and_shows_their_card_and_amount(self):
+        with self.fake_api():
+            order = self.place()
+        create, page = self.calls
+        base = self.product.price_rial + order.shipping_rial
+        self.assertEqual((create['method'], create['path'], create['key']), ('POST', '/api/v1/public/orders', 'cb_test'))
+        self.assertEqual(create['body'], {'amount': base, 'callback_url': orders.link(order), 'merchant_order_id': order.code,
+                                          'customer_name': ADDRESS['name'], 'customer_phone': ADDRESS['phone']})
+        self.assertEqual((page['path'], page['key']), ('/api/v1/pay/kJ8s-2Qa', None))  # their public endpoint, no key
+        self.assertEqual((order.amount_rial, order.offset_rial), (base + 437, 437))
+        self.assertEqual((order.card_number, order.card_holder, order.card_bank), (self.CARD, 'سارا محمدی', 'بانک ملی'))
+        self.assertEqual((order.provider_token, order.provider_ref), ('kJ8s-2Qa', 'CBC-X7KQ'))
+        self.assertAlmostEqual((order.expires_at - timezone.now()).total_seconds(), 1800, delta=60)
+        text = SmsLog.objects.get(kind='order_created').text
+        self.assertIn(f'{persian.rial(order.amount_rial)} ریال', text)
+        self.assertIn('۳۰ دقیقه', text)
+        data = self.client.get(f'/api/orders/{order.token}/').json()
+        self.assertEqual((data['pay_in_rial'], data['amount_rial'], data['card']['number']), (True, base + 437, self.CARD))
+
+    def test_a_card_in_the_panel_lends_its_bank_name(self):
+        Card.objects.create(bank='بانک آزمایش', number=self.CARD, holder='سارا محمدی')
+        self.assertEqual(self.placed().card_bank, 'بانک آزمایش')
+
+    def test_refusal_keeps_the_sms_code_and_tells_the_owner_once(self):
+        code = self.otp()
+        with self.fake_api(error=self.refusal(422, 'کارت پیش‌فرض فعالی وجود ندارد')):
+            for _ in range(2):
+                response = self.client.post('/api/orders/', {**ADDRESS, 'code': code}, content_type='application/json')
+                self.assertEqual(response.json()['error'], 'payment_down')
+        self.assertFalse(Order.objects.exists())
+        self.assertEqual(SmsLog.objects.filter(kind='owner_payment_down', phone='09350000000').count(), 1)
+        self.assertIn('422', SmsLog.objects.get(kind='owner_payment_down').text)
+        with self.fake_api():  # fixed on their side: the same code still works
+            response = self.client.post('/api/orders/', {**ADDRESS, 'code': code}, content_type='application/json')
+        self.assertEqual(response.status_code, 200, response.content)
+
+    def test_unexpected_answer_is_refused(self):
+        with self.fake_api(unique_extra=5000), self.assertRaises(OrderError) as ctx:
+            self.place()
+        self.assertEqual(ctx.exception.code, 'payment_down')
+
+    def test_only_their_signature_gets_in(self):
+        order = self.placed()
+        body = self.event(order, 'order.paid')
+        self.assertEqual(self.client.post('/api/payments/cartbecart/', body, content_type='application/json').status_code, 401)
+        self.assertEqual(self.send(body, secret='guess').status_code, 401)
+        self.assertEqual(self.send(body, timestamp=int(timezone.now().timestamp()) - 3600).status_code, 401)  # replayed
+        with override_settings(PAYMENT_PROVIDER='manual'):
+            self.assertEqual(self.send(body).status_code, 404)
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'awaiting_payment')
+
+    def test_paid_once_however_often_they_send_it(self):
+        order = self.placed()
+        response = self.send(self.event(order, 'order.paid'))
+        self.assertEqual((response.status_code, response.json()['outcome']), (200, 'matched'))
+        order.refresh_from_db()
+        self.assertEqual((order.status, order.paid_via), ('paid', 'auto'))
+        self.assertEqual(self.send(self.event(order, 'order.paid')).json()['outcome'], 'repeat')
+        self.assertEqual(PaymentEvent.objects.count(), 1)
+        self.assertEqual(SmsLog.objects.filter(kind='paid').count(), 1)
+        self.assertTrue(SmsLog.objects.filter(kind='owner_new_order').exists())
+
+    def test_paid_in_their_grace_hour_after_our_countdown(self):
+        order = self.placed()
+        Order.objects.filter(pk=order.pk).update(expires_at=timezone.now() - timedelta(minutes=20))
+        self.assertEqual(self.client.get(f'/api/orders/{order.token}/').json()['status'], 'expired')
+        self.assertEqual(self.send(self.event(order, 'order.paid')).json()['outcome'], 'matched')
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'paid')
+
+    def test_needs_review_then_rejected_in_their_dashboard(self):
+        order = self.placed()
+        self.assertEqual(self.send(self.event(order, 'order.needs_review')).json()['outcome'], 'review')
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'needs_review')
+        self.assertTrue(SmsLog.objects.filter(kind='owner_review').exists())
+        response = self.send(self.event(order, 'order.expired', 'e2', reason='rejected_by_merchant'))
+        self.assertEqual(response.json()['outcome'], 'rejected')
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'cancelled')
+        self.assertTrue(SmsLog.objects.filter(kind='payment_not_found').exists())
+
+    def test_timeout_and_cancel(self):
+        order = self.placed()
+        Order.objects.filter(pk=order.pk).update(expires_at=timezone.now() - timedelta(minutes=95))
+        self.assertEqual(self.send(self.event(order, 'order.expired', reason='timeout')).json()['outcome'], 'expired')
+        other = self.placed()
+        self.assertEqual(self.send(self.event(other, 'order.cancelled', 'e2')).json()['outcome'], 'cancelled')
+        other.refresh_from_db()
+        self.assertEqual(other.status, 'cancelled')
+
+    def test_events_for_other_orders(self):
+        order = self.placed()
+        test = json.loads(self.event(order, 'order.paid', 'e1'))
+        test['order']['merchant_order_id'] = 'TEST-1A2B3C'
+        self.assertEqual(self.send(json.dumps(test)).json()['outcome'], 'test')
+        self.assertEqual(self.send(self.event(order, 'order.paid', 'e2', unique_amount=order.amount_rial + 1)).json()['outcome'],
+                         'mismatch')
+        order.refresh_from_db()
+        self.assertEqual(order.status, 'needs_review')
+        self.assertEqual(self.send(b'not json').json()['outcome'], 'unparsed')
+
+    def test_status_check_catches_a_missed_webhook(self):
+        order = self.placed()
+        with self.fake_api(status='paid'):
+            self.assertEqual(orders.sync_cartbecart(), 1)
+            self.assertEqual(orders.sync_cartbecart(), 0)  # not asked again within SYNC_EVERY
+        self.assertEqual([(c['path'], c['key']) for c in self.calls], [('/api/v1/public/orders/kJ8s-2Qa', 'cb_test')])
+        order.refresh_from_db()
+        self.assertEqual((order.status, order.paid_via), ('paid', 'auto'))
+
+    def test_status_check_of_an_order_already_in_review_adds_nothing(self):
+        from django.core.cache import cache
+        order = self.placed()
+        Order.objects.filter(pk=order.pk).update(status=Order.Status.REVIEW)
+        before = AuditLog.objects.count()
+        with self.fake_api(status='needs_review'):
+            for _ in range(3):
+                cache.clear()  # as if SYNC_EVERY had passed
+                self.assertEqual(orders.sync_cartbecart(), 0)
+        self.assertEqual(AuditLog.objects.count(), before)
+
+    def test_home_shows_the_sample_in_rials(self):
+        from django.core.cache import cache
+        cache.clear()
+        page = self.client.get('/').content.decode()
+        self.assertIn('چند ریال برای شناختن واریز', page)
+
+    def test_cartbecart_check(self):
+        out = io.StringIO()
+        with self.fake_api():
+            call_command('cartbecart_check', '--test', '5000', stdout=out)
+        self.assertIn('grace_minutes=60', out.getvalue())
+        self.assertIn('/api/payments/cartbecart/', out.getvalue())
+        self.assertIn(persian.rial(50_437), out.getvalue())
+        create = self.calls[1]
+        self.assertTrue(create['body']['merchant_order_id'].startswith('TEST-'))
+        self.assertEqual(create['body']['amount'], 50_000)
+        # They refuse an empty customer_phone (seen live, 2026-10-24): no buyer, so none is sent.
+        self.assertNotIn('customer_phone', create['body'])
+        self.assertNotIn('customer_name', create['body'])
 
 
 class PanelTests(Base):

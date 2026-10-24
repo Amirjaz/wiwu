@@ -35,45 +35,80 @@ too) and logged in the panel. Panel users for local testing are in `backend/dev-
    Tipax (paid by the buyer on delivery, پس‌کرایه: `StoreSettings.tipax_on_delivery`, copied onto the order),
    "gift: no price in the box". The mobile is confirmed with a 5-digit SMS code (5 minutes, 5 tries;
    one code a minute and 5 an hour per phone, 15 an hour per address, so the SMS credit can't be drained).
-2. **The amount**: price + shipping + a random **1–999 toman** that no open order (or one expired in the
-   last 48 h) has, so a bank deposit points at exactly one order. The buyer pays the extra (decided
-   2026-10-14). Price, fee and card are copied into the order: later changes don't touch it.
-3. **The card**: the active card used least recently (all in the owner's name). The order page shows it,
-   the holder's name, the exact amount with copy buttons, and a 30-minute countdown. It polls every 5 s
-   and checks again the moment the buyer comes back from their bank app (in-app browsers reload pages).
-4. **Confirmation**: cartbecart sees the deposit SMS and calls the webhook → the order with that amount
-   is paid (SMS to buyer and owner). With `PAYMENT_PROVIDER=manual`, staff approve it in the panel.
+2. **The amount**: price + shipping + a small extra so a bank deposit points at exactly one order. The
+   buyer pays the extra (decided 2026-10-14). With cartbecart it's their **1–999 rials**, so the amount
+   is shown, copied and texted in rials; without, the shop picks **1–999 tomans** no open order (or one
+   expired in the last 48 h) has. Price, fee and card are copied into the order: later changes don't touch it.
+3. **The card**: with cartbecart, the card marked default in their dashboard (they say which, with its
+   holder; the bank's name comes from the same card in the panel, or its first six digits); without, the
+   panel's active card used least recently. The order page shows it, the holder's name, the exact amount
+   with copy buttons, and the countdown (cartbecart's expiry, or the panel's payment minutes). It polls
+   every 5 s and checks again the moment the buyer comes back from their bank app (in-app browsers reload pages).
+4. **Confirmation**: cartbecart sees the deposit SMS and sends a signed event → the order is paid (SMS
+   to buyer and owner). With `PAYMENT_PROVIDER=manual`, staff approve it in the panel.
 5. **"I've paid"**: the buyer can send the transfer reference, the last 4 card digits, the time and a
    screenshot → *needs review* → SMS to the owner → approve or reject in the panel.
-6. **Late money**: a deposit for an order whose 30 minutes ran out goes to *needs review*; one for no
-   order is logged and shown on the panel's Today page. Nothing is dropped.
-7. **The minute timer** (`manage.py tick`, systemd timer): one reminder SMS at minute 15, expiry at 30,
-   and with cartbecart on, an SMS to the owner if two orders in 3 hours ran out with no match (the
-   forwarder phone is probably off).
+6. **Late money**: cartbecart still matches a deposit for an hour after the countdown ends, and the
+   order then turns paid. A deposit that doesn't quite match goes to *needs review* (decide in their
+   dashboard); one for no order is in their dashboard's manual review. Nothing is dropped.
+7. **The minute timer** (`manage.py tick`, systemd timer): one reminder SMS at minute 15, expiry when the
+   countdown ends, and with cartbecart on, a status check of open orders (in case a webhook was missed)
+   and an SMS to the owner if two orders in 3 hours ran out with no match (the forwarder phone is
+   probably off).
 8. **Shipping**: paid → preparing → shipped (tracking code → SMS) → delivered. The panel prints an address
    label and packing slip; a gift's slip has no prices.
 9. **Returns**: 7 working days (Fridays skipped) from delivery, or from shipping + 3 days if never marked
    delivered. The buyer gives reason, Sheba (checked) and holder; staff mark it received, then the owner
    records the refund's transfer reference (SMS to the buyer).
 
-Money is whole **rials** everywhere (bank SMS count in rials) and shown in tomans.
+Money is whole **rials** everywhere (bank SMS count in rials) and shown in tomans, except an amount to
+pay that doesn't end in a whole toman (cartbecart's), which is shown in rials.
 
 ## cartbecart (`backend/shop/payments.py`)
 
-Their API docs are behind their login. Until the client's **Max** account (5 cards) gives us access,
-the webhook stores every payload as received and reads the amount from a few likely field names.
-`TODO(cartbecart docs)` marks what to finish: the real field names and unit, verifying each deposit
-through their API, and whether orders must be registered with them first. The webhook URL is
-`https://<site>/api/payments/cartbecart/<CARTBECART_WEBHOOK_SECRET>/` (not behind the staging password).
+Their REST API (docs in their dashboard → مستندات API; it needs the **Pro or Max** plan, a card set
+**active and default** in their dashboard, and their forwarder app on the phone that gets that card's
+bank SMS). `PAYMENT_PROVIDER=cartbecart` with:
+
+- `CARTBECART_API_KEY`: `cb_…`, their dashboard → Settings → API key.
+- `CARTBECART_WEBHOOK_SECRET`: their dashboard → Settings → Webhook → «ساخت کلید امضا» (shown once).
+  The webhook address to enter there is `https://<site>/api/payments/cartbecart/` (https on 443 only;
+  not behind the staging password).
+
+How it runs: checkout registers the order (`POST /api/v1/public/orders`, our code as
+`merchant_order_id`) and reads the card from their public `GET /api/v1/pay/<token>`; our own order page
+shows it (their hosted pay page isn't used). Each change comes as a signed event (`X-CBC-Signature`,
+HMAC-SHA256 over `timestamp.body`, at most 5 minutes old; repeats recognised by `event_id`):
+`order.paid` → paid; `order.needs_review` → needs review (they're decided in **their** dashboard, and the
+next event follows); `order.expired` → expired, or cancelled with an SMS to the buyer when the reason is
+a rejection; `order.cancelled` → cancelled. The minute timer asks for the status of open orders, so a
+missed webhook is caught within a few minutes. Every event is in the panel → Logs → payments.
+
+If they refuse an order (no default card, plan, monthly quota, key), the buyer sees «پرداخت همین حالا
+آماده نشد», their SMS code still works for another try, and the owner gets an SMS (once an hour).
+
+`manage.py cartbecart_check` checks the key and plan and prints the webhook address;
+`manage.py cartbecart_check --test 10000` also registers a 10,000-toman test order (not a shop order) to
+pay from your own card: once paid, the panel's payments log shows it as a test, which proves the webhook.
 Without cartbecart (`PAYMENT_PROVIDER=manual`) unpaid orders show under "needs action" in the panel.
 
 ## SMS (`backend/shop/sms.py`)
 
-`SMS_BACKEND=kavenegar` uses Kavenegar's verify/lookup templates, which must be created in the
-client's Kavenegar panel first: `ps-otp`, `ps-order-created`, `ps-reminder`, `ps-paid`,
-`ps-payment-not-found`, `ps-shipped`, `ps-return-received`, `ps-refunded`, `ps-owner-new-order`,
-`ps-owner-review`, `ps-owner-forwarder` (wording and tokens in `MESSAGES`). Every SMS is logged
-(panel → Logs), OTP codes hidden.
+`SMS_BACKEND=kavenegar` with `KAVENEGAR_API_KEY` sends each message one of two ways (Kavenegar's REST
+API over plain HTTPS; their Node SDK is the same calls, so no package is needed):
+
+- **Plain text** (`sms/send`) from the line `KAVENEGAR_SENDER` (`2000660110`, empty for the account's
+  default line), with the texts in `MESSAGES`. Works as soon as the account has credit.
+- **Templates** (`verify/lookup`) for the kinds listed in `KAVENEGAR_TEMPLATES` (`otp,paid`, or `all`).
+  They must be created and approved in the Kavenegar panel first (the Advanced plan): `ps-otp`,
+  `ps-order-created`, `ps-reminder`, `ps-paid`, `ps-payment-not-found`, `ps-shipped`,
+  `ps-return-received`, `ps-refunded`, `ps-owner-new-order`, `ps-owner-review`, `ps-owner-forwarder`,
+  `ps-owner-payment-down` (wording and tokens in `MESSAGES`). They also reach numbers that block advertising SMS, so move at
+  least `otp` to a template before launch.
+
+`manage.py sms_check` shows the key's credit and which messages go how, sending nothing;
+`manage.py sms_check 09xxxxxxxxx` also texts that number a test code (12345). Every SMS is logged
+(panel → Logs), OTP codes hidden; a refusal is logged with Kavenegar's reason (no credit, bad key…).
 
 ## Staff panel (`/panel`)
 

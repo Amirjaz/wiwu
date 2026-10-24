@@ -20,7 +20,9 @@ SMS_BACKEND=console
 PAYMENT_PROVIDER=manual
 EOF
   chmod 640 .env
-  echo "    Edit $BACKEND/.env for Kavenegar, cartbecart and the real domain (see .env.example)."
+  echo "    Edit $BACKEND/.env for Kavenegar, cartbecart and the real domain (see .env.example);"
+  echo "    check SMS with: .venv/bin/python manage.py sms_check 09xxxxxxxxx"
+  echo "    and cartbecart with: .venv/bin/python manage.py cartbecart_check"
 fi
 
 echo "==> Python dependencies"

@@ -29,6 +29,11 @@ def toman(rial):
 
 
 @register.filter
+def rial(amount):
+    return persian.rial(amount or 0)
+
+
+@register.filter
 def fa(value):
     return persian.fa_digits(value)
 

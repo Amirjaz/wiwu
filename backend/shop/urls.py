@@ -20,7 +20,7 @@ urlpatterns = [
     path('api/orders/<str:token>/claim/', views.api_claim),
     path('api/orders/<str:token>/return/', views.api_return),
     path('api/lookup/', views.api_lookup),
-    path('api/payments/cartbecart/<str:secret>/', views.cartbecart_webhook),
+    path('api/payments/cartbecart/', views.cartbecart_webhook),
 
     path('api/panel/session/', panel.session),
     path('api/panel/login/', panel.sign_in),

@@ -171,7 +171,7 @@ class Order(models.Model):
     unit_price_rial = models.PositiveBigIntegerField()
     shipping_rial = models.PositiveBigIntegerField()
     shipping_on_delivery = models.BooleanField('هزینه ارسال هنگام تحویل (پس‌کرایه)', default=False)
-    offset_rial = models.PositiveBigIntegerField()  # makes the amount unique, see orders.choose_amount
+    offset_rial = models.PositiveBigIntegerField()  # makes the amount unique: orders.choose_amount, or cartbecart's
     amount_rial = models.PositiveBigIntegerField('مبلغ پرداخت (ریال)', db_index=True)
 
     card = models.ForeignKey(Card, null=True, blank=True, on_delete=models.SET_NULL, related_name='orders')
@@ -185,6 +185,9 @@ class Order(models.Model):
     paid_at = models.DateTimeField(null=True, blank=True)
     paid_via = models.CharField(max_length=10, blank=True)  # 'auto' (cartbecart) or 'manual' (staff)
     confirmed_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+    # Registered with cartbecart (payments.py): their payment_token (for status checks; anyone with it can
+    # see the order's pay page, so it's never shown) and their short code (CBC-…, for their dashboard).
+    provider_token = models.CharField(max_length=64, blank=True, db_index=True)
     provider_ref = models.CharField(max_length=80, blank=True)
 
     # "I've paid": what the buyer tells us when the automatic match didn't happen.
@@ -211,6 +214,11 @@ class Order(models.Model):
 
     def __str__(self):
         return f'{self.code} — {self.name}'
+
+    @property
+    def pay_in_rial(self):
+        """cartbecart's amounts are unique to the rial, so they're shown (and copied) in rials."""
+        return bool(self.provider_token) or self.amount_rial % 10 != 0
 
 
 class ReturnRequest(models.Model):
