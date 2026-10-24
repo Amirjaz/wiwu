@@ -7,10 +7,13 @@ User=purseshop
 Group=purseshop
 UMask=0002
 WorkingDirectory=/srv/purseshop/app/backend
-# 8030: from the shared Nisatech server, where nisatech.org, nisatak.com and contech had 8000-8020. The
-# shop has its own server since 2026-10-24 (4 cores; still 3 workers, see HANDOFF -> Next).
+# 8030: from the shared Nisatech server, where nisatech.org, nisatak.com and contech had 8000-8020.
+# 9 plain (sync) workers for the shop's own 4-core server, 2 x cores + 1 (2026-10-24, LOADTEST.md): about
+# as fast as 5 at full CPU, and a buyer's checkout can wait up to 20 s on cartbecart (payments.TIMEOUT,
+# two calls) or 10 s on an SMS, so it takes nine such waits at once, not five, to hold up every page.
+# Threads (gthread) were half as fast: rendering is pure Python and the threads queue for one lock.
 ExecStart=/srv/purseshop/app/backend/.venv/bin/gunicorn \
-    --workers 3 \
+    --workers 9 \
     --bind 127.0.0.1:8030 \
     --timeout 60 \
     --access-logfile - \

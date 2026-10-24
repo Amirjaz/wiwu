@@ -1,4 +1,9 @@
-# PurseShop: load test, 2026-10-18
+# PurseShop: load test, 2026-10-18 (and the shop's own server, 2026-10-24)
+
+**The shop's own server, 2026-10-24** (its section below): on 4 cores the page cache serves the home page
+about 900 times a second and checkout renders about 200 times a second, with no errors up to 128
+simultaneous clients, on 9 plain gunicorn workers. That is far beyond the campaign estimates further
+down (6–12 views a second at a spike). The 2026-10-18 test of the old shared server follows.
 
 **Question:** can the store take about 500 buyers a day, around 50,000 page views or more, and on what
 server?
@@ -90,9 +95,46 @@ server, 2 vCPU and 2 GB RAM, in an Iranian datacentre, behind ArvanCloud. Then a
 can't slow nisatech.org, nisatak.com or contech, and vice versa. With the fixes above it isn't
 required for 50,000 views a day.
 
+## The shop's own server, 2026-10-24
+
+37.32.25.183: Arvan cloud, 4 vCPU, 4 GB RAM, 2 GB swap, nothing else on it. Measured on the server with
+`tools/loadtest/bench.sh` (ApacheBench straight at a gunicorn port, no nginx or Arvan; one new connection
+per request, as nginx makes them; 15 s per step), during the day with the site live and quiet. The live
+service was measured as it was; each other setup ran as a second gunicorn on port 8031 beside it, as the
+service's user, so the site wasn't touched until the choice was made. ab itself takes part of a core, so
+these are a floor. Peaks over 1–128 simultaneous clients, and the 95th percentile at 64:
+
+| gunicorn | Home (page cache), req/s | p95 at 64 | Checkout (rendered), req/s | p95 at 64 | Memory |
+| --- | --- | --- | --- | --- | --- |
+| 3 sync workers (as it was) | ~800 | 109 ms | ~170 | 445 ms | ~170 MB |
+| 5 sync | ~1,070 | 72 ms | ~228 | 328 ms | ~270 MB |
+| **9 sync (chosen)** | ~880–920 | 90 ms | ~180–210 | 375 ms | ~440 MB |
+| 4 workers × 4 threads (gthread) | ~510 | 407 ms | ~122 | 1,006 ms | ~230 MB |
+| 8 workers × 4 threads (gthread) | ~530 | 265 ms | ~141 | 1,204 ms | ~450 MB |
+
+- **No errors** in any run; the CPU was full (90–100%) from 8 clients up with 5 or more workers.
+- **Threads are slower here:** a page is rendered in Python start to finish, and Python's threads queue for
+  one lock, so 4 or 8 threaded workers did about half the work of 5 plain ones, with much worse waits.
+- **Why 9 and not 5:** 5 was the fastest at full CPU, but a checkout can wait up to 20 s on cartbecart
+  (`payments.TIMEOUT`, two calls) and an OTP up to 10 s on Kavenegar. With 5 workers, five such waits at
+  once would hold up every page; with 9 it takes nine. The price is about 15% at full CPU, which no
+  expected spike comes near.
+- **Per visit** the home page now costs about 1 ms of CPU from the cache and checkout about 5 ms (4 cores
+  at ~200/s). Through Arvan, images are cached at the edge and the 3D model is gone (2026-10-23).
+
 ## Running it again
 
 From `PurseShop/` (dev tools only; the scripts send a `purseshop-loadtest` user agent):
+
+On the shop's own server (needs `apt-get install apache2-utils`; `bash bench.sh <port> <label> [clients]`):
+
+```bash
+scp tools/loadtest/bench.sh root@37.32.25.183:
+ssh root@37.32.25.183 'bash bench.sh 8030 live "1 8 32 64 128"'
+```
+
+The 2026-10-18 tools (`origin.py` is one Python process, which runs out of steam before a 4-core server
+does; `monitor.sh` also times the other sites of the old shared server):
 
 ```bash
 node tools/loadtest/ramp.mjs https://penolinshop.com '[1,2,5,10,20,40]' 30
