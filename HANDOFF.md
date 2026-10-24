@@ -10,9 +10,9 @@ This page is the short version, plus what isn't written down anywhere else.
 
 - **Staging is online at https://penolinshop.com** (since 2026-10-24, Amir's domain from Mihanwebhost,
   DNS on his Arvan account; `www.penolinshop.com` and the old https://shop.nisatech.org redirect to it,
-  keeping the path) and runs **a7fc54a**, deployed on 2026-10-24 (the app is deb2f75's of 2026-10-23;
-  a7fc54a changes only the deploy scripts, docs and load-test tools; `main` is the same, the handoff
-  commits after it change only this file). Still on the shared Nisatech server; Amir will buy a new
+  keeping the path). The move deployed **a7fc54a** (deploy scripts, docs and load-test tools only, on
+  deb2f75's app); minutes later the Kavenegar/cartbecart chat deployed **5c91b10** on the new domain
+  (its own notes say what that changed). Still on the shared Nisatech server; Amir will buy a new
   server later. What it shows: the client's answers (the shop is
   **ویوو** with WiWU's logo in the site's colours, the price, free post and Tipax on delivery, 4 to 6
   working days, the battery, the 72-hour warranty), the hero (opening with the man with the bag for 3 s,
@@ -31,8 +31,8 @@ This page is the short version, plus what isn't written down anywhere else.
     (`remote-deploy.sh`; it passed on the 2026-10-21 deploys). Amir turned the proxy back on by
     2026-10-21 (the shop resolves to Arvan again, `server: ArvanCloud`).
   - **penolinshop.com** (2026-10-24): `penolinshop.com` and `www.penolinshop.com` each have their own
-    certificate (until 2027-01-22; renewal dry-runs passed), and shop.nisatech.org keeps its own for its
-    redirect (`server-setup.sh REDIRECT=…`, README → *Deploying*). Arvan's proxy is **off** for both
+    certificate (until 2027-01-22), and shop.nisatech.org keeps its own for its redirect (renewal
+    dry-runs passed for all three, the old one through its redirect block) (`server-setup.sh REDIRECT=…`, README → *Deploying*). Arvan's proxy is **off** for both
     new records (they resolve to the server), so there is no CDN in front yet.
   - **Panel accounts:** `amir` and `salar`, both superusers (Amir set the passwords himself on
     2026-10-19). Log in at `/panel/` (the store) or `/admin/` (Django, for the Owners/Staff groups).
@@ -336,9 +336,6 @@ node tools/compare.mjs && .venv-3d/Scripts/python tools/dev/compose.py
 - **A new HTTPS host on this server** needs its own certificate: nginx answers any name it has no
   HTTPS block for with nisatak.com, the first HTTPS site it loads and so its default
   (`server-setup.sh CERT=1` for the shop, with every other name of it in `REDIRECT`).
-- **Tests in the main checkout:** its `backend/.env` was given Kavenegar settings on 2026-10-24 (another
-  chat), so the OTP tests fail there with `sms_failed`. Run them with
-  `SMS_BACKEND=console PAYMENT_PROVIDER=manual` in front (53 tests pass that way).
 - **This PC's DNS** (10.255.255.1, the VPN's) failed to resolve penolinshop.com on 2026-10-24 while 8.8.8.8,
   1.1.1.1, Shecan and Arvan's own servers answered. Check from here with `nslookup <host> 8.8.8.8`, or
   `curl --resolve <host>:443:185.231.180.92`.
