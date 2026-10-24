@@ -116,8 +116,10 @@ This page is the short version, plus what isn't written down anywhere else.
    (`/etc/sudoers.d/amir-full`, added by Amir as root, as on the old server); its password is locked.
 8. **The panel's cards and Sheba** (live since 3eb9ed9, 2026-10-24): in panel → فروشگاه, add the real cards
    (Pasargad …8502 and Blu …8679 of Behrad Bakhtiari, Shahr …4142 of Mohammad Salar Kabiri, Tejarat …1836
-   of Amirmohammad Jazayeri, as in cartbecart's dashboard) and delete the sample card; and set the shop's
-   Sheba, its holder and bank. Until the Sheba is set, the Sheba tab doesn't show.
+   of Amirmohammad Jazayeri, as in cartbecart's dashboard) and delete the sample card. The Shebas are a
+   list now (migration 0011, 2026-10-24): it drops the one set in the store settings (Amir's own) and adds
+   Amir's two (Pasargad IR97…7001 of Hesam Mansouri, Shahr IR22…6838 of Mohammad Salar Kabiri), shown
+   under «شباهای فروشگاه». With none active, the Sheba tab doesn't show.
 
 ## Waiting on the client
 
@@ -232,7 +234,8 @@ business address), the `.ir` domain under their national ID.
    cartbecart: the first real 16.5M order is that test.
    **Every card, Sheba, payment codes** (Amir, 2026-10-24; migration 0010; README → *How an order works*,
    step 3): the order page lists every active panel card (the order's own first), offers **Sheba** as a
-   second tab (one shop Sheba, 3 hours, checked by staff), and the panel shows each order's payment
+   second tab (3 hours, checked by staff; since migration 0011 every active panel Sheba, the order's own
+   first, as with the cards), and the panel shows each order's payment
    method and code (CBC- codes, or the Sheba reference). **Test that decided the card labels**
    (TEST-F289CF, 50,000 toman, default card Pasargad …8502, paid to Behrad's Blu …8679 instead):
    cartbecart saw it but marked it `needs_review`, not paid. So only the default card is instant; the

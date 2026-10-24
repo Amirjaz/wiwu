@@ -104,5 +104,6 @@ export const ACTIONS: Record<string, string> = {
   price: 'تغییر قیمت',
   settings: 'تغییر تنظیمات',
   cards: 'تغییر کارت‌ها',
+  shebas: 'تغییر شباها',
   texts: 'تغییر متن‌ها',
 };

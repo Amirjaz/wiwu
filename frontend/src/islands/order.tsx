@@ -9,6 +9,7 @@ import { CopyButton, Field, Notice, useCountdown } from '../lib/ui';
 
 type Status = 'awaiting_payment' | 'needs_review' | 'paid' | 'preparing' | 'shipped' | 'delivered' | 'expired' | 'cancelled';
 type Card = { bank: string; number: string; holder: string };
+type ShebaAccount = { number: string; holder: string; bank: string };
 
 interface Order {
   code: string;
@@ -34,11 +35,13 @@ interface Order {
   cards: (Card & { instant: boolean })[];
   // More than one when the total is over the bank's cap for one card-to-card: each to send on its own.
   transfers: { position: number; amount_rial: number; offset_rial: number; paid: boolean; card: Card | null }[];
-  // Sheba, the second way to pay: offered while awaiting payment; its number once chosen.
+  // Sheba, the second way to pay: offered while awaiting payment; the numbers once chosen.
   payment_method: 'card' | 'sheba';
   sheba_offered: boolean;
   sheba_minutes: number;
-  sheba: { number: string; holder: string; bank: string } | null;
+  sheba: ShebaAccount | null; // the order's own
+  shebas: ShebaAccount[]; // every Sheba the buyer may pay into, the order's own first
+
   claimed: boolean;
   tracking: string;
   paid_at: string | null;
@@ -185,7 +188,8 @@ function MethodTabs({ tab, onChange }: { tab: 'card' | 'sheba'; onChange: (tab: 
   );
 }
 
-/** Paying by Sheba: the whole amount in one transfer to the shop's Sheba, checked by staff. Opening the tab
+/** Paying by Sheba: the whole amount in one transfer to one of the shop's Shebas (the order's own large, the
+ *  others below), checked by staff. Opening the tab
  *  chooses it (Amir, 2026-10-24: the number must be there at once), which gives the order the longer Sheba
  *  deadline; a card-to-card payment still pays it if the buyer goes back. */
 function ShebaPay({ order, token, onUpdate }: { order: Order; token: string; onUpdate: (o: Order) => void }) {
@@ -208,6 +212,7 @@ function ShebaPay({ order, token, onUpdate }: { order: Order; token: string; onU
     if (!chosen) choose();
   }, [chosen, choose]);
 
+  const [, ...others] = order.shebas;
   if (!order.sheba) {
     return problem ? (
       <div className="grid gap-4">
@@ -224,7 +229,7 @@ function ShebaPay({ order, token, onUpdate }: { order: Order; token: string; onU
   return (
     <div className="grid gap-6">
       <p className="text-ink-soft leading-relaxed">
-        مبلغ کامل را <strong className="font-bold text-ink">در یک واریز</strong> به این شبا بفرستید؛ سقف کارت‌به‌کارت را ندارد.
+        مبلغ کامل را <strong className="font-bold text-ink">در یک واریز</strong> به {others.length ? 'یکی از این شباها' : 'این شبا'} بفرستید؛ سقف کارت‌به‌کارت را ندارد.
         واریز شبا را همکاران ما بررسی می‌کنند و تأیید آن پس از رسیدن پول <strong className="font-bold text-ink">تا ۲۰ تا ۳۰ دقیقه</strong> طول می‌کشد.
         مهلت پرداخت با شبا {wait} است.
       </p>
@@ -239,6 +244,22 @@ function ShebaPay({ order, token, onUpdate }: { order: Order; token: string; onU
           <CopyButton text={order.sheba.number} label="کپی شبا" className="!border-raised/30 !text-raised" />
         </div>
       </div>
+      {others.length > 0 && (
+        <div className="grid gap-3">
+          <p className="label">یا به یکی از شباهای دیگر فروشگاه</p>
+          <ul className="grid gap-2">
+            {others.map((s) => (
+              <li key={s.number} className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-field)] border border-line bg-raised p-4">
+                <span className="grid gap-1 min-w-0">
+                  <span className="text-sm text-ink-soft">{s.bank ? `${s.bank} · ` : ''}{s.holder}</span>
+                  <span className="ltr font-bold tracking-wide break-all" dir="ltr">{fa(groupSheba(s.number))}</span>
+                </span>
+                <CopyButton text={s.number} label="کپی شبا" />
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <div className="grid gap-3">
         <p className="label">مبلغ دقیق واریز{inRial && ' (به ریال)'}</p>
         <div className="flex flex-wrap items-center gap-x-4 gap-y-3">

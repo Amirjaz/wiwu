@@ -15,7 +15,7 @@ from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
 from django.views.decorators.http import require_GET, require_POST
 
 from . import jalali, orders, pagecache, payments, persian, text
-from .models import SAMPLE_CARD_NUMBER, Card, Faq, Order, Page, Product, StoreSettings
+from .models import SAMPLE_CARD_NUMBER, Card, Faq, Order, Page, Product, Sheba, StoreSettings
 from .orders import OrderError
 
 log = logging.getLogger(__name__)
@@ -392,6 +392,14 @@ def payment_cards(order):
     return cards
 
 
+def payment_shebas(order):
+    """Every Sheba the buyer may pay into, once they chose Sheba: the order's own first, then the other active ones."""
+    shebas = [{'number': order.sheba_number, 'holder': order.sheba_holder, 'bank': order.sheba_bank}]
+    for sheba in Sheba.objects.filter(active=True).exclude(number=order.sheba_number):
+        shebas.append({'number': sheba.number, 'holder': sheba.holder, 'bank': sheba.bank})
+    return shebas
+
+
 def order_json(order):
     order = orders.refresh(order)
     ret = order.returns.order_by('-created_at').first()
@@ -427,12 +435,13 @@ def order_json(order):
                        'card': {'bank': t.card_bank, 'number': t.card_number, 'holder': t.card_holder} if payable else None}
                       for t in order.transfers.all()],
         # Sheba, the second way to pay (orders.choose_sheba): offered while awaiting payment if the shop has
-        # one; its number only once chosen, so the order has started waiting for it.
+        # an active one; the numbers only once chosen, so the order has started waiting for it.
         'payment_method': order.payment_method,
-        'sheba_offered': bool(store.sheba) and order.status == Order.Status.AWAITING,
+        'sheba_offered': order.status == Order.Status.AWAITING and Sheba.objects.filter(active=True).exists(),
         'sheba_minutes': store.sheba_minutes,
         'sheba': {'number': order.sheba_number, 'holder': order.sheba_holder, 'bank': order.sheba_bank}
         if sheba and payable else None,
+        'shebas': payment_shebas(order) if sheba and order.status == Order.Status.AWAITING else [],
         'claimed': bool(order.claimed_at),
         'tracking': order.tracking_code,
         'paid_at': order.paid_at.isoformat() if order.paid_at else None,

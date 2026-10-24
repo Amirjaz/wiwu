@@ -85,7 +85,7 @@ export default function OrderPage() {
           {order.sheba && (
             <p className="text-ink-soft leading-relaxed">
               خریدار <strong className="text-ink">شبا</strong> را انتخاب کرده: در حساب شبای <span className="ltr font-semibold text-ink">{order.sheba.number}</span>
-              {order.sheba.bank && ` (${order.sheba.bank})`} دنبال یک واریز دقیق <strong className="text-ink">{amount(order.amount_rial)}</strong> بگردید.
+              {order.sheba.bank && ` (${order.sheba.bank})`} و شباهای فعال دیگر فروشگاه دنبال یک واریز دقیق <strong className="text-ink">{amount(order.amount_rial)}</strong> بگردید.
               اگر به کارت هم واریز کرده باشد، کارت‌به‌کارت خودکار تأییدش می‌کند.
             </p>
           )}

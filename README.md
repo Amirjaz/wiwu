@@ -60,10 +60,11 @@ too) and logged in the panel. Panel users for local testing are in `backend/dev-
    confirmed at once: a deposit to another of their cards becomes *needs review* there (tested 2026-10-24
    with the Blu card), and approving it in their dashboard pays the order. So the others are labelled
    «بررسی دستی» unless a card is marked «تأیید خودکار» in the panel (`Card.auto`, off by default).
-   **Sheba** is the second way to pay (tabs on the order page; `orders.choose_sheba`), once the shop's
-   Sheba is set in the panel: the whole amount in one transfer, no card-to-card cap, checked by staff
-   («تا ۲۰ تا ۳۰ دقیقه»). Opening the Sheba tab chooses it (Amir wanted the number there at once): it
-   shows the Sheba (copied onto the order), gives the order `sheba_minutes` (3 hours) from then, skips the
+   **Sheba** is the second way to pay (tabs on the order page; `orders.choose_sheba`), while the panel has
+   an active Sheba (panel → فروشگاه → شباهای فروشگاه, `Sheba`): the whole amount in one transfer, no
+   card-to-card cap, checked by staff («تا ۲۰ تا ۳۰ دقیقه»). Opening the Sheba tab chooses it (Amir wanted
+   the number there at once): it shows every active Sheba, the first as the order's own (copied onto the
+   order) and the others below, like the cards; gives the order `sheba_minutes` (3 hours) from then, skips the
    minute-15 reminder and puts it in the panel's "needs action" until confirmed; the buyer sends the
    transfer reference with the same form as «پرداخت کرده‌ام». A card-to-card payment still pays it if it
    comes, and the order is then labelled card-to-card again. The panel shows each order's **payment method** and

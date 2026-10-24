@@ -12,7 +12,7 @@ interface Store {
   instagram: string; owner_mobile: string; shipping_post_rial: number; shipping_tipax_rial: number; tipax_on_delivery: boolean; post_days: string;
   tipax_days: string; payment_minutes: number; reminder_minutes: number; return_days: number; enamad_html: string;
   transfer_limit_rial: number; // the bank's cap for one card-to-card; orders above it are paid in several
-  sheba: string; sheba_holder: string; sheba_bank: string; sheba_minutes: number; // the second way to pay
+  sheba_minutes: number; // how long an order paid by Sheba (the second way to pay) waits
 }
 interface Product { slug: string; name: string; subtitle: string; description: string; price_rial: number; is_available: boolean; specs: [string, string][] }
 /** A model in the list: the main bag first; another shows on the site once it has a price. */
@@ -22,6 +22,7 @@ type SettingsData = { store: Store; product: Product; products: Model[] };
 /** The address of a page of the API for one model (the main bag's without ?product=). */
 const forModel = (url: string, slug: string) => (slug ? `${url}?product=${encodeURIComponent(slug)}` : url);
 interface Card { id: number; bank: string; number: string; holder: string; active: boolean; auto: boolean }
+interface Sheba { id: number; number: string; holder: string; bank: string; active: boolean }
 interface Color { id: number; name: string; swatch: string; shown: boolean; available: boolean; orders: number }
 
 /** A toman input stored as rials. */
@@ -117,11 +118,6 @@ function StoreForm({ slug, main }: { slug: string; main: boolean }) {
             help="سفارش بالاتر از این مبلغ در چند واریز پرداخت می‌شود: باقی مبلغ، بعد واریزهای ۵ میلیون تومانی. حداقل ۱۰ میلیون؛ ۰ یعنی همیشه یک واریز.">
             {(id, d) => <TomanInput id={id} describedBy={d} rial={store.transfer_limit_rial} onChange={(v) => s('transfer_limit_rial', v)} />}
           </Field>
-          <Field label="شبای فروشگاه" error={err('sheba')} help="تا خالی است، پرداخت با شبا به خریدار پیشنهاد نمی‌شود. واریز شبا را همکاران بررسی و تأیید می‌کنند.">
-            {(id, d) => <input id={id} aria-describedby={d} className="input ltr" placeholder="IR" value={store.sheba} onChange={(e) => s('sheba', e.target.value)} />}
-          </Field>
-          <Field label="نام صاحب حساب شبا">{(id) => <input id={id} className="input" value={store.sheba_holder} onChange={(e) => s('sheba_holder', e.target.value)} />}</Field>
-          <Field label="بانک حساب شبا">{(id) => <input id={id} className="input" value={store.sheba_bank} onChange={(e) => s('sheba_bank', e.target.value)} />}</Field>
           <Field label="مهلت پرداخت با شبا (دقیقه)" error={err('sheba_minutes')}>{(id) => <input id={id} className="input ltr text-right" inputMode="numeric" value={fa(store.sheba_minutes)} onChange={(e) => s('sheba_minutes', Number(latin(e.target.value).replace(/\D/g, '') || 0))} />}</Field>
           <Field label="مهلت بازگشت (روز کاری)" error={err('return_days')}>{(id) => <input id={id} className="input ltr text-right" inputMode="numeric" value={fa(store.return_days)} onChange={(e) => s('return_days', Number(latin(e.target.value).replace(/\D/g, '') || 0))} />}</Field>
           <Field label="موبایل مدیر (پیامک سفارش‌ها)" error={err('owner_mobile')}>{(id) => <input id={id} className="input ltr text-right" inputMode="tel" value={store.owner_mobile} onChange={(e) => s('owner_mobile', e.target.value)} />}</Field>
@@ -210,6 +206,67 @@ function Cards() {
         <Field label="بانک" error={errors.bank ? message(errors.bank) : undefined}>{(id) => <input id={id} className="input" value={draft.bank} onChange={(e) => setDraft({ ...draft, bank: e.target.value })} />}</Field>
         <Field label="شماره کارت" error={errors.number ? message(errors.number) : undefined}>{(id) => <input id={id} className="input ltr" inputMode="numeric" value={draft.number} onChange={(e) => setDraft({ ...draft, number: e.target.value })} />}</Field>
         <Field label="نام صاحب کارت" error={errors.holder ? message(errors.holder) : undefined}>{(id) => <input id={id} className="input" value={draft.holder} onChange={(e) => setDraft({ ...draft, holder: e.target.value })} />}</Field>
+        <button type="submit" className="btn btn-primary">افزودن</button>
+      </form>
+      {problem && !Object.keys(errors).length && <Notice tone="error">{problem}</Notice>}
+    </section>
+  );
+}
+
+/** The shop's Shebas: a buyer who pays by Sheba sees every active one, the first as the order's own. */
+function Shebas() {
+  const { data, setData, error } = useLoad<{ shebas: Sheba[] }>('/api/panel/shebas/');
+  const [draft, setDraft] = useState({ number: '', holder: '', bank: '' });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [problem, setProblem] = useState('');
+
+  async function save(body: Record<string, unknown>) {
+    setProblem('');
+    setErrors({});
+    try {
+      setData(await post<{ shebas: Sheba[] }>('/api/panel/shebas/', body));
+      return true;
+    } catch (e) {
+      if (isApiError(e)) {
+        setErrors(e.fields ?? {});
+        setProblem(message(e.error));
+      }
+      return false;
+    }
+  }
+
+  return (
+    <section className="grid gap-4">
+      <h2 className="text-lg font-bold">شباهای فروشگاه</h2>
+      <p className="text-ink-soft leading-relaxed -mt-2">
+        خریدارِ پرداخت با شبا همه‌ی شباهای فعال را می‌بیند و به هر کدام خواست واریز می‌کند؛ اولی شبای خود سفارش است.
+        واریز شبا را همکاران بررسی و تأیید می‌کنند. تا هیچ شبای فعالی نیست، پرداخت با شبا پیشنهاد نمی‌شود.
+      </p>
+      {error && <Notice tone="error">{message(error.error)}</Notice>}
+      <ul className="grid gap-2">
+        {data?.shebas.map((sheba) => (
+          <li key={sheba.id} className="flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-field)] border border-line bg-raised p-4">
+            <span className="grid gap-0.5 min-w-0">
+              <span className="font-semibold">{sheba.bank ? `${sheba.bank} · ` : ''}{sheba.holder}</span>
+              <span className="ltr text-ink-soft break-all">{sheba.number}</span>
+            </span>
+            <span className="flex items-center gap-2">
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" className="size-4 accent-[var(--color-ink)]" checked={sheba.active} onChange={(e) => save({ ...sheba, active: e.target.checked })} /> فعال
+              </label>
+              <button type="button" className="btn btn-ghost btn-sm !px-3" aria-label="حذف شبا"
+                onClick={() => window.confirm('شبا حذف شود؟ (سفارش‌های ثبت‌شده شبای خودشان را نگه می‌دارند.)') && save({ id: sheba.id, delete: true })}>
+                <Trash size={18} />
+              </button>
+            </span>
+          </li>
+        ))}
+      </ul>
+      <form className="grid gap-3 sm:grid-cols-[1.6fr_1fr_1fr_auto] sm:items-end rounded-[var(--radius-field)] border border-dashed border-line-strong p-4"
+        onSubmit={async (e) => { e.preventDefault(); if (await save({ ...draft, number: latin(draft.number), active: true })) setDraft({ number: '', holder: '', bank: '' }); }}>
+        <Field label="شماره شبا" error={errors.number ? message(errors.number) : undefined}>{(id) => <input id={id} className="input ltr" placeholder="IR" value={draft.number} onChange={(e) => setDraft({ ...draft, number: e.target.value })} />}</Field>
+        <Field label="نام صاحب حساب" error={errors.holder ? message(errors.holder) : undefined}>{(id) => <input id={id} className="input" value={draft.holder} onChange={(e) => setDraft({ ...draft, holder: e.target.value })} />}</Field>
+        <Field label="بانک">{(id) => <input id={id} className="input" value={draft.bank} onChange={(e) => setDraft({ ...draft, bank: e.target.value })} />}</Field>
         <button type="submit" className="btn btn-primary">افزودن</button>
       </form>
       {problem && !Object.keys(errors).length && <Notice tone="error">{problem}</Notice>}
@@ -319,6 +376,7 @@ export default function Settings() {
         {models.length > 1 && <ModelPicker models={models} slug={slug} onPick={setSlug} />}
         <Colors key={`colors-${slug}`} slug={slug} />
         <Cards />
+        <Shebas />
         <StoreForm key={`form-${slug}`} slug={slug} main={main} />
       </div>
     </>

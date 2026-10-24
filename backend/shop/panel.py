@@ -25,7 +25,8 @@ from django.utils import timezone
 from django.views.decorators.http import require_GET, require_http_methods, require_POST
 
 from . import orders, persian
-from .models import AuditLog, Card, Color, Faq, Order, Page, PaymentEvent, Product, ReturnRequest, SmsLog, StoreSettings
+from .models import (AuditLog, Card, Color, Faq, Order, Page, PaymentEvent, Product, ReturnRequest, Sheba, SmsLog,
+                     StoreSettings)
 from .views import PRODUCT_SLUG
 
 LOGIN_LIMIT = (10, 15 * 60)  # attempts per address per 15 minutes
@@ -364,8 +365,8 @@ def sms_log(request):
 
 STORE_FIELDS = ('store_name', 'tagline', 'phone', 'email', 'address', 'postal_code', 'hours', 'instagram',
                 'owner_mobile', 'shipping_post_rial', 'shipping_tipax_rial', 'tipax_on_delivery', 'post_days', 'tipax_days',
-                'payment_minutes', 'reminder_minutes', 'return_days', 'transfer_limit_rial',
-                'sheba', 'sheba_holder', 'sheba_bank', 'sheba_minutes', 'enamad_html')
+                'payment_minutes', 'reminder_minutes', 'return_days', 'transfer_limit_rial', 'sheba_minutes',
+                'enamad_html')
 # The cap for one card-to-card: 0 (never split) or at least 10M toman, so an order splits into a few round
 # 5M transfers at most (orders.split_amounts).
 TRANSFER_LIMIT_MIN_RIAL = 100_000_000
@@ -417,11 +418,6 @@ def store_settings(request):
                 errors[field] = 'phone'
                 continue
             value = persian.phone(value) if value else ''
-        elif field == 'sheba':
-            if value and not persian.sheba(value):
-                errors[field] = 'sheba'
-                continue
-            value = persian.sheba(value) if value else ''
         elif field != 'enamad_html':
             value = persian.clean_text(value, model_field.max_length)
         setattr(store, field, value)
@@ -495,6 +491,38 @@ def cards(request):
             card.save()
         orders.audit('cards', None, request.user)
     return JsonResponse({'cards': [_card_json(c) for c in Card.objects.all()]})
+
+
+def _sheba_json(sheba):
+    return {'id': sheba.id, 'number': sheba.number, 'holder': sheba.holder, 'bank': sheba.bank,
+            'active': sheba.active, 'position': sheba.position}
+
+
+@require_http_methods(['GET', 'POST'])
+@staff('shop.change_storesettings')
+def shebas(request):
+    """The shop's Shebas: every active one is offered to a buyer who pays by Sheba. Orders keep their own
+    Sheba's number, so one can be deleted outright."""
+    if request.method == 'POST':
+        data = _json(request)
+        sheba = get_object_or_404(Sheba, pk=data['id']) if data.get('id') else Sheba()
+        if data.get('delete') and sheba.pk:
+            sheba.delete()
+        else:
+            number = persian.sheba(data.get('number'))
+            bank, holder = persian.clean_text(data.get('bank'), 40), persian.clean_text(data.get('holder'), 80)
+            errors = {'holder': 'required'} if not holder else {}
+            if not number:
+                errors['number'] = 'sheba'
+            if errors:
+                return _error('fields', fields=errors)
+            sheba.number, sheba.holder, sheba.bank = number, holder, bank
+            sheba.active = bool(data.get('active', True))
+            if not sheba.pk:
+                sheba.position = (Sheba.objects.aggregate(m=Max('position'))['m'] or 0) + 1
+            sheba.save()
+        orders.audit('shebas', None, request.user)
+    return JsonResponse({'shebas': [_sheba_json(s) for s in Sheba.objects.all()]})
 
 
 def _color_json(color):

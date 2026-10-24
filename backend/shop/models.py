@@ -39,10 +39,7 @@ class StoreSettings(models.Model):
     # An order above it is paid in several transfers (orders.split_amounts, Transfer). 0: always one.
     transfer_limit_rial = models.PositiveBigIntegerField('سقف هر کارت‌به‌کارت (ریال)', default=150_000_000)
     # Sheba (an account transfer, Paya) as a second way to pay, checked by staff, so it waits longer (Amir,
-    # 2026-10-24: one shop Sheba, 3 hours). Offered on the order page once the number is set.
-    sheba = models.CharField('شبای فروشگاه', max_length=26, blank=True)
-    sheba_holder = models.CharField('نام صاحب حساب شبا', max_length=80, blank=True)
-    sheba_bank = models.CharField('بانک حساب شبا', max_length=40, blank=True)
+    # 2026-10-24: 3 hours). Offered on the order page while there's an active Sheba (Sheba).
     sheba_minutes = models.PositiveSmallIntegerField('مهلت پرداخت با شبا (دقیقه)', default=180)
     reminder_minutes = models.PositiveSmallIntegerField('یادآوری پرداخت پس از (دقیقه)', default=15)
     return_days = models.PositiveSmallIntegerField('مهلت بازگشت کالا (روز کاری)', default=7)
@@ -142,6 +139,25 @@ class Card(models.Model):
         return f'{self.bank} …{self.number[-4:]}'
 
 
+class Sheba(models.Model):
+    """A shop account the buyer may pay into by Sheba. Like the cards, the buyer sees every active one (Amir,
+    2026-10-24: three Shebas): the first is the order's own, kept on the order; staff check them all."""
+
+    number = models.CharField('شماره شبا', max_length=26)
+    holder = models.CharField('نام صاحب حساب', max_length=80)
+    bank = models.CharField('بانک', max_length=40, blank=True)
+    active = models.BooleanField('فعال', default=True)
+    position = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'شبا'
+        verbose_name_plural = 'شباها'
+        ordering = ['position', 'id']
+
+    def __str__(self):
+        return f'{self.bank} …{self.number[-4:]}'
+
+
 def new_order_code():
     return ''.join(secrets.choice(CODE_ALPHABET) for _ in range(6))
 
@@ -208,7 +224,7 @@ class Order(models.Model):
     provider_token = models.CharField(max_length=64, blank=True, db_index=True)
     provider_ref = models.CharField(max_length=80, blank=True)
     payment_method = models.CharField('روش پرداخت', max_length=8, choices=Method.choices, default=Method.CARD)
-    # The shop's Sheba as it was when the buyer chose to pay by Sheba.
+    # The order's own Sheba (the first active one) as it was when the buyer chose to pay by Sheba.
     sheba_number = models.CharField(max_length=26, blank=True)
     sheba_holder = models.CharField(max_length=80, blank=True)
     sheba_bank = models.CharField(max_length=40, blank=True)

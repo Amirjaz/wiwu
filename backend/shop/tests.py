@@ -7,12 +7,15 @@ from unittest import mock
 from django.contrib.auth.models import Group, User
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
-from django.test import TestCase, override_settings
+from django.db import connection
+from django.db.migrations.executor import MigrationExecutor
+from django.test import TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 
 from . import orders, persian
 from .management.commands.seed_store import _luhn_complete
-from .models import AuditLog, Card, Order, OtpCode, PaymentEvent, Product, ReturnRequest, SmsLog, StoreSettings
+from .models import (AuditLog, Card, Order, OtpCode, PaymentEvent, Product, ReturnRequest, Sheba, SmsLog,
+                     StoreSettings)
 from .orders import OrderError
 
 
@@ -350,18 +353,23 @@ class ShebaTests(Base):
 
     def setUp(self):
         super().setUp()
-        self.store.sheba, self.store.sheba_holder, self.store.sheba_bank = valid_sheba(), 'محمدسالار کبیری', 'بانک ملت'
-        self.store.save()
+        Sheba.objects.all().delete()  # migration 0011's
+        self.sheba = Sheba.objects.create(number=valid_sheba(), holder='محمدسالار کبیری', bank='بانک ملت')
 
     def choose(self, order):
         return self.client.post(f'/api/orders/{order.token}/sheba/', {}, content_type='application/json').json()
+
+    def sign_in_owner(self):
+        owner = User.objects.create_user('owner', password='pw-123456!')
+        owner.groups.add(Group.objects.get(name='Owners'))
+        self.client.post('/api/panel/login/', {'username': 'owner', 'password': 'pw-123456!'}, content_type='application/json')
 
     def test_offered_only_when_the_shop_has_a_sheba(self):
         order = self.place()
         data = self.client.get(f'/api/orders/{order.token}/').json()
         self.assertEqual((data['payment_method'], data['sheba_offered'], data['sheba']), ('card', True, None))
-        self.store.sheba = ''
-        self.store.save()
+        self.sheba.active = False
+        self.sheba.save()
         self.assertFalse(self.client.get(f'/api/orders/{order.token}/').json()['sheba_offered'])
         self.assertEqual(self.choose(order)['error'], 'sheba_closed')
 
@@ -370,6 +378,7 @@ class ShebaTests(Base):
         data = self.choose(order)
         self.assertEqual(data['payment_method'], 'sheba')
         self.assertEqual(data['sheba'], {'number': valid_sheba(), 'holder': 'محمدسالار کبیری', 'bank': 'بانک ملت'})
+        self.assertEqual(data['shebas'], [data['sheba']])
         order.refresh_from_db()
         self.assertAlmostEqual((order.expires_at - timezone.now()).total_seconds(), 180 * 60, delta=60)
         self.assertTrue(AuditLog.objects.filter(order=order, action='sheba_chosen').exists())
@@ -407,15 +416,47 @@ class ShebaTests(Base):
         self.assertIn(other.code, action)
         self.assertNotIn(card.code, action)
 
-    def test_the_sheba_setting_is_checked(self):
-        owner = User.objects.create_user('owner', password='pw-123456!')
-        owner.groups.add(Group.objects.get(name='Owners'))
-        self.client.post('/api/panel/login/', {'username': 'owner', 'password': 'pw-123456!'}, content_type='application/json')
-        save = lambda value: self.client.post('/api/panel/settings/', {'store': {'sheba': value}},
-                                              content_type='application/json').json()
-        self.assertEqual(save('IR12345')['fields'], {'sheba': 'sheba'})
-        self.assertEqual(save(valid_sheba()[2:])['store']['sheba'], valid_sheba())  # IR added
-        self.assertEqual(save('')['store']['sheba'], '')
+    def test_every_active_sheba_is_offered_the_orders_own_first(self):
+        other = Sheba.objects.create(number=valid_sheba('0570022711517635897001'), holder='حسام منصوری',
+                                     bank='بانک پاسارگاد', position=1)
+        Sheba.objects.create(number=valid_sheba('0610000007001005596838'), holder='—', active=False, position=2)
+        order = self.place()
+        data = self.choose(order)
+        self.assertEqual([s['number'] for s in data['shebas']], [self.sheba.number, other.number])
+        # A Sheba moved first later doesn't change the order's own.
+        Sheba.objects.filter(pk=other.pk).update(position=0)
+        self.sheba.position = 5
+        self.sheba.save()
+        data = self.client.get(f'/api/orders/{order.token}/').json()
+        self.assertEqual([s['number'] for s in data['shebas']], [self.sheba.number, other.number])
+
+    def test_the_panel_shebas_are_checked(self):
+        self.sign_in_owner()
+        save = lambda body: self.client.post('/api/panel/shebas/', body, content_type='application/json').json()
+        self.assertEqual(save({'number': 'IR12345', 'holder': ''})['fields'], {'number': 'sheba', 'holder': 'required'})
+        number = valid_sheba('0570022711517635897001')
+        rows = save({'number': number[2:], 'holder': 'حسام منصوری', 'bank': 'بانک پاسارگاد'})['shebas']
+        self.assertEqual([(r['number'], r['position']) for r in rows], [(valid_sheba(), 0), (number, 1)])  # IR added
+        self.assertEqual(len(save({'id': rows[1]['id'], 'delete': True})['shebas']), 1)
+
+
+class ShebaMigrationTests(TransactionTestCase):
+    """0011: Amir's two Shebas replace the store settings' one (his own, dropped)."""
+
+    def migrate(self, target):
+        executor = MigrationExecutor(connection)
+        executor.loader.build_graph()
+        executor.migrate([('shop', target)])
+        return executor.loader.project_state([('shop', target)]).apps
+
+    def test_replaces_the_one_sheba(self):
+        apps = self.migrate('0010_sheba')
+        apps.get_model('shop', 'StoreSettings').objects.update_or_create(
+            pk=1, defaults={'sheba': valid_sheba(), 'sheba_holder': 'مریم', 'sheba_bank': 'بانک ملت'})
+        apps = self.migrate('0011_shebas')
+        rows = list(apps.get_model('shop', 'Sheba').objects.values_list('number', 'holder', 'bank'))
+        self.assertEqual(rows, [('IR970570022711517635897001', 'حسام منصوری', 'بانک پاسارگاد'),
+                                ('IR220610000007001005596838', 'محمدسالار کبیری', 'بانک شهر')])
 
 
 class TickTests(Base):
@@ -699,9 +740,7 @@ class CartbecartTests(Base):
         self.assertEqual(AuditLog.objects.count(), before)
 
     def test_paid_by_card_after_opening_the_sheba_tab_counts_as_card(self):
-        self.store.sheba = valid_sheba()
-        self.store.save()
-        order = self.placed()
+        order = self.placed()  # migration 0011's Shebas are there
         orders.choose_sheba(order)
         self.assertEqual(self.send(self.event(order, 'order.paid')).json()['outcome'], 'matched')
         order.refresh_from_db()

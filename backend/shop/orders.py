@@ -28,8 +28,8 @@ from django.db.models import Q
 from django.utils import timezone
 
 from . import payments, sms
-from .models import (AuditLog, Card, Color, Order, OtpCode, PaymentEvent, ReturnRequest, StoreSettings, Transfer,
-                     new_order_code, new_order_token)
+from .models import (AuditLog, Card, Color, Order, OtpCode, PaymentEvent, ReturnRequest, Sheba, StoreSettings,
+                     Transfer, new_order_code, new_order_token)
 from .persian import bank_of, fa_digits, money, toman
 
 log = logging.getLogger(__name__)
@@ -513,17 +513,19 @@ def sync_cartbecart(now=None):
 
 def choose_sheba(order):
     """The buyer pays by Sheba instead of card-to-card (Amir, 2026-10-24): the whole amount in one transfer
-    to the shop's Sheba, checked by staff, so the order waits StoreSettings.sheba_minutes from now. A
-    card-to-card payment still pays it if it comes. Only while the order awaits payment."""
+    to one of the shop's Shebas (the first active one is the order's own), checked by staff, so the order
+    waits StoreSettings.sheba_minutes from now. A card-to-card payment still pays it if it comes. Only while
+    the order awaits payment."""
     store = StoreSettings.load()
     refresh(order)
-    if order.status != Order.Status.AWAITING or not store.sheba:
+    first = Sheba.objects.filter(active=True).first()
+    if order.status != Order.Status.AWAITING or not first:
         raise OrderError('sheba_closed')
     if order.payment_method != Order.Method.SHEBA:
         until = max(order.expires_at, timezone.now() + timedelta(minutes=store.sheba_minutes))
         Order.objects.filter(pk=order.pk, status=Order.Status.AWAITING).update(
-            payment_method=Order.Method.SHEBA, sheba_number=store.sheba, sheba_holder=store.sheba_holder,
-            sheba_bank=store.sheba_bank, expires_at=until)
+            payment_method=Order.Method.SHEBA, sheba_number=first.number, sheba_holder=first.holder,
+            sheba_bank=first.bank, expires_at=until)
         order.refresh_from_db()
         audit('sheba_chosen', order, detail=f'{money(order.amount_rial, order.pay_in_rial)}، تا '
                                              f'{fa_digits(timezone.localtime(until).strftime("%H:%M"))}')
