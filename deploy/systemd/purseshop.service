@@ -7,7 +7,8 @@ User=purseshop
 Group=purseshop
 UMask=0002
 WorkingDirectory=/srv/purseshop/app/backend
-# 8000 is nisatech.org, 8010 nisatak.com, 8020 contech on this server.
+# 8030: from the shared Nisatech server, where nisatech.org, nisatak.com and contech had 8000-8020. The
+# shop has its own server since 2026-10-24 (4 cores; still 3 workers, see HANDOFF -> Next).
 ExecStart=/srv/purseshop/app/backend/.venv/bin/gunicorn \
     --workers 3 \
     --bind 127.0.0.1:8030 \

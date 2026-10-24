@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
-# One-time root setup for the purse store on the Nisatech server (Ubuntu 24.04), next to
-# nisatech.org, nisatak.com and contech.
-#   scp -r deploy amir@185.231.180.92:purseshop-deploy
-#   ssh -t amir@185.231.180.92 'sudo DOMAIN=<host> REDIRECT="<names>" CERT=1 bash purseshop-deploy/server-setup.sh'
+# One-time root setup for the purse store on its own server (Arvan cloud in Tehran, Ubuntu 24.04,
+# 37.32.25.183 since 2026-10-24; before that the shared Nisatech server, 185.231.180.92). A bare server
+# needs nginx, certbot, python3-certbot-nginx and python3-venv, swap, and the deploy user with the
+# deployer's SSH key first (README -> Deploying, *A new server*). Then, as root:
+#   scp -r deploy root@37.32.25.183:purseshop-deploy
+#   ssh root@37.32.25.183 'DOMAIN=<host> REDIRECT="<names>" CERT=1 bash purseshop-deploy/server-setup.sh'
 # DOMAIN: the site's host name (penolinshop.com since 2026-10-24; shop.nisatech.org before).
 # REDIRECT: other names (space-separated) that send visitors to DOMAIN, keeping the path: its www and
 # any address the shop used to have, e.g. REDIRECT="www.penolinshop.com shop.nisatech.org".

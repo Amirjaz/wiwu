@@ -96,8 +96,8 @@ From `PurseShop/` (dev tools only; the scripts send a `purseshop-loadtest` user 
 
 ```bash
 node tools/loadtest/ramp.mjs https://penolinshop.com '[1,2,5,10,20,40]' 30
-scp tools/loadtest/origin.py tools/loadtest/monitor.sh amir@185.231.180.92:
-ssh amir@185.231.180.92 'nohup bash monitor.sh 140 > monitor.log 2>&1 & python3 origin.py html 1,2,4,8 15; python3 origin.py glb 1,2,4 15'
+scp tools/loadtest/origin.py tools/loadtest/monitor.sh amir@37.32.25.183:
+ssh amir@37.32.25.183 'nohup bash monitor.sh 140 > monitor.log 2>&1 & python3 origin.py html 1,2,4,8 15; python3 origin.py glb 1,2,4 15'
 ```
 
 Run them when a short slowdown of the other sites is acceptable. `ramp.mjs` stops at 5+ errors over

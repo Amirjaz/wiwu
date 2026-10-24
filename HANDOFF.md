@@ -12,8 +12,10 @@ This page is the short version, plus what isn't written down anywhere else.
   DNS on his Arvan account; `www.penolinshop.com` and the old https://shop.nisatech.org redirect to it,
   keeping the path). The move deployed **a7fc54a** (deploy scripts, docs and load-test tools only, on
   deb2f75's app); minutes later the Kavenegar/cartbecart chat deployed **5c91b10** on the new domain
-  (its own notes say what that changed). Still on the shared Nisatech server; Amir will buy a new
-  server later. What it shows: the client's answers (the shop is
+  (its own notes say what that changed). **On its own server since 2026-10-24: 37.32.25.183** (Arvan
+  cloud in Tehran, بامداد, 4 vCPU / 4 GB / 40 GB SSD, Ubuntu 24.04, 2 GB swap; `root` and `amir` log in
+  with this laptop's key, `asus@Amir-Laptop`; README → *Deploying*). The copy on the shared Nisatech server
+  is stopped and its units masked (`/srv/purseshop/MOVED` there says so). What it shows: the client's answers (the shop is
   **ویوو** with WiWU's logo in the site's colours, the price, free post and Tipax on delivery, 4 to 6
   working days, the battery, the 72-hour warranty), the hero (opening with the man with the bag for 3 s,
   sharp on laptops, colour dots that jump to their poster), black and brown only (no silver), a picture
@@ -98,6 +100,12 @@ This page is the short version, plus what isn't written down anywhere else.
    before turning the cloud on. The server works with either origin protocol.
 5. **Whose name penolinshop.com is in:** asked, not answered. Enamad is issued to the domain's owner
    (PLAN.md), so if it isn't the client's, the launch still needs the client's own domain.
+6. **shop.nisatech.org's record** (2026-10-24): after Amir pointed the three records at the new server,
+   penolinshop.com and `www` reached it, but shop.nisatech.org still reached the old server, whose nginx
+   still redirects it to penolinshop.com (so it works). Point it at 37.32.25.183 too, then on the new
+   server `certbot renew --cert-name shop.nisatech.org --dry-run`.
+7. **The new server's root password** was posted in the chat on 2026-10-24; change it in Arvan's panel.
+   Logins are by key, so nothing here needs it.
 
 ## Waiting on the client
 
@@ -163,12 +171,11 @@ business address), the `.ir` domain under their national ID.
 
 1. **Re-run the load test** (LOADTEST.md, *Running it again*) now the page has no 3D model to download
    (2026-10-23); the Arvan rule for `/models/*` it waited for isn't needed while the 3D bag is off.
-2. **For the launch server**, recommended to Amir (not built): an Arvan cloud server in Tehran behind
-   Arvan's CDN, **4 cores** for the campaign (Amir is looking at G6-Small5, 4 cores / 4 GB, Ubuntu 24.04;
-   2026-10-20 quotes above; resize to 8 cores if needed),
-   2 GB swap; gunicorn with about 2 workers per core × 4 threads (`--worker-class gthread`, in
-   `deploy/systemd/purseshop.service`), so SMS and payment calls don't hold up pages. Today's shared server (1 core, 1 GB, three other sites) tops out around 18 visits a second
-   without the Arvan rule (LOADTEST.md).
+2. **The launch server is bought and running** (2026-10-24, 37.32.25.183, 4 cores / 4 GB, behind Arvan;
+   resize to 8 cores if needed). Still to do: gunicorn is on 3 workers from the 1-core server; give it
+   about 2 workers per core × 4 threads (`--worker-class gthread`, `deploy/systemd/purseshop.service`) so
+   SMS and payment calls don't hold up pages, then re-run the load test (LOADTEST.md) on it. The old
+   shared server (1 core, 1 GB, three other sites) topped out around 18 visits a second.
 3. **On staging:** a test order end to end (the SMS code is in `journalctl -u purseshop`), then cancel it
    in the panel. Replace the sample card once the client sends theirs.
 4. **Client answers:** the domain must belong to whoever applies for Enamad; with the shop named WiWU, the
@@ -344,12 +351,12 @@ node tools/compare.mjs && .venv-3d/Scripts/python tools/dev/compose.py
 - **ArvanCloud:** with the shop's own certificate (2026-10-20) any origin protocol works; before it,
   over HTTPS Arvan reached nisatak.com. HTML is never cached by Arvan. Check where a name points with
   `nslookup <host> k.ns.arvancdn.ir`: the server's IP means the proxy is off, Arvan's means on.
-- **A new HTTPS host on this server** needs its own certificate: nginx answers any name it has no
-  HTTPS block for with nisatak.com, the first HTTPS site it loads and so its default
-  (`server-setup.sh CERT=1` for the shop, with every other name of it in `REDIRECT`).
+- **Every name of the shop needs its own certificate** (`server-setup.sh CERT=1`, every other name in
+  `REDIRECT`). On the old shared server, nginx answered a name with no HTTPS block with nisatak.com; on
+  the shop's own server the shop is the only site, so it answers every name.
 - **This PC's DNS** (10.255.255.1, the VPN's) failed to resolve penolinshop.com on 2026-10-24 while 8.8.8.8,
   1.1.1.1, Shecan and Arvan's own servers answered. Check from here with `nslookup <host> 8.8.8.8`, or
-  `curl --resolve <host>:443:185.231.180.92`.
+  `curl --resolve <host>:443:37.32.25.183`.
 - **certbot without a terminal** (over `ssh` with no `-t`) waits a random few minutes before a renewal or
   dry run; it isn't stuck.
 - **Plane:** create and edit items from a signed-in Plane tab in the browser pane with
@@ -407,6 +414,7 @@ another project's (Finance).
 
 | Date | Commit | What |
 | --- | --- | --- |
+| 2026-10-24 | 4e1a48e | **The shop moves to its own server, 37.32.25.183** (Amir bought it): packages, swap, user `amir`, the three certificates and their renewal account copied from the old server, `server-setup.sh` with the same names, the old server's `.env`, a sqlite snapshot of the database and `private/` copied, then the deploy (no migration; backup `db-20261024-115607.sqlite3`, server time). Checked on the new IP before the DNS change (pages, redirects, the cartbecart webhook's 401, checkout in a browser on desktop and phone), Amir pointed the records, a marked request reached the new server, the data was identical on both, the old copy stopped, disabled and masked, renewal dry runs for penolinshop.com and `www` passed through Arvan, and a browser pass through Arvan. shop.nisatech.org still reaches the old server (Waiting on Amir) |
 | 2026-10-24 | a7fc54a | The shop moves to **penolinshop.com** on the same server: `server-setup.sh DOMAIN=penolinshop.com REDIRECT="www.penolinshop.com shop.nisatech.org" CERT=1` (certificates for the two new names; nginx config and TLS lines backed up as `~/purseshop.nginx.bak-20261024` and `~/purseshop-tls.bak-20261024`), `.env` set to `DJANGO_ALLOWED_HOSTS=penolinshop.com,localhost` and `PUBLIC_URL=https://penolinshop.com` (old one at `~/purseshop.env.bak-20261024`), then the deploy (no migration; backup `db-20261024-082250.sqlite3`, server time) and the page cache emptied. Checked: every page 200 on the new name, http and `www` and shop.nisatech.org 301 to it with the path kept, no old address left on the pages or sitemap, still noindex |
 | 2026-10-23 | deb2f75 | Both versions per colour: two hero posters (black, brown) with the two-zipper bag beside the Alpha, the closing cards with one picture of both and both prices; checkout asks one zipper or two and keeps the colour; the two-zipper pictures from its own cut-out (no migration; page cache emptied; backup `db-20261023-122110.sqlite3`, server time). Checked on the live site: the seven hero pictures, the closing cards, switching versions at checkout on desktop and phone |
 | 2026-10-23 | 6d8de65 | A picture of each bag instead of the 3D bag in جزء به جزء (Alpha and two-zipper, black and brown, each with its price and checkout), the 3D island off the page (no three.js, no model download); the two-zipper bag at 16,500,000 toman (migration 0007, page cache emptied after it; backup `db-20261023-120433.sqlite3`, server time). The first run dropped its SSH connection after pushing the code; the second went through. Checked: the four pictures and their links, the two-zipper section and checkout, no 3D requests, desktop and phone in headless Edge |

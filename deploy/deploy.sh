@@ -5,7 +5,7 @@
 # frontend is built here, since the server has no Node (and npm is unreliable from Iran).
 set -euo pipefail
 
-SERVER=${SERVER:-amir@185.231.180.92}
+SERVER=${SERVER:-amir@37.32.25.183}  # the shop's own server since 2026-10-24 (the shared Nisatech one before)
 # The site's host name: written into the server's backend/.env on the first deploy, checked against
 # it on later ones, and used for the HTTPS check at the end.
 DOMAIN=${DOMAIN:?set DOMAIN, the site host name, e.g. DOMAIN=penolinshop.com}

@@ -10,7 +10,7 @@ SMS by cartbecart.com, or by staff in the panel.
 | --- | --- |
 | `backend/` | Django 5.2 (Python 3.12), SQLite. Renders the pages; JSON API under `/api/`; Django admin at `/admin/` |
 | `frontend/` | Vite + React 18 + Tailwind v4 *islands* on Django's pages (checkout, order page, lookup) and the staff panel at `/panel` |
-| `deploy/` | nginx site, systemd units (gunicorn + a minute timer) and deploy scripts for the Nisatech server |
+| `deploy/` | nginx site, systemd units (gunicorn + a minute timer) and deploy scripts for the shop's server |
 | `media/` | the client's photos, the background-removed cutouts, 3D sources (not served) |
 | `tools/` | `cutout.py`/`fix2.py` (background removal), `studio_images.py` (the site's product images, from WiWU's studio photos; `web_images.py` made them from the client's phone photos before), the 3D model's pipeline (see *The hero and the 3D bag*), `ai_shape/` (the AI shape it starts from), `dev/` (screenshots and checks) |
 
@@ -336,17 +336,36 @@ everywhere and a blocking robots.txt. Policy pages (`/p/<slug>/`) are edited in 
 applying for Enamad. The warranty, the battery and shipping came from the client on 2026-10-20 (migration
 0004).
 
-## Deploying (Nisatech server, next to nisatech.org, nisatak.com and contech)
+## Deploying (the shop's own server, 37.32.25.183, since 2026-10-24)
 
 ```bash
-scp -r deploy amir@185.231.180.92:purseshop-deploy
-ssh -t amir@185.231.180.92 'sudo DOMAIN=penolinshop.com REDIRECT="www.penolinshop.com shop.nisatech.org" CERT=1 bash purseshop-deploy/server-setup.sh'
+scp -r deploy root@37.32.25.183:purseshop-deploy
+ssh root@37.32.25.183 'DOMAIN=penolinshop.com REDIRECT="www.penolinshop.com shop.nisatech.org" CERT=1 bash purseshop-deploy/server-setup.sh'
 DOMAIN=penolinshop.com bash deploy/deploy.sh
 ```
 
+`deploy.sh` goes to `amir@37.32.25.183` (`SERVER=` for another). The server is an Arvan cloud server in
+Tehran (بامداد), 4 vCPU, 4 GB, 40 GB SSD, Ubuntu 24.04; `root` and `amir` log in with the deploying PC's
+SSH key only. Until 2026-10-24 the shop ran on the shared Nisatech server (185.231.180.92) beside
+nisatech.org, nisatak.com and contech; that copy is stopped and its units masked (`/srv/purseshop/MOVED`
+there), its files kept.
+
+**A new server** (how this one was set up, 2026-10-24): as root, `apt-get install nginx certbot
+python3-certbot-nginx python3-venv sqlite3`, a 2 GB swap file, the default nginx site removed, a user
+`amir` (no password) with the deploying PC's key. The certificates came from the old server
+(`/etc/letsencrypt`: `live`, `archive` and `renewal` for each name, `accounts`, `options-ssl-nginx.conf`,
+`ssl-dhparams.pem`; `live`, `archive` and `accounts` mode 700), so `CERT=1` found them and HTTPS worked
+before any DNS change. Then `server-setup.sh` as above; into `/srv/purseshop/app/backend` (owned
+`amir:purseshop`, mode 2775) the old server's `.env` (it holds the cartbecart and other keys: never in
+git), a snapshot of `db.sqlite3` (sqlite's backup, not a file copy of a live database) and `private/`;
+then `SERVER=amir@<ip> DOMAIN=… bash deploy/deploy.sh`. Checked with `curl --resolve <host>:443:<ip>` and a
+browser with `--host-resolver-rules="MAP <host> <ip>"` before Amir pointed the A records at it; then the
+old copy stopped once a marked request showed up in the new server's nginx log, and the renewal dry runs
+passed through Arvan.
+
 Staging runs at **https://penolinshop.com** (since 2026-10-24; at https://shop.nisatech.org from
 2026-10-15): set up without `STAGING=1` (open, no password, Amir's choice), DNS on ArvanCloud (A records
-`@` and `www` → 185.231.180.92, meant to have the CDN on). `REDIRECT` lists the other names that send
+`@` and `www` → 37.32.25.183, the CDN on). `REDIRECT` lists the other names that send
 visitors to the shop's address, keeping the path, each with its own certificate: `www.penolinshop.com`
 and the old `shop.nisatech.org`. Pass the same list on every re-run; a name left out stops redirecting.
 
