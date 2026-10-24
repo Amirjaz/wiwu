@@ -10,7 +10,7 @@ import time
 
 KIND, STAGES, SECS = sys.argv[1], [int(n) for n in sys.argv[2].split(',')], float(sys.argv[3])
 PATHS = {'html': ['/', '/', '/', '/checkout/', '/orders/'], 'glb': ['/models/alpha-mobile.glb']}[KIND]
-HEADERS = {'Host': 'shop.nisatech.org', 'X-Forwarded-Proto': 'https', 'Accept-Encoding': 'gzip',
+HEADERS = {'Host': 'penolinshop.com', 'X-Forwarded-Proto': 'https', 'Accept-Encoding': 'gzip',
            'User-Agent': 'purseshop-loadtest/1 (Nisatech, origin)'}
 
 

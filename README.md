@@ -305,13 +305,22 @@ applying for Enamad. The warranty, the battery and shipping came from the client
 
 ```bash
 scp -r deploy amir@185.231.180.92:purseshop-deploy
-ssh -t amir@185.231.180.92 'sudo DOMAIN=<host> STAGING=1 CERT=1 bash purseshop-deploy/server-setup.sh'
-DOMAIN=<host> bash deploy/deploy.sh
+ssh -t amir@185.231.180.92 'sudo DOMAIN=penolinshop.com REDIRECT="www.penolinshop.com shop.nisatech.org" CERT=1 bash purseshop-deploy/server-setup.sh'
+DOMAIN=penolinshop.com bash deploy/deploy.sh
 ```
 
-Staging runs at **https://shop.nisatech.org** (2026-10-15): set up without `STAGING=1` (open, no
-password, Amir's choice), DNS on ArvanCloud (A record `shop` → 185.231.180.92, meant to have the CDN on,
-origin over HTTP). **The site also answers HTTPS itself**, with its own Let's Encrypt certificate
+Staging runs at **https://penolinshop.com** (since 2026-10-24; at https://shop.nisatech.org from
+2026-10-15): set up without `STAGING=1` (open, no password, Amir's choice), DNS on ArvanCloud (A records
+`@` and `www` → 185.231.180.92, meant to have the CDN on). `REDIRECT` lists the other names that send
+visitors to the shop's address, keeping the path, each with its own certificate: `www.penolinshop.com`
+and the old `shop.nisatech.org`. Pass the same list on every re-run; a name left out stops redirecting.
+
+**Moving to another domain:** point its DNS here, re-run `server-setup.sh` with the new `DOMAIN` and the
+old one added to `REDIRECT`, then in the server's `backend/.env` set `DJANGO_ALLOWED_HOSTS` and
+`PUBLIC_URL` to the new name (the deploy refuses to run while `PUBLIC_URL` doesn't match `DOMAIN`),
+deploy, and empty the page cache (the pages hold the old address).
+
+**The site also answers HTTPS itself**, with its own Let's Encrypt certificate
 (`CERT=1`; certbot.timer renews it and reloads nginx): on 2026-10-20 Arvan's proxy was off for the whole
 nisatech.org zone, browsers came straight to the server, and nginx answered them with its only HTTPS
 site, nisatak.com. So it works with the proxy on or off and with either origin protocol. Every deploy

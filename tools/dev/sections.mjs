@@ -1,6 +1,6 @@
 // Screenshots of every home section and the other pages at one size, as visitors see them (scroll
 // animations play out first). Headless Edge through patchright, as in tools/compare.mjs.
-//   node tools/dev/sections.mjs <width> <height> <out-dir>          (BASE=https://shop.nisatech.org for staging)
+//   node tools/dev/sections.mjs <width> <height> <out-dir>          (BASE=https://penolinshop.com for staging)
 // Below 768 px wide the page opens as a phone (2x, touch) and the phone menu is shot open too.
 // The --disable-features flags let the page (port 8030) load Vite's modules (port 5180) in development.
 import { createRequire } from 'node:module';

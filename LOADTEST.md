@@ -78,7 +78,7 @@ Response times stayed flat; most of the 0.65 s is the network between the PC and
    the second request. The model then never reaches the server again: about 28 ms of CPU and 0.3 MB less
    per visit.
 3. **Stop nginx gzipping the model** *(the server admin re-runs
-   `sudo DOMAIN=shop.nisatech.org bash /home/amir/purseshop-deploy/server-setup.sh` after a fresh
+   `sudo DOMAIN=penolinshop.com REDIRECT="www.penolinshop.com shop.nisatech.org" bash /home/amir/purseshop-deploy/server-setup.sh` after a fresh
    `scp -r deploy`).* `deploy/nginx/purseshop.conf` no longer lists it. Gzip saved only 18% for
    ~28 ms of CPU each time. This matters less once (2) is done, but it's free.
 
@@ -95,7 +95,7 @@ required for 50,000 views a day.
 From `PurseShop/` (dev tools only; the scripts send a `purseshop-loadtest` user agent):
 
 ```bash
-node tools/loadtest/ramp.mjs https://shop.nisatech.org '[1,2,5,10,20,40]' 30
+node tools/loadtest/ramp.mjs https://penolinshop.com '[1,2,5,10,20,40]' 30
 scp tools/loadtest/origin.py tools/loadtest/monitor.sh amir@185.231.180.92:
 ssh amir@185.231.180.92 'nohup bash monitor.sh 140 > monitor.log 2>&1 & python3 origin.py html 1,2,4,8 15; python3 origin.py glb 1,2,4 15'
 ```

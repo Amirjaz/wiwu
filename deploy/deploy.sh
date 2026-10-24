@@ -6,7 +6,9 @@
 set -euo pipefail
 
 SERVER=${SERVER:-amir@185.231.180.92}
-DOMAIN=${DOMAIN:?set DOMAIN, the site host name (only used on the first deploy, for .env)}
+# The site's host name: written into the server's backend/.env on the first deploy, checked against
+# it on later ones, and used for the HTTPS check at the end.
+DOMAIN=${DOMAIN:?set DOMAIN, the site host name, e.g. DOMAIN=penolinshop.com}
 ROOT=/srv/purseshop
 
 cd "$(git rev-parse --show-toplevel)"
@@ -15,6 +17,13 @@ if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
   exit 1
 fi
 [ "$(git rev-parse --abbrev-ref HEAD)" = main ] || { echo "Deploy from main." >&2; exit 1; }
+
+# A new domain means editing .env on the server first (README, Deploying): otherwise SMS links and
+# the sitemap would keep the old address, and Django would turn the new one away.
+if ssh "$SERVER" "[ -f $ROOT/app/backend/.env ] && ! grep -qx 'PUBLIC_URL=https://$DOMAIN' $ROOT/app/backend/.env"; then
+  echo "The server's backend/.env has a PUBLIC_URL other than https://$DOMAIN; fix one of them first." >&2
+  exit 1
+fi
 
 echo "==> Building the frontend"
 (
