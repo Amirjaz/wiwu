@@ -51,6 +51,9 @@ export interface OrderDetail extends OrderRow {
   pay_in_rial: boolean;
   provider_ref: string; // cartbecart's CBC-… code
   card: { bank: string; number: string; holder: string };
+  // Paid in several card-to-card transfers (over the bank's cap); empty for one.
+  transfers: { position: number; amount_rial: number; offset_rial: number; card: { bank: string; number: string };
+    provider_ref: string; status: string; status_label: string; paid_at: string | null }[];
   expires: string;
   paid_via: string;
   confirmed_by: string | null;
@@ -80,6 +83,7 @@ export const ACTIONS: Record<string, string> = {
   placed: 'سفارش ثبت شد',
   expired: 'مهلت پرداخت تمام شد',
   paid: 'پرداخت تأیید شد',
+  transfer_paid: 'یکی از واریزها رسید',
   needs_review: 'نیاز به بررسی پرداخت',
   payment_rejected: 'پرداخت رد شد',
   second_deposit: 'واریز تکراری',

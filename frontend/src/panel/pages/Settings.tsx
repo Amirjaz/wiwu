@@ -11,6 +11,7 @@ interface Store {
   store_name: string; tagline: string; phone: string; email: string; address: string; postal_code: string; hours: string;
   instagram: string; owner_mobile: string; shipping_post_rial: number; shipping_tipax_rial: number; tipax_on_delivery: boolean; post_days: string;
   tipax_days: string; payment_minutes: number; reminder_minutes: number; return_days: number; enamad_html: string;
+  transfer_limit_rial: number; // the bank's cap for one card-to-card; orders above it are paid in several
 }
 interface Product { slug: string; name: string; subtitle: string; description: string; price_rial: number; is_available: boolean; specs: [string, string][] }
 /** A model in the list: the main bag first; another shows on the site once it has a price. */
@@ -111,6 +112,10 @@ function StoreForm({ slug, main }: { slug: string; main: boolean }) {
           <Field label="زمان رسیدن با تیپاکس">{(id) => <input id={id} className="input" value={store.tipax_days} onChange={(e) => s('tipax_days', e.target.value)} />}</Field>
           <Field label="مهلت پرداخت (دقیقه)" error={err('payment_minutes')}>{(id) => <input id={id} className="input ltr text-right" inputMode="numeric" value={fa(store.payment_minutes)} onChange={(e) => s('payment_minutes', Number(latin(e.target.value).replace(/\D/g, '') || 0))} />}</Field>
           <Field label="یادآوری پرداخت پس از (دقیقه)" error={err('reminder_minutes')}>{(id) => <input id={id} className="input ltr text-right" inputMode="numeric" value={fa(store.reminder_minutes)} onChange={(e) => s('reminder_minutes', Number(latin(e.target.value).replace(/\D/g, '') || 0))} />}</Field>
+          <Field label="سقف هر کارت‌به‌کارت (تومان)" error={err('transfer_limit_rial')}
+            help="سفارش بالاتر از این مبلغ در چند واریز پرداخت می‌شود: باقی مبلغ، بعد واریزهای ۵ میلیون تومانی. حداقل ۱۰ میلیون؛ ۰ یعنی همیشه یک واریز.">
+            {(id, d) => <TomanInput id={id} describedBy={d} rial={store.transfer_limit_rial} onChange={(v) => s('transfer_limit_rial', v)} />}
+          </Field>
           <Field label="مهلت بازگشت (روز کاری)" error={err('return_days')}>{(id) => <input id={id} className="input ltr text-right" inputMode="numeric" value={fa(store.return_days)} onChange={(e) => s('return_days', Number(latin(e.target.value).replace(/\D/g, '') || 0))} />}</Field>
           <Field label="موبایل مدیر (پیامک سفارش‌ها)" error={err('owner_mobile')}>{(id) => <input id={id} className="input ltr text-right" inputMode="tel" value={store.owner_mobile} onChange={(e) => s('owner_mobile', e.target.value)} />}</Field>
         </div>

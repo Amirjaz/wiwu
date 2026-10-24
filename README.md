@@ -39,6 +39,17 @@ too) and logged in the panel. Panel users for local testing are in `backend/dev-
    buyer pays the extra (decided 2026-10-14). With cartbecart it's their **1–999 rials**, so the amount
    is shown, copied and texted in rials; without, the shop picks **1–999 tomans** no open order (or one
    expired in the last 48 h) has. Price, fee and card are copied into the order: later changes don't touch it.
+   **Over the bank's cap for one card-to-card** (`StoreSettings.transfer_limit_rial`, panel → فروشگاه →
+   «سقف هر کارت‌به‌کارت»; 15M toman, Amir 2026-10-24; 0 never splits) the order is paid in several
+   **transfers** (`Transfer`, `orders.split_amounts`): the rest first, then round **5M-toman** ones, as few as
+   keep the first under the cap. The 16.5M two-zipper bag is 11.5M + 5M; the 14.1M Alpha stays one; exactly
+   15M is 10M + 5M (its extra would take it over). Each transfer has its own extra and exact amount (and with
+   cartbecart its own registration, `merchant_order_id` `<code>-1`, `<code>-2`); the order's amount is their
+   sum. Checkout says so beside the total, the order page shows each transfer with a tick when it arrives,
+   and the SMS gives both amounts. The order is paid once all have arrived; if the countdown ends with only
+   some, it goes to *needs review* (the rest can still arrive and pay it, else staff refund), as does one
+   arriving alone after the countdown or one refused while another came. Staff approving by hand marks
+   every transfer received.
 3. **The card**: with cartbecart, the card marked default in their dashboard (they say which, with its
    holder; the bank's name comes from the same card in the panel, or its first six digits); without, the
    panel's active card used least recently. The order page shows it, the holder's name, the exact amount
@@ -82,14 +93,19 @@ HMAC-SHA256 over `timestamp.body`, at most 5 minutes old; repeats recognised by 
 `order.paid` → paid; `order.needs_review` → needs review (they're decided in **their** dashboard, and the
 next event follows); `order.expired` → expired, or cancelled with an SMS to the buyer when the reason is
 a rejection; `order.cancelled` → cancelled. The minute timer asks for the status of open orders, so a
-missed webhook is caught within a few minutes. Every event is in the panel → Logs → payments.
+missed webhook is caught within a few minutes. Every event is in the panel → Logs → payments. An order
+paid in several transfers is registered once per transfer (`<code>-1`, `<code>-2`, each with its own token
+and CBC- code, kept on `Transfer`); their events and status checks go per transfer (`orders.transfer_result`,
+outcome `part` until the last one), and the panel's search finds an order by any of its CBC- codes.
 
 If they refuse an order (no default card, plan, monthly quota, key), the buyer sees «پرداخت همین حالا
 آماده نشد», their SMS code still works for another try, and the owner gets an SMS (once an hour).
 
 `manage.py cartbecart_check` checks the key and plan and prints the webhook address;
-`manage.py cartbecart_check --test 10000` also registers a 10,000-toman test order (not a shop order) to
+`manage.py cartbecart_check --test 50000` also registers a 50,000-toman test order (not a shop order) to
 pay from your own card: once paid, the panel's payments log shows it as a test, which proves the webhook.
+Use 50,000 rather than 10,000: on 2026-10-24 the 10,000-toman tests were never matched, the 50,000 ones
+within minutes.
 Without cartbecart (`PAYMENT_PROVIDER=manual`) unpaid orders show under "needs action" in the panel.
 
 ## SMS (`backend/shop/sms.py`)

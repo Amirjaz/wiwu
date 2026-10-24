@@ -170,7 +170,8 @@ def order_list(request):
     if q:
         digits = persian.latin_digits(q)
         found = found.filter(Q(code__iexact=digits) | Q(phone__contains=digits) | Q(name__icontains=q)
-                             | Q(tracking_code__iexact=digits) | Q(provider_ref__iexact=digits))
+                             | Q(tracking_code__iexact=digits) | Q(provider_ref__iexact=digits)
+                             | Q(transfers__provider_ref__iexact=digits)).distinct()
     try:
         page = max(1, int(request.GET.get('page', 1)))
     except ValueError:
@@ -189,6 +190,11 @@ def _detail(order):
         'shipping_on_delivery': order.shipping_on_delivery, 'pay_in_rial': order.pay_in_rial,
         'provider_ref': order.provider_ref,  # cartbecart's CBC-… code, to find it in their dashboard
         'card': {'bank': order.card_bank, 'number': order.card_number, 'holder': order.card_holder},
+        # Paid in several card-to-card transfers (over the bank's cap): each one, its own CBC-… code.
+        'transfers': [{'position': t.position, 'amount_rial': t.amount_rial, 'offset_rial': t.offset_rial,
+                       'card': {'bank': t.card_bank, 'number': t.card_number}, 'provider_ref': t.provider_ref,
+                       'status': t.status, 'status_label': t.get_status_display(),
+                       'paid_at': t.paid_at.isoformat() if t.paid_at else None} for t in order.transfers.all()],
         'expires': order.expires_at.isoformat(), 'paid_via': order.paid_via,
         'confirmed_by': order.confirmed_by.get_full_name() or order.confirmed_by.username if order.confirmed_by else None,
         'claim': {
@@ -350,7 +356,10 @@ def sms_log(request):
 
 STORE_FIELDS = ('store_name', 'tagline', 'phone', 'email', 'address', 'postal_code', 'hours', 'instagram',
                 'owner_mobile', 'shipping_post_rial', 'shipping_tipax_rial', 'tipax_on_delivery', 'post_days', 'tipax_days',
-                'payment_minutes', 'reminder_minutes', 'return_days', 'enamad_html')
+                'payment_minutes', 'reminder_minutes', 'return_days', 'transfer_limit_rial', 'enamad_html')
+# The cap for one card-to-card: 0 (never split) or at least 10M toman, so an order splits into a few round
+# 5M transfers at most (orders.split_amounts).
+TRANSFER_LIMIT_MIN_RIAL = 100_000_000
 PRODUCT_FIELDS = ('name', 'subtitle', 'description', 'price_rial', 'is_available', 'specs')
 
 
@@ -386,8 +395,8 @@ def store_settings(request):
         model_field = StoreSettings._meta.get_field(field)
         if model_field.get_internal_type() in ('PositiveBigIntegerField', 'PositiveSmallIntegerField'):
             try:
-                value = int(persian.latin_digits(value))
-                if value < 0:
+                value = int(persian.latin_digits(str(value)))  # str: latin_digits(0) is ''
+                if value < 0 or (field == 'transfer_limit_rial' and 0 < value < TRANSFER_LIMIT_MIN_RIAL):
                     raise ValueError
             except (TypeError, ValueError):
                 errors[field] = 'number'

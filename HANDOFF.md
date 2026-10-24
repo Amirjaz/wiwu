@@ -214,10 +214,12 @@ business address), the `.ir` domain under their national ID.
    `ssh -t amir@37.32.25.183 bash set-cartbecart-keys.sh`. A 401 only shows in nginx's log
    (`sudo grep cartbecart-webhook /var/log/nginx/access.log`), never in the database. They retry a
    refused webhook at growing gaps (about 4, then 6 minutes). Final key set 2026-10-24 17:20.
-   **Open: paying 16,500,000 toman in one transfer** goes over the card-to-card limit (Amir, 2026-10-24),
-   so the two-zipper bag needs two transfers; each order is one cartbecart order with one exact amount,
-   so that needs orders split into parts (each its own cartbecart order, paid when all parts are).
-   Waiting on whether the limit is per transfer or per day per card, and its amount.
+   **Orders over the card-to-card cap are paid in several transfers** (built 2026-10-24, migration 0009;
+   README → *How an order works*, step 2): the cap is per transfer, **15M toman** (Amir), a panel setting
+   («سقف هر کارت‌به‌کارت»); above it the rest first, then round 5M transfers (Amir's choice: 16.5M is
+   11.5M + 5M), each its own cartbecart order (`<code>-1`, `<code>-2`). Paid when all arrive; review if the
+   countdown ends with only some. Tested with faked cartbecart answers and on a local dev server (order
+   page on phone and desktop, panel), not yet on cartbecart's live API.
 8. **Kavenegar:** Amir's account (2026-10-24), identity verified, Advanced plan until 1406-08-01, about
    205,000 toman credit. **The account has no line it may send from**: `2000660110` (from their sample
    code) answers 427 "needs an access level", and with no line named, 412; so everything goes through

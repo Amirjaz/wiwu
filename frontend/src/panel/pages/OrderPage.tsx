@@ -61,6 +61,9 @@ export default function OrderPage() {
   const shippable = ['paid', 'preparing'].includes(order.status);
   const cancellable = ['awaiting_payment', 'needs_review', 'expired', 'paid', 'preparing'].includes(order.status);
   const address = `${order.province}، ${order.city}، ${order.address}`;
+  const amount = (rialAmount: number) => (order.pay_in_rial ? `${rial(rialAmount)} ریال` : `${toman(rialAmount)} تومان`);
+  const split = order.transfers.length > 1;
+  const looking = split ? order.transfers.map((t) => amount(t.amount_rial)).join(' و ') : amount(order.amount_rial);
 
   function ship(event: FormEvent) {
     event.preventDefault();
@@ -80,9 +83,22 @@ export default function OrderPage() {
       {reviewable && (
         <Box title="پرداخت">
           <p className="text-ink-soft leading-relaxed">
-            در حساب کارت <span className="ltr font-semibold text-ink">{fa(groupCard(order.card.number))}</span> ({order.card.bank}) دنبال واریز
-            دقیق <strong className="text-ink">{toman(order.amount_rial)} تومان</strong> بگردید.
+            در حساب کارت <span className="ltr font-semibold text-ink">{fa(groupCard(order.card.number))}</span> ({order.card.bank})
+            {split
+              ? <> دنبال {fa(order.transfers.length)} واریز جدا با این مبلغ‌های دقیق بگردید: <strong className="text-ink">{looking}</strong>.</>
+              : <> دنبال واریز دقیق <strong className="text-ink">{looking}</strong> بگردید.</>}
           </p>
+          {split && (
+            <ul className="grid gap-1 text-sm">
+              {order.transfers.map((t) => (
+                <li key={t.position} className="flex flex-wrap gap-x-3">
+                  <span>واریز {fa(t.position)}: {amount(t.amount_rial)}</span>
+                  <span className={t.status === 'paid' ? 'text-accent-ink font-semibold' : 'text-muted'}>{t.status_label}{t.paid_at ? ` (${when(t.paid_at)})` : ''}</span>
+                  {t.provider_ref && <span className="ltr text-muted">{t.provider_ref}</span>}
+                </li>
+              ))}
+            </ul>
+          )}
           {order.claim.at ? (
             <div className="grid gap-2 rounded-[var(--radius-field)] bg-warn-soft text-warn p-4">
               <p className="font-semibold">خریدار اعلام پرداخت کرده ({when(order.claim.at)})</p>
@@ -102,7 +118,7 @@ export default function OrderPage() {
           {can.approve ? (
             <div className="flex flex-wrap gap-3">
               <button type="button" className="btn btn-primary" disabled={!!busy}
-                onClick={() => act('approve', {}, `واریز ${toman(order.amount_rial)} تومان را در حساب دیدید؟ سفارش پرداخت‌شده ثبت می‌شود و به خریدار پیامک می‌رود.`)}>
+                onClick={() => act('approve', {}, `${split ? `هر ${fa(order.transfers.length)} واریز (${looking})` : `واریز ${looking}`} را در حساب دیدید؟ سفارش پرداخت‌شده ثبت می‌شود و به خریدار پیامک می‌رود.`)}>
                 {busy === 'approve' ? '…' : 'تأیید پرداخت'}
               </button>
               {order.status === 'needs_review' && (
@@ -155,6 +171,11 @@ export default function OrderPage() {
           <Row label={order.pay_in_rial ? 'جمع (ریال)' : 'جمع (تومان)'}><span className="text-lg">{order.pay_in_rial ? rial(order.amount_rial) : toman(order.amount_rial)}</span></Row>
           <Row label="کارت">{order.card.bank} <span className="ltr">…{fa(order.card.number.slice(-4))}</span></Row>
           {order.provider_ref && <Row label="کارت‌به‌کارت"><span className="ltr">{order.provider_ref}</span></Row>}
+          {split && order.transfers.map((t) => (
+            <Row key={t.position} label={`واریز ${fa(t.position)}${t.provider_ref ? ` (${t.provider_ref})` : ''}`}>
+              {amount(t.amount_rial)} · {t.status_label}
+            </Row>
+          ))}
           {order.paid_at && <Row label="پرداخت">{when(order.paid_at)}، {order.paid_via === 'auto' ? 'خودکار' : `دستی${order.confirmed_by ? ` (${order.confirmed_by})` : ''}`}</Row>}
         </Box>
       </div>

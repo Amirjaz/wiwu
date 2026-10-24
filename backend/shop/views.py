@@ -142,6 +142,9 @@ def _store_json(store, product, models):
         # 2026-10-23: one zipper or two), starting from the one asked for (?product=).
         'models': [{'slug': m.slug, 'name': m.name, 'short': VERSIONS.get(m.slug, m.name),
                     'price_rial': m.price_rial, 'available': m.is_available,
+                    # Over the bank's cap for one card-to-card it's paid in several: the parts, per way to send.
+                    'transfers': {o['id']: orders.split_amounts(m.price_rial + o['price_rial'], store.transfer_limit_rial)
+                                  for o in store.shipping_options()},
                     # Only asked for when more than one colour is on show.
                     'colors': [{'id': c.id, 'name': c.name, 'swatch': c.swatch, 'available': c.available}
                                for c in m.shown_colors()]}
@@ -382,6 +385,8 @@ def order_json(order):
     order = orders.refresh(order)
     ret = order.returns.order_by('-created_at').first()
     deadline = orders.return_deadline(order)
+    # The card is only shown while it's still worth paying into.
+    payable = order.status in (Order.Status.AWAITING, Order.Status.EXPIRED, Order.Status.REVIEW)
     return {
         'code': order.code,
         'status': order.status,
@@ -401,9 +406,12 @@ def order_json(order):
         'is_gift': order.is_gift,
         'name': order.name,
         'city': f'{order.province}، {order.city}',
-        # The card is only shown while it's still worth paying into.
-        'card': {'bank': order.card_bank, 'number': order.card_number, 'holder': order.card_holder}
-        if order.status in (Order.Status.AWAITING, Order.Status.EXPIRED, Order.Status.REVIEW) else None,
+        'card': {'bank': order.card_bank, 'number': order.card_number, 'holder': order.card_holder} if payable else None,
+        # Over the bank's cap for one card-to-card: each transfer to make, and whether it has arrived.
+        'transfers': [{'position': t.position, 'amount_rial': t.amount_rial, 'offset_rial': t.offset_rial,
+                       'paid': t.status == t.Status.PAID,
+                       'card': {'bank': t.card_bank, 'number': t.card_number, 'holder': t.card_holder} if payable else None}
+                      for t in order.transfers.all()],
         'claimed': bool(order.claimed_at),
         'tracking': order.tracking_code,
         'paid_at': order.paid_at.isoformat() if order.paid_at else None,

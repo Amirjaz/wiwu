@@ -33,6 +33,9 @@ class StoreSettings(models.Model):
     post_days = models.CharField('زمان رسیدن با پست', max_length=60, default='۴ تا ۶ روز کاری')
     tipax_days = models.CharField('زمان رسیدن با تیپاکس', max_length=60, default='۴ تا ۶ روز کاری')
     payment_minutes = models.PositiveSmallIntegerField('مهلت پرداخت (دقیقه)', default=30)
+    # Banks cap a single card-to-card transfer (Amir, 2026-10-24: 16.5M toman won't go in one, 14.1M will).
+    # An order above it is paid in several transfers (orders.split_amounts, Transfer). 0: always one.
+    transfer_limit_rial = models.PositiveBigIntegerField('سقف هر کارت‌به‌کارت (ریال)', default=150_000_000)
     reminder_minutes = models.PositiveSmallIntegerField('یادآوری پرداخت پس از (دقیقه)', default=15)
     return_days = models.PositiveSmallIntegerField('مهلت بازگشت کالا (روز کاری)', default=7)
     enamad_html = models.TextField('کد نماد اعتماد (همان‌طور که اینماد می‌دهد)', blank=True)
@@ -218,7 +221,48 @@ class Order(models.Model):
     @property
     def pay_in_rial(self):
         """cartbecart's amounts are unique to the rial, so they're shown (and copied) in rials."""
-        return bool(self.provider_token) or self.amount_rial % 10 != 0
+        return (bool(self.provider_token) or self.amount_rial % 10 != 0
+                or self.transfers.exclude(provider_token='').exists())
+
+
+class Transfer(models.Model):
+    """One of the card-to-card transfers an order is paid in when its total is over the bank's cap
+    (StoreSettings.transfer_limit_rial). Each has its own exact amount and card and, with cartbecart, its
+    own registration there (merchant_order_id "<order code>-<position>"); the order is paid once every
+    one has arrived. An order paid in one transfer has none: its amount and card are on the order."""
+
+    class Status(models.TextChoices):
+        PENDING = 'pending', 'در انتظار'
+        PAID = 'paid', 'رسید'
+        REVIEW = 'needs_review', 'بررسی'
+        EXPIRED = 'expired', 'منقضی'
+        CANCELLED = 'cancelled', 'لغو'
+
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='transfers')
+    position = models.PositiveSmallIntegerField()  # 1, 2, …
+    amount_rial = models.PositiveBigIntegerField(db_index=True)
+    offset_rial = models.PositiveBigIntegerField()
+    card = models.ForeignKey(Card, null=True, blank=True, on_delete=models.SET_NULL, related_name='+')
+    card_bank = models.CharField(max_length=40)
+    card_number = models.CharField(max_length=16)
+    card_holder = models.CharField(max_length=80)
+    expires_at = models.DateTimeField()
+    provider_token = models.CharField(max_length=64, blank=True, db_index=True)
+    provider_ref = models.CharField(max_length=80, blank=True)
+    status = models.CharField(max_length=14, choices=Status.choices, default=Status.PENDING)
+    paid_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['position']
+        constraints = [models.UniqueConstraint(fields=['order', 'position'], name='transfer_position')]
+
+    def __str__(self):
+        return self.merchant_code
+
+    @property
+    def merchant_code(self):
+        """What cartbecart knows it by: the order's code and its number."""
+        return f'{self.order.code}-{self.position}'
 
 
 class ReturnRequest(models.Model):
